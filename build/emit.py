@@ -12,10 +12,26 @@ import pathlib
 from build.tree import nivel
 
 NIVELES_INSTITUCIONALES = 9
+SEPARADOR = "-"
 
 
 def clave_de_archivo(camino: tuple) -> str:
-    return "-".join(camino)
+    """Join the camino into one file key.
+
+    The separator makes this encoding lossy when a code holds the separator
+    itself. The caminos ("88", "1-0", "100") and ("88", "1", "0-100") would
+    give one key, and one file would overwrite the other. INV-05 would die at
+    the boundary of the file system. No code of the source holds a hyphen
+    today, so this guard stops a future change of the source.
+    """
+    for codigo in camino:
+        if SEPARADOR in codigo:
+            raise ValueError(
+                f"the code {codigo!r} of the camino {camino} holds "
+                f"{SEPARADOR!r}, which the file key uses to join the codes. "
+                "INV-05 needs another separator."
+            )
+    return SEPARADOR.join(camino)
 
 
 def _nodo_a_json(nodo) -> dict:
@@ -74,8 +90,21 @@ def escribir_manifiesto(destino: pathlib.Path, entradas: list) -> None:
     """The manifest names the file of every exercise. It names the date too.
     INV-03.
 
-    The build commits this file on every change. The commit keeps the
-    repository active. The scheduled workflow does not stop. The history
-    becomes a public record of every change in the official numbers.
+    The workflow commits this file on every change. The history becomes a
+    public record of every change in the official numbers. Only a change of
+    the official numbers writes here. The heartbeat keeps its own file, so it
+    does not drown that signal.
     """
     _escribir(destino / "manifest.json", {"ejercicios": entradas})
+
+
+def escribir_latido(destino: pathlib.Path, fecha: str) -> None:
+    """Write the date of this run in UTC.
+
+    GitHub disables a scheduled workflow after 60 days with no activity in a
+    public repository. The workflow commits this file every day, so the
+    repository never goes quiet. The manifest cannot do this job: it changes
+    only when the official numbers change, and a closed exercise never
+    changes.
+    """
+    _escribir(destino / "heartbeat.json", {"ultima_corrida_utc": fecha})

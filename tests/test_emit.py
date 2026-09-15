@@ -3,7 +3,12 @@ import pathlib
 import tempfile
 import unittest
 
-from build.emit import clave_de_archivo, escribir_ejercicio, escribir_manifiesto
+from build.emit import (
+    clave_de_archivo,
+    escribir_ejercicio,
+    escribir_latido,
+    escribir_manifiesto,
+)
 from build.measures import MedidasCero
 from build.rows import leer_filas
 from build.tree import Nodo, construir
@@ -20,6 +25,19 @@ class TestEmit(unittest.TestCase):
 
     def test_la_clave_de_archivo_une_el_camino(self):
         self.assertEqual(clave_de_archivo(("88", "1", "0")), "88-1-0")
+
+    def test_un_codigo_con_el_separador_para_el_build(self):
+        """INV-05 dies at the boundary of the file system when a code holds the
+        separator. The caminos ("88", "1-0", "100") and ("88", "1", "0-100")
+        give one key, and one file overwrites the other."""
+        with self.assertRaises(ValueError):
+            clave_de_archivo(("88", "1-0", "100"))
+
+    def test_escribe_el_latido(self):
+        escribir_latido(self.destino, "2026-09-15")
+        datos = json.loads(
+            (self.destino / "heartbeat.json").read_text(encoding="utf-8"))
+        self.assertEqual(datos, {"ultima_corrida_utc": "2026-09-15"})
 
     def test_escribe_el_archivo_institucional(self):
         escribir_ejercicio(self.arbol, 2025, self.destino)

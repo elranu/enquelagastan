@@ -29,10 +29,6 @@ class Monto:
         self._mismo_ejercicio(otro)
         return Monto(self.millones + otro.millones, self.ejercicio)
 
-    def __sub__(self, otro: "Monto") -> "Monto":
-        self._mismo_ejercicio(otro)
-        return Monto(self.millones - otro.millones, self.ejercicio)
-
     def mayor_que(self, otro: "Monto", tolerancia: float = 1e-6) -> bool:
         self._mismo_ejercicio(otro)
         return self.millones > otro.millones + tolerancia
