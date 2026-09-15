@@ -49,7 +49,12 @@ def escribir_ejercicio(arbol: dict, ejercicio: int,
     _escribir(carpeta / "institucional.json", institucional)
 
     hojas = [
-        camino for camino in arbol if nivel(camino) == NIVELES_INSTITUCIONALES
+        camino for camino in arbol
+        if nivel(camino) == NIVELES_INSTITUCIONALES
+        # A camino with no hijos ends the institutional axis early. It
+        # counts as a hoja, but it gets no object file: it has no
+        # descendant, so its group in `grupos` is empty.
+        or (nivel(camino) < NIVELES_INSTITUCIONALES and not arbol[camino].hijos)
     ]
 
     grupos: dict = {}

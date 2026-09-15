@@ -4,8 +4,9 @@ import tempfile
 import unittest
 
 from build.emit import clave_de_archivo, escribir_ejercicio, escribir_manifiesto
+from build.measures import MedidasCero
 from build.rows import leer_filas
-from build.tree import construir
+from build.tree import Nodo, construir
 
 FIXTURE = pathlib.Path(__file__).parent / "fixtures" / "mini.csv"
 
@@ -49,6 +50,15 @@ class TestEmit(unittest.TestCase):
             if len(camino) > len(hoja) and camino[: len(hoja)] == hoja
         }
         self.assertEqual(set(datos.keys()), esperadas)
+
+    def test_una_hoja_institucional_sin_hijos_cuenta_como_hoja(self):
+        camino = ("99",)
+        arbol = {camino: Nodo(camino, "Sin descendientes", MedidasCero(2025))}
+        resumen = escribir_ejercicio(arbol, 2025, self.destino)
+        self.assertEqual(resumen["hojas"], 1,
+                          "a camino with no hijos ends the institutional axis")
+        self.assertFalse((self.destino / "2025" / "objeto").exists(),
+                          "a nodo with no descendant writes no object file")
 
     def test_el_manifiesto_nombra_el_archivo_y_la_fecha(self):
         """INV-03."""
