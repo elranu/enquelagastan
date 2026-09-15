@@ -1,4 +1,4 @@
-# Enquelagastan
+# En qué la gastan
 
 A navigable map of the public spending of the Argentine national state. The data is open
 already, but it arrives as thousands of rows with codes. This project shows it on one

@@ -1,4 +1,4 @@
-# Enquelagastan
+# En qué la gastan
 
 The instructions for every agent in this repository are in `CLAUDE.md`. Read that file
 before you start. It applies to Codex, to Claude Code and to any other agent.

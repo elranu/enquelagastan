@@ -1,8 +1,8 @@
-# Enquelagastan
+# En qué la gastan
 
 ## Purpose
 
-Enquelagastan makes the public spending of the Argentine national state easy
+En qué la gastan makes the public spending of the Argentine national state easy
 to read. The data is open already. It comes from an API as thousands of rows
 with codes for the jurisdiction, the program and the object of the spending.
 This project shows that data as one map. The user sees the total spending as a
@@ -12,6 +12,18 @@ spending.
 
 The users are the citizens, the journalists and the researchers of Argentina.
 The product asks for no login, and for no knowledge of budget terms.
+
+The name of the product is **En qué la gastan**, with the spaces and the
+accent. It is a question, and it asks what the politicians do with the money of
+their citizens. The name answers the purpose of the product, so it keeps its
+exact spelling.
+
+**Where each form goes.** `En qué la gastan` goes everywhere a user reads it:
+the title of the site, the copy of the product, the `README.md`, and the title
+of every document. `enquelagastan` goes where a user does not read it directly:
+the name of the repository, the directory, the URL, the package and the
+identifiers. A repository name holds no space and no accent, which is the only
+reason the second form exists. See `docs/WRITING_STYLE.md`, "Technical names".
 
 The repository carries the Designpowers stack: design stages between an
 approved design spec and the implementation plan, and the `ranu` orchestrator
