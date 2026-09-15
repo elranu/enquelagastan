@@ -269,7 +269,10 @@ These questions do not stop the work. Send the first four to
 
 ## 11. What the next stage decides
 
-- The events of the build and of the navigation: `designpowers:eventstorming`.
+- The events of the build and of the navigation: **skipped**. The user asked
+  to skip `designpowers:eventstorming` on 2026-09-15. Section 8 of this spec
+  already gives the flow of the build. Recover the stage when the work
+  reaches the alerts, which section 4 defers.
 - The screen, the transition between levels, and the behaviour on a telephone:
   `designpowers:wireframing`.
 - The words of the domain, and `CONTEXT.md`: `designpowers:domain-modeling`.
