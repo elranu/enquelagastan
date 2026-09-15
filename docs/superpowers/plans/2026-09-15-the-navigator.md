@@ -793,7 +793,7 @@ That screen is not rare. Measured between 2025 and 2026: every jurisdiccion surv
 
 **Interfaces:**
 - Consumes: `site/app/arbol.js` for `nivelDe`.
-- Produces: `leerRuta(hash) -> {ejercicio, clave}`; `escribirRuta(ejercicio, clave) -> string`; `ejerciciosDisponibles(manifiesto) -> number[]`; `vecino(disponibles, ejercicio, paso) -> number | null`; `ancestroQueExiste(indice, clave) -> string | null`.
+- Produces: `leerRuta(hash) -> {ejercicio, clave}`; `escribirRuta(ejercicio, clave) -> string`; `ejerciciosDisponibles(manifiesto) -> number[]`; `ejercicioDeEntrada(disponibles, hoy?) -> number`; `vecino(disponibles, ejercicio, paso) -> number | null`; `ancestroQueExiste(indice, clave) -> string | null`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -804,7 +804,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  ancestroQueExiste, ejerciciosDisponibles, escribirRuta, leerRuta, vecino,
+  ancestroQueExiste, ejercicioDeEntrada, ejerciciosDisponibles, escribirRuta,
+  leerRuta, vecino,
 } from "../site/app/ruta.js";
 
 const MANIFIESTO = {
@@ -829,6 +830,17 @@ test("escribe una url que se puede compartir", () => {
 test("un ejercicio que no esta en el artefacto no se ofrece", () => {
   assert.deepEqual(ejerciciosDisponibles(MANIFIESTO), [2024, 2025],
     "the build of that day published no data for 2026");
+});
+
+test("la entrada muestra el ultimo ejercicio cerrado", () => {
+  // Decision C2 of the spec. The open exercise is not complete, so the entry
+  // shows the last one that closed.
+  assert.equal(ejercicioDeEntrada([2024, 2025, 2026], 2026), 2025);
+  // The build of that day did not publish 2026. The last closed one is still
+  // 2025, so a rule of "the one before the last available" would give 2024.
+  assert.equal(ejercicioDeEntrada([2024, 2025], 2026), 2025);
+  // Nothing is closed yet. Show what there is.
+  assert.equal(ejercicioDeEntrada([2026], 2026), 2026);
 });
 
 test("el vecino respeta el orden y los bordes", () => {
@@ -890,6 +902,17 @@ export function ejerciciosDisponibles(manifiesto) {
     .sort((uno, otro) => uno - otro);
 }
 
+export function ejercicioDeEntrada(disponibles, hoy = new Date().getFullYear()) {
+  // The entry shows the last closed exercise. The open one is not complete, so
+  // its pie chart is smaller by the calendar and not by a policy.
+  //
+  // The rule reads the year and not the position in the list. An exercise that
+  // failed its build that day is absent from the list, so a rule of "the one
+  // before the last" would step back one year too far.
+  const cerrados = disponibles.filter((ejercicio) => ejercicio < hoy);
+  return cerrados.at(-1) ?? disponibles.at(-1);
+}
+
 export function vecino(disponibles, ejercicio, paso) {
   const posicion = disponibles.indexOf(ejercicio);
   if (posicion < 0) {
@@ -913,7 +936,7 @@ export function ancestroQueExiste(indice, clave) {
 - [ ] **Step 4: Run the test and see it pass**
 
 Run: `node --test test/ruta.test.mjs`
-Expected: PASS, 5 tests.
+Expected: PASS, 6 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -1483,7 +1506,9 @@ Create `site/app/app.js`:
 
 import { cargarInstitucional, cargarManifiesto } from "./datos.js";
 import { dibujarRaiz, vistaDeRaiz } from "./pantalla.js";
-import { ejerciciosDisponibles, escribirRuta, leerRuta } from "./ruta.js";
+import {
+  ejercicioDeEntrada, ejerciciosDisponibles, escribirRuta, leerRuta,
+} from "./ruta.js";
 
 const app = document.getElementById("app");
 
@@ -1499,7 +1524,7 @@ async function dibujar() {
   const pedido = leerRuta(window.location.hash);
   const ejercicio = disponibles.includes(pedido.ejercicio)
     ? pedido.ejercicio
-    : disponibles.at(-2) ?? disponibles.at(-1);
+    : ejercicioDeEntrada(disponibles);
 
   const entrada = manifiesto.ejercicios
     .find((fila) => fila.ejercicio === ejercicio);
@@ -1532,7 +1557,7 @@ function informar(error) {
 dibujar().catch(informar);
 ```
 
-**The entry shows the last closed exercise**, which is the one before the last available. Decision C2 of the spec.
+**The entry shows the last closed exercise**, which `ejercicioDeEntrada` of task 6 decides by the year and not by the position. Decision C2 of the spec.
 
 Create `site/estilo.css`:
 
