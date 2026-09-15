@@ -1,0 +1,113 @@
+# This workflow runs the build every day. It also runs on every push to
+# main, and it runs on demand from the Actions tab.
+name: build
+
+on:
+  schedule:
+    - cron: "17 11 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+# Two runs that overlap would push to main at the same time, and one push
+# would fail. A run waits for the one before it.
+concurrency:
+  group: build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      fallo: ${{ steps.construir.outputs.codigo != '0' }}
+      publico: ${{ steps.construir.outputs.codigo != '2' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run the tests
+        run: python -m unittest discover -s tests -v
+
+      # A check that fails stops one exercise, and never the others. The
+      # build keeps going, the artifact carries every exercise that passed,
+      # and the job "report" below turns the run red.
+      #
+      # The step keeps the exit code of the build in an output, and it ends
+      # green. The later steps must run: the heartbeat must reach the
+      # repository, and the exercises that passed must reach the visitor.
+      # The code 2 says that no exercise published. The upload and the
+      # deploy below then do not run, so the live site keeps its data.
+      - name: Build every exercise
+        id: construir
+        run: |
+          codigo=0
+          python -m build --destino site/data || codigo=$?
+          echo "codigo=$codigo" >> "$GITHUB_OUTPUT"
+          echo "the build exited with $codigo"
+
+      # The heartbeat carries the date of this run. The workflow commits it
+      # every day, so the repository never goes quiet. GitHub disables a
+      # scheduled workflow after 60 days with no activity in a public
+      # repository.
+      #
+      # This premise is unproven: the documentation of GitHub does not say
+      # whether a commit that GITHUB_TOKEN makes resets that clock. Watch
+      # the workflow near the 60th quiet day.
+      #
+      # The manifest is the public record of every change in the official
+      # numbers. It changes only on such a change.
+      #
+      # Stage the files first, then diff the index against HEAD. A plain
+      # working-tree diff misses a file that git never tracked before,
+      # because git diff shows no line for a path outside the index.
+      - name: Commit the manifest and the heartbeat when they changed
+        run: |
+          git add site/data/manifest.json site/data/heartbeat.json
+          if git diff --cached --quiet; then
+            echo "nothing changed"
+          else
+            git config user.name "the build"
+            git config user.email "noreply@github.com"
+            git commit -m "The build ran"
+            git push
+          fi
+
+      # A run that published no exercise uploads nothing. An artifact with
+      # no data would replace the live site with an empty one.
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.construir.outputs.codigo != '2'
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    if: needs.build.outputs.publico == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  # The exercises that passed reach the visitor first. Then this job fails
+  # the run, so a person sees the red mark and reads the log of the build.
+  report:
+    needs: [build, deploy]
+    if: always() && needs.build.outputs.fallo == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report the exercise that did not publish
+        run: |
+          echo "One exercise or more did not pass its checks."
+          echo "Read the step 'Build every exercise' of the job 'build'."
+          exit 1

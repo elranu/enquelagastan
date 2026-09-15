@@ -1,14 +1,34 @@
-# Designpowers
+# En qué la gastan
 
 ## Purpose
 
-Designpowers is a Claude Code plugin repository and a GitHub template. It
-extends Superpowers with design stages between brainstorming and
-writing-plans. It ships the `ranu` orchestrator profile as a separate plugin.
-Use this repository as a template for a new project, or add it as a
-marketplace to an existing project. A repository made from the template starts
-with `/init`, which installs the plugins, adapts the documents to the new
-project and asks the kickoff question. See `.claude/skills/init/SKILL.md`.
+En qué la gastan makes the public spending of the Argentine national state easy
+to read. The data is open already. It comes from an API as thousands of rows
+with codes for the jurisdiction, the program and the object of the spending.
+This project shows that data as one map. The user sees the total spending as a
+pie chart, with the fiscal result beside it. The user taps one slice and goes
+one level down: jurisdiction, entity, program, activity, object of the
+spending.
+
+The users are the citizens, the journalists and the researchers of Argentina.
+The product asks for no login, and for no knowledge of budget terms.
+
+The name of the product is **En qué la gastan**, with the spaces and the
+accent. It is a question, and it asks what the politicians do with the money of
+their citizens. The name answers the purpose of the product, so it keeps its
+exact spelling.
+
+**Where each form goes.** `En qué la gastan` goes everywhere a user reads it:
+the title of the site, the copy of the product, the `README.md`, and the title
+of every document. `enquelagastan` goes where a user does not read it directly:
+the name of the repository, the directory, the URL, the package and the
+identifiers. A repository name holds no space and no accent, which is the only
+reason the second form exists. See `docs/WRITING_STYLE.md`, "Technical names".
+
+The repository carries the Designpowers stack: design stages between an
+approved design spec and the implementation plan, and the `ranu` orchestrator
+profile. The design stages record the domain in `CONTEXT.md` and the decisions
+under `docs/superpowers/specs/`.
 
 ## Hard rules
 
@@ -54,13 +74,13 @@ Every level of every design stage ends with a model, a KPI table, and a user gat
 ## Layout
 
 ```
-Designpowers/
-├── .claude/               # settings, hooks, profile map
+enquelagastan/
+├── .claude/               # settings, hooks, profile map, the /init skill
 ├── .claude-plugin/        # marketplace catalog
 ├── plugins/
-│   ├── designpowers/      # the methodology plugin
+│   ├── designpowers/      # the design stages
 │   └── ranu/              # the orchestrator profile
-├── docs/                  # proposals and writing style
+├── docs/                  # workflow and writing style
 ├── scripts/               # setup.sh
 ├── CONTEXT.md             # glossary of the project
 └── README.md

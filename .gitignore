@@ -2,3 +2,14 @@
 .scratch/
 node_modules/
 .DS_Store
+__pycache__/
+*.pyc
+
+# The build writes site/data/*.json. Keep two files tracked. The manifest
+# records every change in the official numbers. The heartbeat records the
+# date of every run, and its commit keeps the repository active.
+/site/*
+!/site/data/
+/site/data/*
+!/site/data/manifest.json
+!/site/data/heartbeat.json
