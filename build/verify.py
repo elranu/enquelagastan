@@ -17,8 +17,10 @@ from build.rows import NIVEL_DE_CONTROL
 from build.tree import nivel
 
 TOLERANCIA_PESOS = 1000.0
-"""The observed difference is 0 to 1 peso, from the decimals of the CSV. A real
-error is millions, so this value separates the two with room."""
+"""The observed difference is 0 to 1 peso. Two causes make it. The CSV keeps a
+limited number of decimals. The build also adds about 113,000 float values, and
+every addition can lose a fraction. A real error is millions, so this value
+separates the two with room. Do not tighten it on the decimals alone."""
 
 CONCEPTO_GASTO = "VII GASTOS TOTALES"
 
@@ -97,3 +99,40 @@ def nodos_que_pasan_el_limite(arbol: dict) -> list:
         if nivel(camino) <= NIVEL_DE_CONTROL
         and nodo.medidas.devengado.mayor_que(nodo.medidas.vigente)
     )
+
+
+TOLERANCIA_RELATIVA = 1e-9
+"""The relative gap that INV-04 accepts between a nodo and its children. The
+measures are floats, and the build adds about 113,000 of them. So a sum of
+children and its parent can differ in the last bits. A relative limit follows
+the size of the amount, which an absolute limit does not."""
+
+TOLERANCIA_MILLONES = 1e-6
+"""The absolute floor of the same check, for amounts near zero."""
+
+
+def nodos_que_no_suman(arbol: dict) -> list:
+    """INV-04. The sum of the children of a nodo equals the total of the nodo.
+
+    A row of the source can end its camino early. The build then adds that
+    money to a nodo that also holds children. The nodo is right, its children
+    are right, and the two do not agree. Every total above stays right, so no
+    other check sees it. The navigator would draw a pie whose slices cover less
+    than the parent.
+
+    Give one tuple per nodo that does not agree: the camino, the devengado of
+    the nodo, and the sum of its children.
+    """
+    malos = []
+    for camino, nodo in arbol.items():
+        if not nodo.hijos:
+            continue
+        propio = nodo.medidas.devengado.millones
+        suma = sum(
+            arbol[camino + (codigo,)].medidas.devengado.millones
+            for codigo in nodo.hijos
+        )
+        limite = max(TOLERANCIA_MILLONES, abs(propio) * TOLERANCIA_RELATIVA)
+        if abs(propio - suma) > limite:
+            malos.append((camino, propio, suma))
+    return sorted(malos)

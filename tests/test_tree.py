@@ -3,7 +3,7 @@ import unittest
 
 from build.measures import Monto
 from build.rows import leer_filas
-from build.tree import construir, hijos_de, nivel
+from build.tree import construir, nivel
 
 FIXTURE = pathlib.Path(__file__).parent / "fixtures" / "mini.csv"
 
@@ -24,12 +24,12 @@ class TestTree(unittest.TestCase):
         self.assertEqual(adiestramiento.medidas.devengado, Monto(31.0, 2025))
 
     def test_los_hijos_suman_el_padre(self):
-        """INV-04."""
+        """INV-04. build/verify.py holds the check that the build runs."""
         for camino, nodo in self.arbol.items():
-            hijos = hijos_de(self.arbol, camino)
-            if not hijos:
+            if not nodo.hijos:
                 continue
-            suma = sum(self.arbol[h].medidas.devengado.millones for h in hijos)
+            suma = sum(self.arbol[camino + (codigo,)].medidas.devengado.millones
+                       for codigo in nodo.hijos)
             self.assertAlmostEqual(suma, nodo.medidas.devengado.millones, places=6)
 
     def test_la_raiz_de_cada_jurisdiccion(self):
