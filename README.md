@@ -58,8 +58,7 @@ print(f'{total * 1_000_000:,.0f}')
 
 It prints `123,533,955,013,702`, the same total the table above gives.
 
-The script multiplies the total by one million because the source stores
-each amount in millions of pesos.
+The source stores each amount in millions of pesos. The script multiplies the total by one million.
 
 The same method works for any branch of the tree, once the reader filters
 the file's rows by that branch's codes.
