@@ -30,9 +30,13 @@ export function vistaDeRaiz(estado) {
     ejercicio,
     anios: disponibles,
     titulo: "En qué la gastó el Estado nacional",
-    total: totales.d,
+    // The headline shows the verified total from the manifest, not the sum.
+    // Each jurisdiccion below rounds to 6 decimals of a million pesos.
+    // Summing 15 of them can drift from the true total by a few pesos.
+    // Never replace this line with totales.d for that reason.
+    total: entrada.total_devengado / 1_000_000,
     ejecucion: ejecucionDe(comoNodo),
-    desviacion: desviacionDe(comoNodo, "1"),
+    desviacion: desviacionDe(comoNodo, ""),
     porciones: porcionesDe(indice, totales.claves, "d").porciones,
     procedencia: procedenciaDe(entrada, indice, ""),
   };
