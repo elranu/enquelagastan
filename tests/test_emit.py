@@ -38,6 +38,18 @@ class TestEmit(unittest.TestCase):
         datos = json.loads(hoja.read_text(encoding="utf-8"))
         self.assertEqual(len(datos), 8, "two incisos of four levels each")
 
+    def test_el_archivo_de_una_hoja_no_lleva_caminos_de_otra_hoja(self):
+        escribir_ejercicio(self.arbol, 2025, self.destino)
+        hoja = ("88", "1", "0", "100", "21", "0", "0", "1", "0")
+        ruta = self.destino / "2025" / "objeto" / f"{clave_de_archivo(hoja)}.json"
+        datos = json.loads(ruta.read_text(encoding="utf-8"))
+        esperadas = {
+            clave_de_archivo(camino)
+            for camino in self.arbol
+            if len(camino) > len(hoja) and camino[: len(hoja)] == hoja
+        }
+        self.assertEqual(set(datos.keys()), esperadas)
+
     def test_el_manifiesto_nombra_el_archivo_y_la_fecha(self):
         """INV-03."""
         escribir_manifiesto(self.destino, [{

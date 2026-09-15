@@ -39,7 +39,7 @@ def _escribir(ruta: pathlib.Path, datos: dict) -> None:
 
 def escribir_ejercicio(arbol: dict, ejercicio: int,
                        destino: pathlib.Path) -> dict:
-    """Write the institutional file and one file per leaf. Give a summary."""
+    """Write the institutional file. Write one file per leaf. Give a summary."""
     carpeta = destino / str(ejercicio)
     institucional = {
         clave_de_archivo(camino): _nodo_a_json(nodo)
@@ -49,29 +49,28 @@ def escribir_ejercicio(arbol: dict, ejercicio: int,
     _escribir(carpeta / "institucional.json", institucional)
 
     hojas = [
-        camino
-        for camino in arbol
-        if nivel(camino) == NIVELES_INSTITUCIONALES
-        or (nivel(camino) < NIVELES_INSTITUCIONALES and not arbol[camino].hijos)
+        camino for camino in arbol if nivel(camino) == NIVELES_INSTITUCIONALES
     ]
-    for hoja in hojas:
-        debajo = {
-            clave_de_archivo(camino): _nodo_a_json(arbol[camino])
-            for camino in arbol
-            if len(camino) > len(hoja) and camino[: len(hoja)] == hoja
-        }
-        if debajo:
-            _escribir(carpeta / "objeto" / f"{clave_de_archivo(hoja)}.json",
-                      debajo)
+
+    grupos: dict = {}
+    for camino, nodo in arbol.items():
+        if nivel(camino) > NIVELES_INSTITUCIONALES:
+            prefijo = camino[:NIVELES_INSTITUCIONALES]
+            grupos.setdefault(prefijo, {})[clave_de_archivo(camino)] = \
+                _nodo_a_json(nodo)
+    for hoja, debajo in grupos.items():
+        _escribir(carpeta / "objeto" / f"{clave_de_archivo(hoja)}.json",
+                  debajo)
     return {"nodos": len(arbol), "institucional": len(institucional),
             "hojas": len(hojas)}
 
 
 def escribir_manifiesto(destino: pathlib.Path, entradas: list) -> None:
-    """The manifest names the file and the date of every exercise. INV-03.
+    """The manifest names the file of every exercise. It names the date too.
+    INV-03.
 
-    The build commits this file on every change. It keeps the repository
-    active, so the scheduled workflow does not stop, and it gives a public
-    record of every change in the official numbers.
+    The build commits this file on every change. The commit keeps the
+    repository active. The scheduled workflow does not stop. The history
+    becomes a public record of every change in the official numbers.
     """
     _escribir(destino / "manifest.json", {"ejercicios": entradas})
