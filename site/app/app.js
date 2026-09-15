@@ -3,8 +3,8 @@
 import { saltarHijoUnico } from "./arbol.js";
 import { cargarInstitucional, cargarManifiesto } from "./datos.js";
 import {
-  dibujarAusente, dibujarNodo, dibujarRaiz, indiceParaClave, vistaDeAusente,
-  vistaDeNodo, vistaDeRaiz,
+  dibujarAusente, dibujarFuentes, dibujarNodo, dibujarRaiz, indiceParaClave,
+  vistaDeAusente, vistaDeFuentes, vistaDeNodo, vistaDeRaiz,
 } from "./pantalla.js";
 import {
   ejercicioDeEntrada, ejerciciosDisponibles, escribirRuta, leerRuta,
@@ -27,8 +27,20 @@ function vaciar(elemento) {
   }
 }
 
+// The sources screen is static and belongs to no exercise. leerRuta cannot
+// name it, because its first segment is always a year, so app.js checks the
+// raw hash before it asks ruta.js for anything.
+const RUTA_DE_FUENTES = "#/fuentes";
+
 async function dibujar() {
   const manifiesto = await cargarManifiesto();
+
+  vaciar(app);
+  if (window.location.hash === RUTA_DE_FUENTES) {
+    app.appendChild(dibujarFuentes(vistaDeFuentes(manifiesto), document));
+    return;
+  }
+
   const disponibles = ejerciciosDisponibles(manifiesto);
   const pedido = leerRuta(window.location.hash);
   const ejercicio = disponibles.includes(pedido.ejercicio)
@@ -38,8 +50,6 @@ async function dibujar() {
     .find((fila) => fila.ejercicio === ejercicio);
   const indiceInstitucional = await cargarInstitucional(ejercicio);
   const estadoBase = { ejercicio, entrada, indice: indiceInstitucional, disponibles };
-
-  vaciar(app);
 
   if (grupoOtros && grupoOtros.deClave !== pedido.clave) {
     grupoOtros = null;

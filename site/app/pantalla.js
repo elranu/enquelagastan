@@ -134,6 +134,10 @@ export function dibujarProcedencia(procedencia, documento) {
       .join(" · ");
     pie.appendChild(texto(documento, "p", lista, "codigos"));
   }
+  // UC-06 is a must: every screen offers a way to check the source.
+  const fuentes = texto(documento, "a", "De dónde salen estos números");
+  fuentes.setAttribute("href", "#/fuentes");
+  pie.appendChild(fuentes);
   return pie;
 }
 
@@ -235,6 +239,57 @@ export function dibujarNodo(vista, documento = document) {
   }
 
   seccion.appendChild(dibujarProcedencia(vista.procedencia, documento));
+  return seccion;
+}
+
+const REPOSITORIO = "https://github.com/elranu/enquelagastan";
+
+export function vistaDeFuentes(manifiesto) {
+  return {
+    filas: manifiesto.ejercicios.map((entrada) => ({
+      ejercicio: entrada.ejercicio,
+      archivo: entrada.archivo,
+      publicado: entrada.publicado,
+      verificado: entrada.verificado === true,
+    })),
+  };
+}
+
+export function dibujarFuentes(vista, documento = document) {
+  const seccion = documento.createElement("section");
+  seccion.setAttribute("class", "pantalla pantalla-fuentes");
+  seccion.appendChild(texto(documento, "h1", "De dónde salen estos números"));
+
+  seccion.appendChild(texto(documento, "p",
+    "Los datos son de Presupuesto Abierto, del Ministerio de Economía de la "
+    + "Nación, bajo licencia CC BY 4.0. Este proyecto lee los mismos archivos "
+    + "que ofrece la página oficial de datos abiertos. Las URLs son idénticas."));
+
+  const tabla = documento.createElement("table");
+  tabla.setAttribute("class", "fuentes");
+  for (const fila of vista.filas) {
+    const linea = documento.createElement("tr");
+    linea.appendChild(texto(documento, "td", String(fila.ejercicio)));
+    const celda = documento.createElement("td");
+    const enlace = texto(documento, "a", fila.archivo.split("/").pop());
+    enlace.setAttribute("href", fila.archivo);
+    celda.appendChild(enlace);
+    linea.appendChild(celda);
+    linea.appendChild(texto(documento, "td", fila.publicado));
+    linea.appendChild(texto(documento, "td",
+      fila.verificado ? "verificado" : "sin verificar"));
+    tabla.appendChild(linea);
+  }
+  seccion.appendChild(tabla);
+
+  seccion.appendChild(texto(documento, "p",
+    "En cada corrida, el build suma el total del ejercicio y lo compara con el "
+    + "informe oficial Cuenta Ahorro Inversión Financiamiento. Si los dos no "
+    + "coinciden, no publica nada."));
+
+  const codigo = texto(documento, "a", "El código de este proyecto");
+  codigo.setAttribute("href", REPOSITORIO);
+  seccion.appendChild(codigo);
   return seccion;
 }
 

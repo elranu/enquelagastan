@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  dibujarAusente, dibujarNodo, dibujarRaiz, indiceParaClave, vistaDeAusente,
-  vistaDeNodo, vistaDeRaiz,
+  dibujarAusente, dibujarFuentes, dibujarNodo, dibujarRaiz, indiceParaClave,
+  vistaDeAusente, vistaDeFuentes, vistaDeNodo, vistaDeRaiz,
 } from "../site/app/pantalla.js";
 import { SOBRE_LO_APROBADO } from "../site/app/desviacion.js";
 import { falsoDocumento, textoDe } from "./falso-documento.mjs";
@@ -159,4 +159,33 @@ test("indiceParaClave junta el archivo del objeto en el nivel 9", async () => {
   const indice = await indiceParaClave(2025, base, "1-0-0-312-16-0-0-1-0", traer);
   assert.deepEqual(indice["1-0-0-312-16-0-0-1-0-1"], delArchivo["1-0-0-312-16-0-0-1-0-1"]);
   assert.ok(indice["1-0-0-312-16-0-0-1-0"], "the join keeps the institutional entries too");
+});
+
+const MANIFIESTO = { ejercicios: [
+  { ejercicio: 2024, archivo: "https://x/credito-anual-2024.zip",
+    publicado: "Fri, 04 Jul 2025 10:44:09 GMT", verificado: true,
+    en_este_artefacto: true },
+  { ejercicio: 2025, archivo: "https://x/credito-anual-2025.zip",
+    publicado: "Wed, 08 Jul 2026 10:39:43 GMT", verificado: true,
+    en_este_artefacto: true },
+] };
+
+test("las fuentes listan un ejercicio por fila con su fecha", () => {
+  const vista = vistaDeFuentes(MANIFIESTO);
+  assert.equal(vista.filas.length, 2);
+  assert.equal(vista.filas[0].ejercicio, 2024);
+  assert.equal(vista.filas[0].verificado, true);
+});
+
+test("la pantalla nombra la licencia y el organismo", () => {
+  const texto = textoDe(dibujarFuentes(vistaDeFuentes(MANIFIESTO), falsoDocumento()));
+  assert.match(texto, /CC BY 4\.0/);
+  assert.match(texto, /Ministerio de Economía/);
+  assert.match(texto, /credito-anual-2025\.zip/);
+});
+
+test("todas las pantallas enlazan a la pantalla de fuentes", () => {
+  // UC-06 is a must: every screen must offer a way to check the source.
+  const raiz = dibujarRaiz(vistaDeRaiz(ESTADO), falsoDocumento());
+  assert.match(textoDe(raiz), /De dónde salen estos números/);
 });
