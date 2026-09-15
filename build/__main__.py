@@ -99,6 +99,42 @@ def construir_ejercicio(ejercicio, destino, leer_cabecera=_leer_cabecera,
     return Resultado("publicado", verificacion, resumen, cabecera)
 
 
+def _leer_manifiesto_anterior(destino: pathlib.Path) -> dict:
+    """Read the manifest of the last build. Map every ejercicio to its entry.
+
+    Give an empty map when the file is absent, so the first build runs with
+    no previous state. Give an empty map on a broken file too, and print one
+    line, instead of stopping the run.
+    """
+    ruta = destino / "manifest.json"
+    if not ruta.exists():
+        return {}
+    try:
+        datos = json.loads(ruta.read_text(encoding="utf-8"))
+        return {entrada["ejercicio"]: entrada for entrada in datos["ejercicios"]}
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        aviso = f"manifest.json is broken ({error}). No previous state."
+        print(aviso, file=sys.stderr)
+        return {}
+
+
+def _valores_anteriores(anteriores: dict, ejercicio: int):
+    """Give the cabecera_anterior and total_anterior of one exercise.
+
+    Give (None, None) when the manifest holds no entry for it, or an entry
+    that is missing a field this needs.
+    """
+    entrada = anteriores.get(ejercicio)
+    if entrada is None:
+        return None, None
+    try:
+        cabecera_anterior = sources.Cabecera(entrada["publicado"],
+                                             entrada["largo"])
+        return cabecera_anterior, entrada["total_devengado"]
+    except (KeyError, TypeError):
+        return None, None
+
+
 def main(argv=None) -> int:
     analizador = argparse.ArgumentParser(prog="python -m build")
     analizador.add_argument("--destino", default="site/data")
@@ -106,24 +142,35 @@ def main(argv=None) -> int:
     opciones = analizador.parse_args(argv)
 
     destino = pathlib.Path(opciones.destino)
-    entradas = []
+    anteriores = _leer_manifiesto_anterior(destino)
+    entradas = dict(anteriores)
     fallo = False
     for ejercicio in (opciones.ejercicio or EJERCICIOS):
-        resultado = construir_ejercicio(ejercicio, destino)
+        cabecera_anterior, total_anterior = _valores_anteriores(
+            anteriores, ejercicio)
+        resultado = construir_ejercicio(
+            ejercicio, destino,
+            cabecera_anterior=cabecera_anterior,
+            total_anterior=total_anterior,
+        )
         print(f"{ejercicio}: {resultado.estado}")
         if resultado.estado == "fallido":
             print(f"  {resultado.verificacion.motivo}", file=sys.stderr)
             fallo = True
-        if resultado.estado == "publicado":
-            entradas.append({
+        elif resultado.estado == "publicado":
+            entradas[ejercicio] = {
                 "ejercicio": ejercicio,
                 "archivo": sources.url_credito(ejercicio),
                 "publicado": resultado.cabecera.last_modified,
+                "largo": resultado.cabecera.largo,
                 "total_devengado": resultado.verificacion.total_propio,
                 "verificado": True,
-            })
-    if entradas:
-        emit.escribir_manifiesto(destino, entradas)
+            }
+
+    nuevas = [entradas[ejercicio] for ejercicio in sorted(entradas)]
+    viejas = [anteriores[ejercicio] for ejercicio in sorted(anteriores)]
+    if nuevas != viejas:
+        emit.escribir_manifiesto(destino, nuevas)
     return 1 if fallo else 0
 
 
