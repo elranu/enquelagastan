@@ -2,3 +2,12 @@
 .scratch/
 node_modules/
 .DS_Store
+__pycache__/
+*.pyc
+
+# The build writes site/data/*.json. Keep the manifest tracked, so the
+# workflow can commit it on every change in the official numbers.
+/site/*
+!/site/data/
+/site/data/*
+!/site/data/manifest.json

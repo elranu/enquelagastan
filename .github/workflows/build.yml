@@ -1,0 +1,65 @@
+# This workflow runs the build every day. It also runs on every push to
+# main, and it runs on demand from the Actions tab.
+name: build
+
+on:
+  schedule:
+    - cron: "17 11 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run the tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Build every exercise
+        run: python -m build --destino site/data
+
+      # The commit of the manifest keeps the repository active, so this
+      # scheduled workflow does not stop. It also gives a public record of
+      # every change in the official numbers.
+      #
+      # Stage the file first, then diff the index against HEAD. A plain
+      # working-tree diff misses a manifest that git never tracked before,
+      # because git diff shows no line for a path outside the index.
+      - name: Commit the manifest when it changed
+        run: |
+          git add site/data/manifest.json
+          if git diff --cached --quiet -- site/data/manifest.json; then
+            echo "the manifest did not change"
+          else
+            git config user.name "the build"
+            git config user.email "noreply@github.com"
+            git commit -m "The official numbers changed"
+            git push
+          fi
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
