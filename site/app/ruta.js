@@ -34,9 +34,9 @@ export function ejercicioDeEntrada(disponibles, hoy = new Date().getFullYear()) 
   // The entry shows the last closed exercise. The open one is not complete, so
   // its pie chart is smaller by the calendar and not by a policy.
   //
-  // The rule reads the year and not the position in the list. An exercise that
-  // failed its build that day is absent from the list, so a rule of "the one
-  // before the last" would step back one year too far.
+  // The rule reads the year and not the position in the list. An exercise
+  // that failed its build that day is absent from the list. A rule of "the
+  // one before the last" would then step back one year too far.
   const cerrados = disponibles.filter((ejercicio) => ejercicio < hoy);
   return cerrados.at(-1) ?? disponibles.at(-1);
 }

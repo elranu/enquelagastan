@@ -1,10 +1,10 @@
 // The difference between what the state spent and what the Congress approved.
 //
 // The same arithmetic names two different facts, and the level decides which.
-// At the level of the proyecto and above, the credito vigente is a legal limit,
-// so the difference says the state spent differently from the vote of the
-// Congress. Below that level the number is an internal distribution, and money
-// moves between the actividades of one proyecto.
+// At the level of the proyecto and above, the credito vigente is a legal
+// limit. The difference then says the state spent differently from the vote
+// of the Congress. Below that level the number is an internal distribution,
+// and money moves between the actividades of one proyecto.
 //
 // Measured on the exercise 2025: 0 exceptions in 2,673 nodos at the proyecto
 // level and above, and 12.7% of the actividades break it. Of the 303
