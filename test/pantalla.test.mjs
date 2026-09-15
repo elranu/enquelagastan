@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { dibujarRaiz, vistaDeRaiz } from "../site/app/pantalla.js";
+import {
+  dibujarAusente, dibujarNodo, dibujarRaiz, indiceParaClave, vistaDeAusente,
+  vistaDeNodo, vistaDeRaiz,
+} from "../site/app/pantalla.js";
 import { SOBRE_LO_APROBADO } from "../site/app/desviacion.js";
 import { falsoDocumento, textoDe } from "./falso-documento.mjs";
 
@@ -59,4 +62,101 @@ test("la pantalla nombra el ejercicio, el total y la fuente", () => {
   assert.match(texto, /2025/);
   assert.match(texto, /105\.250\.000/, "the total in full pesos");
   assert.match(texto, /credito-anual-2025/, "UC-06: every screen names its source");
+});
+
+// A chain of nodos with one child each, followed by one that divides. The
+// visitor never stops at "45" or "45-1"; only their names go to the miga.
+const CON_CADENA = {
+  ...ESTADO,
+  indice: {
+    "45": { n: "Procuracion", d: 31, p: 30, v: 33, g: 30, k: ["1"] },
+    "45-1": { n: "Procuracion", d: 31, p: 30, v: 33, g: 30, k: ["0"] },
+    "45-1-0": { n: "Defensa Juridica", d: 31, p: 30, v: 33, g: 30, k: ["7", "8"] },
+    "45-1-0-7": { n: "Curso", d: 20, p: 20, v: 21, g: 20, k: [] },
+    "45-1-0-8": { n: "Taller", d: 11, p: 10, v: 12, g: 10, k: [] },
+  },
+};
+
+test("el nodo muestra su parte del total nacional", () => {
+  const vista = vistaDeNodo(ESTADO, "88");
+  assert.equal(vista.total, 60);
+  assert.ok(Math.abs(vista.parteDelTotal - 0.6) < 1e-9);
+});
+
+test("la miga conserva los tramos que el navegador saltea", () => {
+  const vista = vistaDeNodo(CON_CADENA, "45-1-0");
+  assert.deepEqual(vista.miga.map((t) => t.nombre),
+    ["Procuracion", "Procuracion", "Defensa Juridica"]);
+});
+
+test("la hoja muestra los codigos exactos al pie", () => {
+  const vista = vistaDeNodo(CON_CADENA, "45-1-0-7");
+  assert.equal(vista.procedencia.codigos.length, 4);
+});
+
+test("un nodo con gasto cero lo dice y no dibuja torta", () => {
+  const cero = { ...ESTADO, indice: { "9": { n: "Sin ejecucion", d: 0, p: 0, v: 0, g: 0, k: [] } } };
+  const vista = vistaDeNodo(cero, "9");
+  assert.equal(vista.total, 0);
+  assert.deepEqual(vista.porciones, []);
+  assert.equal(vista.sinEjecucion, true);
+});
+
+test("abajo del nivel de control la desviacion cambia de nombre", () => {
+  const vista = vistaDeNodo(CON_CADENA, "45-1-0-7");
+  assert.equal(vista.desviacion.tipo, "sobre-lo-aprobado");
+  const hondo = { ...ESTADO, indice: {
+    "1-2-3-4-5-6-7-8": { n: "Actividad", d: 12, p: 10, v: 13, g: 11, k: [] } } };
+  assert.equal(vistaDeNodo(hondo, "1-2-3-4-5-6-7-8").desviacion.tipo,
+    "reasignacion-interna");
+});
+
+test("un grupo otros muestra solo sus claves y lo dice en la miga", () => {
+  // app.js passes a subset of the children when the visitor opens "otros".
+  // vistaDeNodo must show only that subset, and name the group in the miga.
+  const vista = vistaDeNodo(CON_CADENA, "45-1-0", ["45-1-0-8"]);
+  assert.deepEqual(vista.porciones.map((porcion) => porcion.nombre), ["Taller"]);
+  assert.equal(vista.miga.at(-1).nombre, "otros");
+});
+
+test("el camino ausente dice que no existe y ofrece dos salidas", () => {
+  const vista = vistaDeAusente(ESTADO, "88-9-9", { ejercicio: 2024, monto: 12 });
+  assert.equal(vista.clavePedida, "88-9-9");
+  assert.equal(vista.ancestro, "88", "the nearest ancestor that exists");
+  assert.equal(vista.origen.ejercicio, 2024);
+});
+
+test("la pantalla del ausente nombra el ejercicio y las dos salidas", () => {
+  const vista = vistaDeAusente(ESTADO, "88-9-9", { ejercicio: 2024, monto: 12 });
+  const texto = textoDe(dibujarAusente(vista, falsoDocumento()));
+  assert.match(texto, /2025/);
+  assert.match(texto, /2024/);
+});
+
+test("indiceParaClave no toca la red debajo del nivel institucional", async () => {
+  const llamadas = [];
+  const traer = async (ruta) => { llamadas.push(ruta); return { ok: true, json: async () => ({}) }; };
+  const indice = await indiceParaClave(2025, ESTADO.indice, "88-1", traer);
+  assert.equal(indice, ESTADO.indice);
+  assert.equal(llamadas.length, 0, "a clave above the object level asks nothing of the network");
+});
+
+test("indiceParaClave junta el archivo del objeto en el nivel 9", async () => {
+  // The real nodo 1-0-0-312-16-0-0-1-0 declares its five incisos in `k`, and
+  // those incisos live only in one file per nodo of level 9.
+  const base = {
+    "1-0-0-312-16-0-0-1-0": {
+      n: "Formacion y Sancion de Leyes Nacionales", d: 190, p: 160, v: 191, g: 183, k: ["1"],
+    },
+  };
+  const delArchivo = {
+    "1-0-0-312-16-0-0-1-0-1": { n: "Gastos en personal", d: 190, p: 160, v: 191, g: 183, k: [] },
+  };
+  const traer = async (ruta) => {
+    assert.equal(ruta, "data/2025/objeto/1-0-0-312-16-0-0-1-0.json");
+    return { ok: true, json: async () => delArchivo };
+  };
+  const indice = await indiceParaClave(2025, base, "1-0-0-312-16-0-0-1-0", traer);
+  assert.deepEqual(indice["1-0-0-312-16-0-0-1-0-1"], delArchivo["1-0-0-312-16-0-0-1-0-1"]);
+  assert.ok(indice["1-0-0-312-16-0-0-1-0"], "the join keeps the institutional entries too");
 });

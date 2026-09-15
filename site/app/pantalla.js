@@ -4,11 +4,15 @@
 // Every decision lives in the functions that give a view. The functions that
 // draw hold no decision, so a test reads a view without a browser.
 
-import { raices, totalDe } from "./arbol.js";
-import { desviacionDe, ejecucionDe } from "./desviacion.js";
+import { hijosDe, migaDePan, nivelDe, NIVELES_INSTITUCIONALES, raices, totalDe }
+  from "./arbol.js";
+import { cargarObjeto } from "./datos.js";
+import { desviacionDe, ejecucionDe, REASIGNACION_INTERNA, SOBRE_LO_APROBADO }
+  from "./desviacion.js";
 import { conSigno, montoCorto, montoLargo, porcentaje } from "./formato.js";
-import { porcionesDe } from "./porciones.js";
+import { NOMBRE_OTROS, porcionesDe } from "./porciones.js";
 import { procedenciaDe } from "./procedencia.js";
+import { ancestroQueExiste } from "./ruta.js";
 import { dibujarTorta } from "./torta.js";
 
 function totalesDeLaRaiz(indice) {
@@ -39,6 +43,58 @@ export function vistaDeRaiz(estado) {
     desviacion: desviacionDe(comoNodo, ""),
     porciones: porcionesDe(indice, totales.claves, "d").porciones,
     procedencia: procedenciaDe(entrada, indice, ""),
+  };
+}
+
+export async function indiceParaClave(ejercicio, indice, clave, traer) {
+  // A nodo of level 9 declares its children of the object in `k`, and those
+  // children live in one file per nodo of that level. Join that file with the
+  // institutional index once the visitor reaches or crosses that level.
+  if (nivelDe(clave) < NIVELES_INSTITUCIONALES) {
+    return indice;
+  }
+  const hoja = clave.split("-").slice(0, NIVELES_INSTITUCIONALES).join("-");
+  const objeto = await cargarObjeto(ejercicio, hoja, traer);
+  return { ...indice, ...objeto };
+}
+
+export function vistaDeNodo(estado, clave, grupo = null) {
+  const { indice, entrada, ejercicio, disponibles } = estado;
+  const nodo = indice[clave];
+  // A visitor who opens the slice "otros" gets the same nodo, with the pie
+  // chart limited to that group instead of every child. See app.js.
+  const hijos = grupo ?? hijosDe(indice, clave);
+  const { total, porciones } = hijos.length > 0
+    ? porcionesDe(indice, hijos, "d")
+    : { total: nodo.d, porciones: [] };
+  const raizTotal = totalDe(indice, raices(indice), "d");
+  return {
+    ejercicio,
+    anios: disponibles,
+    clave,
+    titulo: nodo.n,
+    total: nodo.d,
+    parteDelTotal: raizTotal > 0 ? nodo.d / raizTotal : null,
+    ejecucion: ejecucionDe(nodo),
+    desviacion: desviacionDe(nodo, clave),
+    miga: grupo
+      ? [...migaDePan(indice, clave), { clave, nombre: NOMBRE_OTROS }]
+      : migaDePan(indice, clave),
+    porciones: total > 0 ? porciones : [],
+    sinEjecucion: nodo.d === 0,
+    procedencia: procedenciaDe(entrada, indice, clave),
+  };
+}
+
+export function vistaDeAusente(estado, clave, origen) {
+  return {
+    ejercicio: estado.ejercicio,
+    anios: estado.disponibles,
+    clavePedida: clave,
+    nombre: origen.nombre ?? clave.split("-").at(-1),
+    origen,
+    ancestro: ancestroQueExiste(estado.indice, clave),
+    procedencia: procedenciaDe(estado.entrada, estado.indice, ""),
   };
 }
 
@@ -113,6 +169,100 @@ export function dibujarRaiz(vista, documento = document) {
     leyenda.appendChild(fila);
   });
   seccion.appendChild(leyenda);
+
+  seccion.appendChild(dibujarProcedencia(vista.procedencia, documento));
+  return seccion;
+}
+
+const PALABRA_DE_LA_DESVIACION = {
+  [SOBRE_LO_APROBADO]: "sobre lo aprobado",
+  [REASIGNACION_INTERNA]: "de reasignación dentro del proyecto",
+};
+
+export function dibujarNodo(vista, documento = document) {
+  const seccion = documento.createElement("section");
+  seccion.setAttribute("class", "pantalla pantalla-nodo");
+  seccion.appendChild(dibujarTiraDeAnios(vista, documento));
+
+  const miga = documento.createElement("nav");
+  miga.setAttribute("class", "miga");
+  miga.setAttribute("aria-label", "Camino");
+  const inicio = texto(documento, "button", "Inicio", "tramo");
+  inicio.setAttribute("data-clave", "");
+  miga.appendChild(inicio);
+  for (const tramo of vista.miga) {
+    const paso = texto(documento, "button", tramo.nombre, "tramo");
+    paso.setAttribute("data-clave", tramo.clave);
+    miga.appendChild(paso);
+  }
+  seccion.appendChild(miga);
+
+  seccion.appendChild(texto(documento, "h1", vista.titulo));
+
+  const cifra = documento.createElement("p");
+  cifra.setAttribute("class", "total");
+  cifra.textContent = `${montoLargo(vista.total)} pesos`;
+  seccion.appendChild(cifra);
+
+  const detalle = [];
+  if (vista.parteDelTotal !== null) {
+    detalle.push(`${porcentaje(vista.parteDelTotal)} del gasto total`);
+  }
+  if (vista.ejecucion !== null) {
+    detalle.push(`${porcentaje(vista.ejecucion)} de lo autorizado`);
+  }
+  if (vista.desviacion) {
+    const palabra = PALABRA_DE_LA_DESVIACION[vista.desviacion.tipo];
+    detalle.push(`${conSigno(vista.desviacion.valor)} ${palabra}`);
+  }
+  seccion.appendChild(texto(documento, "p", detalle.join(" · "), "detalle"));
+
+  if (vista.sinEjecucion) {
+    seccion.appendChild(texto(documento, "p",
+      "Sin ejecución en este ejercicio.", "sin-ejecucion"));
+  } else {
+    seccion.appendChild(dibujarTorta(vista.porciones, documento));
+    const leyenda = documento.createElement("ul");
+    leyenda.setAttribute("class", "leyenda");
+    vista.porciones.forEach((porcion, orden) => {
+      const fila = texto(documento, "li",
+        `${porcion.nombre} · ${porcentaje(porcion.parte)} · ${montoCorto(porcion.monto)}`,
+        `leyenda-${orden}`);
+      fila.setAttribute("data-destino", porcion.destino.join(" "));
+      leyenda.appendChild(fila);
+    });
+    seccion.appendChild(leyenda);
+  }
+
+  seccion.appendChild(dibujarProcedencia(vista.procedencia, documento));
+  return seccion;
+}
+
+export function dibujarAusente(vista, documento = document) {
+  const seccion = documento.createElement("section");
+  seccion.setAttribute("class", "pantalla pantalla-ausente");
+  seccion.appendChild(dibujarTiraDeAnios(vista, documento));
+
+  seccion.appendChild(texto(documento, "h1",
+    `"${vista.nombre}" no existe en el ejercicio ${vista.ejercicio}`));
+
+  if (vista.origen && vista.origen.monto !== undefined) {
+    seccion.appendChild(texto(documento, "p",
+      `Existió en ${vista.origen.ejercicio}, con ${montoCorto(vista.origen.monto)} de pesos.`,
+      "origen"));
+  }
+
+  if (vista.ancestro !== null) {
+    const subir = texto(documento, "button", "Subir al nivel que sí existe",
+      "principal");
+    subir.setAttribute("data-clave", vista.ancestro);
+    seccion.appendChild(subir);
+  }
+  const volver = texto(documento, "button",
+    `Volver a ${vista.origen.ejercicio}`, "secundario");
+  volver.setAttribute("data-anio", String(vista.origen.ejercicio));
+  volver.setAttribute("data-clave", vista.clavePedida);
+  seccion.appendChild(volver);
 
   seccion.appendChild(dibujarProcedencia(vista.procedencia, documento));
   return seccion;
