@@ -56,3 +56,8 @@ test("sube al ancestro que existe en el otro ejercicio", () => {
   assert.equal(ancestroQueExiste(indice, "88-1"), "88-1");
   assert.equal(ancestroQueExiste(indice, "77-7"), null);
 });
+
+test("la raiz siempre existe", () => {
+  const indice = { "88": { n: "Capital Humano", k: [] } };
+  assert.equal(ancestroQueExiste(indice, ""), "");
+});

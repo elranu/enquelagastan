@@ -50,6 +50,10 @@ export function vecino(disponibles, ejercicio, paso) {
 }
 
 export function ancestroQueExiste(indice, clave) {
+  if (clave === "") {
+    // The root always exists. It carries no code to look up.
+    return "";
+  }
   const codigos = clave.split("-");
   for (let corte = codigos.length; corte > 0; corte -= 1) {
     const parcial = codigos.slice(0, corte).join("-");
