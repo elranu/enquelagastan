@@ -6,6 +6,7 @@ from unittest import mock
 
 from build import verify
 from build.__main__ import (
+    SIN_PUBLICACION,
     Resultado,
     _leer_manifiesto_anterior,
     _total_anterior,
@@ -208,7 +209,10 @@ class TestMain(unittest.TestCase):
         self.assertEqual(codigo, 1)
         por_ejercicio = {e["ejercicio"]: e
                          for e in self._manifiesto()["ejercicios"]}
-        self.assertEqual(por_ejercicio[2024], entrada_2024)
+        self.assertEqual(por_ejercicio[2024],
+                         {**entrada_2024, "en_este_artefacto": False})
+        self.assertEqual(por_ejercicio[2024]["total_devengado"], 20.0)
+        self.assertTrue(por_ejercicio[2025]["en_este_artefacto"])
         self.assertEqual(por_ejercicio[2025]["publicado"], "new-2025")
         self.assertEqual(por_ejercicio[2025]["largo"], 999)
 
@@ -218,7 +222,8 @@ class TestMain(unittest.TestCase):
         says nothing. The heartbeat carries the daily commit instead."""
         entrada = {"ejercicio": 2025, "archivo": url_credito(2025),
                   "publicado": "old", "largo": 100,
-                  "total_devengado": 97_000_000.0, "verificado": True}
+                  "total_devengado": 97_000_000.0, "verificado": True,
+                  "en_este_artefacto": True}
         self._escribir_manifiesto_previo([entrada])
 
         def construir_falso(ejercicio, destino, total_anterior=None):
@@ -251,7 +256,7 @@ class TestMain(unittest.TestCase):
     def test_main_no_escribe_nada_cuando_el_total_cae_debajo_del_anterior(self):
         entrada = {"ejercicio": 2025, "archivo": "url", "publicado": "old",
                   "largo": 100, "total_devengado": 200_000_000.0,
-                  "verificado": True}
+                  "verificado": True, "en_este_artefacto": False}
         self._escribir_manifiesto_previo([entrada])
         recibido = {}
 
@@ -267,9 +272,100 @@ class TestMain(unittest.TestCase):
             codigo = main(["--destino", str(self.destino), "--ejercicio", "2025"])
             escribir_falso.assert_not_called()
 
-        self.assertEqual(codigo, 1)
+        # The only exercise of this run failed, so nothing published.
+        self.assertEqual(codigo, SIN_PUBLICACION)
         self.assertEqual(recibido["total_anterior"], 200_000_000.0)
         self.assertEqual(self._manifiesto()["ejercicios"], [entrada])
+
+    def test_una_excepcion_no_frena_a_otro_ejercicio(self):
+        """A download that raises stops one exercise alone. The other
+        exercise publishes, the heartbeat lands, and the run exits
+        non-zero."""
+        def construir_falso(ejercicio, destino, total_anterior=None):
+            if ejercicio == 2024:
+                raise OSError("503 from the server of the source")
+            return Resultado("publicado", VERIFICACION_QUE_PASA, {"nodos": 1},
+                             Cabecera("new-2025", 999))
+
+        with mock.patch("build.__main__.construir_ejercicio",
+                       side_effect=construir_falso):
+            codigo = main(["--destino", str(self.destino),
+                          "--ejercicio", "2024", "--ejercicio", "2025"])
+
+        self.assertEqual(codigo, 1)
+        por_ejercicio = {e["ejercicio"]: e
+                         for e in self._manifiesto()["ejercicios"]}
+        self.assertEqual(por_ejercicio[2025]["publicado"], "new-2025")
+        self.assertNotIn(2024, por_ejercicio)
+        self.assertTrue((self.destino / "heartbeat.json").exists())
+
+    def test_una_excepcion_deja_la_entrada_anterior_fuera_del_artefacto(self):
+        """The entry keeps total_devengado, because the next run needs that
+        baseline. The entry says that this artifact holds no data for it."""
+        entrada_2024 = {"ejercicio": 2024, "archivo": "url-2024",
+                        "publicado": "old-2024", "largo": 20,
+                        "total_devengado": 20.0, "verificado": True,
+                        "en_este_artefacto": True}
+        self._escribir_manifiesto_previo([entrada_2024])
+
+        def construir_falso(ejercicio, destino, total_anterior=None):
+            if ejercicio == 2024:
+                raise ValueError("the official report holds no row")
+            return Resultado("publicado", VERIFICACION_QUE_PASA, {"nodos": 1},
+                             Cabecera("new-2025", 999))
+
+        with mock.patch("build.__main__.construir_ejercicio",
+                       side_effect=construir_falso):
+            codigo = main(["--destino", str(self.destino),
+                          "--ejercicio", "2024", "--ejercicio", "2025"])
+
+        self.assertEqual(codigo, 1)
+        por_ejercicio = {e["ejercicio"]: e
+                         for e in self._manifiesto()["ejercicios"]}
+        self.assertFalse(por_ejercicio[2024]["en_este_artefacto"])
+        self.assertEqual(por_ejercicio[2024]["total_devengado"], 20.0)
+
+    def test_una_verificacion_fallida_marca_la_entrada_fuera_del_artefacto(self):
+        """A check that fails does the same as an exception. The entry keeps
+        its baseline, and it says that it is not in this artifact."""
+        entrada_2024 = {"ejercicio": 2024, "archivo": "url-2024",
+                        "publicado": "old-2024", "largo": 20,
+                        "total_devengado": 20.0, "verificado": True,
+                        "en_este_artefacto": True}
+        self._escribir_manifiesto_previo([entrada_2024])
+
+        def construir_falso(ejercicio, destino, total_anterior=None):
+            if ejercicio == 2024:
+                return Resultado("fallido", verify.Verificacion(
+                    0.0, 0.0, 0.0, "x", False, "no coincide"))
+            return Resultado("publicado", VERIFICACION_QUE_PASA, {"nodos": 1},
+                             Cabecera("new-2025", 999))
+
+        with mock.patch("build.__main__.construir_ejercicio",
+                       side_effect=construir_falso):
+            main(["--destino", str(self.destino),
+                 "--ejercicio", "2024", "--ejercicio", "2025"])
+
+        por_ejercicio = {e["ejercicio"]: e
+                         for e in self._manifiesto()["ejercicios"]}
+        self.assertFalse(por_ejercicio[2024]["en_este_artefacto"])
+        self.assertEqual(por_ejercicio[2024]["total_devengado"], 20.0)
+
+    def test_el_codigo_dice_que_ningun_ejercicio_publico(self):
+        """Every exercise fails. The guard fires: main gives the code that
+        stops the upload and the deploy. The heartbeat still lands."""
+        def construir_falso(ejercicio, destino, total_anterior=None):
+            raise OSError("503 from the server of the source")
+
+        with mock.patch("build.__main__.construir_ejercicio",
+                       side_effect=construir_falso):
+            codigo = main(["--destino", str(self.destino),
+                          "--ejercicio", "2024", "--ejercicio", "2025"])
+
+        self.assertEqual(codigo, SIN_PUBLICACION)
+        self.assertTrue((self.destino / "heartbeat.json").exists())
+        self.assertFalse((self.destino / "2024").exists())
+        self.assertFalse((self.destino / "2025").exists())
 
     def test_main_trata_un_manifiesto_invalido_como_si_no_hubiera_build_anterior(self):
         (self.destino / "manifest.json").write_text("{ no es json",

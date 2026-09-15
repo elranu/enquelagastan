@@ -21,6 +21,14 @@ from build.tree import construir
 
 EJERCICIOS = (2024, 2025, 2026)
 
+SIN_PUBLICACION = 2
+"""The exit code of a run that published no exercise.
+
+The workflow reads this code. It does not upload the artifact, and it does
+not deploy. The live site keeps the data of the last good run. A code of 1
+means that one exercise or more published, so the artifact holds data.
+"""
+
 
 @dataclass
 class Resultado:
@@ -146,6 +154,17 @@ def _total_anterior(anteriores: dict, ejercicio: int):
     return total if isinstance(total, (int, float)) else None
 
 
+def _resultado_de_la_excepcion(ejercicio: int, error: Exception) -> Resultado:
+    """Turn an exception of one exercise into a failed Resultado."""
+    motivo = (
+        f"the build of the exercise {ejercicio} raised "
+        f"{type(error).__name__}: {error}"
+    )
+    verificacion = verify.Verificacion(0.0, 0.0, 0.0, "the build of this run",
+                                       False, motivo)
+    return Resultado("fallido", verificacion)
+
+
 def main(argv=None) -> int:
     analizador = argparse.ArgumentParser(prog="python -m build")
     analizador.add_argument("--destino", default="site/data")
@@ -156,11 +175,18 @@ def main(argv=None) -> int:
     anteriores = _leer_manifiesto_anterior(destino)
     entradas = dict(anteriores)
     fallo = False
+    publicados = 0
     for ejercicio in (opciones.ejercicio or EJERCICIOS):
-        resultado = construir_ejercicio(
-            ejercicio, destino,
-            total_anterior=_total_anterior(anteriores, ejercicio),
-        )
+        try:
+            resultado = construir_ejercicio(
+                ejercicio, destino,
+                total_anterior=_total_anterior(anteriores, ejercicio),
+            )
+        except Exception as error:
+            # A download that fails, a ZIP that arrives cut, or a report
+            # that is not JSON raises here. The exception stops this
+            # exercise alone. The loop goes on, and the heartbeat lands.
+            resultado = _resultado_de_la_excepcion(ejercicio, error)
         print(f"{ejercicio}: {resultado.estado}")
         if resultado.estado == "fallido":
             print(f"  {resultado.verificacion.motivo}", file=sys.stderr)
@@ -169,7 +195,13 @@ def main(argv=None) -> int:
             print(f"  the exercise {ejercicio} holds no data in this run",
                   file=sys.stderr)
             fallo = True
+            entrada = entradas.get(ejercicio)
+            if isinstance(entrada, dict):
+                # Keep the entry, because total_devengado is the baseline of
+                # the next run. Say that this artifact holds no data for it.
+                entradas[ejercicio] = {**entrada, "en_este_artefacto": False}
         elif resultado.estado == "publicado":
+            publicados += 1
             entradas[ejercicio] = {
                 "ejercicio": ejercicio,
                 "archivo": sources.url_credito(ejercicio),
@@ -177,6 +209,7 @@ def main(argv=None) -> int:
                 "largo": resultado.cabecera.largo,
                 "total_devengado": resultado.verificacion.total_propio,
                 "verificado": True,
+                "en_este_artefacto": True,
             }
 
     nuevas = [entradas[ejercicio] for ejercicio in sorted(entradas)]
@@ -187,6 +220,10 @@ def main(argv=None) -> int:
         destino,
         datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d"),
     )
+    if publicados == 0:
+        print("no exercise published. The workflow keeps the live site.",
+              file=sys.stderr)
+        return SIN_PUBLICACION
     return 1 if fallo else 0
 
 

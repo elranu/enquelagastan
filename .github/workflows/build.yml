@@ -22,7 +22,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     outputs:
-      fallo: ${{ steps.construir.outcome == 'failure' }}
+      fallo: ${{ steps.construir.outputs.codigo != '0' }}
+      publico: ${{ steps.construir.outputs.codigo != '2' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -36,10 +37,19 @@ jobs:
       # A check that fails stops one exercise, and never the others. The
       # build keeps going, the artifact carries every exercise that passed,
       # and the job "report" below turns the run red.
+      #
+      # The step keeps the exit code of the build in an output, and it ends
+      # green. The later steps must run: the heartbeat must reach the
+      # repository, and the exercises that passed must reach the visitor.
+      # The code 2 says that no exercise published. The upload and the
+      # deploy below then do not run, so the live site keeps its data.
       - name: Build every exercise
         id: construir
-        continue-on-error: true
-        run: python -m build --destino site/data
+        run: |
+          codigo=0
+          python -m build --destino site/data || codigo=$?
+          echo "codigo=$codigo" >> "$GITHUB_OUTPUT"
+          echo "the build exited with $codigo"
 
       # The heartbeat carries the date of this run. The workflow commits it
       # every day, so the repository never goes quiet. GitHub disables a
@@ -68,12 +78,16 @@ jobs:
             git push
           fi
 
+      # A run that published no exercise uploads nothing. An artifact with
+      # no data would replace the live site with an empty one.
       - uses: actions/upload-pages-artifact@v3
+        if: steps.construir.outputs.codigo != '2'
         with:
           path: site
 
   deploy:
     needs: build
+    if: needs.build.outputs.publico == 'true'
     runs-on: ubuntu-latest
     permissions:
       pages: write
