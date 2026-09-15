@@ -12,9 +12,17 @@ on:
 permissions:
   contents: write
 
+# Two runs that overlap would push to main at the same time, and one push
+# would fail. A run waits for the one before it.
+concurrency:
+  group: build
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      fallo: ${{ steps.construir.outcome == 'failure' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -25,25 +33,38 @@ jobs:
       - name: Run the tests
         run: python -m unittest discover -s tests -v
 
+      # A check that fails stops one exercise, and never the others. The
+      # build keeps going, the artifact carries every exercise that passed,
+      # and the job "report" below turns the run red.
       - name: Build every exercise
+        id: construir
+        continue-on-error: true
         run: python -m build --destino site/data
 
-      # The commit of the manifest keeps the repository active, so this
-      # scheduled workflow does not stop. It also gives a public record of
-      # every change in the official numbers.
+      # The heartbeat carries the date of this run. The workflow commits it
+      # every day, so the repository never goes quiet. GitHub disables a
+      # scheduled workflow after 60 days with no activity in a public
+      # repository.
       #
-      # Stage the file first, then diff the index against HEAD. A plain
-      # working-tree diff misses a manifest that git never tracked before,
+      # This premise is unproven: the documentation of GitHub does not say
+      # whether a commit that GITHUB_TOKEN makes resets that clock. Watch
+      # the workflow near the 60th quiet day.
+      #
+      # The manifest is the public record of every change in the official
+      # numbers. It changes only on such a change.
+      #
+      # Stage the files first, then diff the index against HEAD. A plain
+      # working-tree diff misses a file that git never tracked before,
       # because git diff shows no line for a path outside the index.
-      - name: Commit the manifest when it changed
+      - name: Commit the manifest and the heartbeat when they changed
         run: |
-          git add site/data/manifest.json
-          if git diff --cached --quiet -- site/data/manifest.json; then
-            echo "the manifest did not change"
+          git add site/data/manifest.json site/data/heartbeat.json
+          if git diff --cached --quiet; then
+            echo "nothing changed"
           else
             git config user.name "the build"
             git config user.email "noreply@github.com"
-            git commit -m "The official numbers changed"
+            git commit -m "The build ran"
             git push
           fi
 
@@ -63,3 +84,16 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # The exercises that passed reach the visitor first. Then this job fails
+  # the run, so a person sees the red mark and reads the log of the build.
+  report:
+    needs: [build, deploy]
+    if: always() && needs.build.outputs.fallo == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report the exercise that did not publish
+        run: |
+          echo "One exercise or more did not pass its checks."
+          echo "Read the step 'Build every exercise' of the job 'build'."
+          exit 1
