@@ -13,6 +13,7 @@ from build.__main__ import (
     construir_ejercicio,
     main,
 )
+from build.rows import COLUMNAS_NECESARIAS
 from build.sources import Cabecera, url_credito
 
 FIXTURE = pathlib.Path(__file__).parent / "fixtures" / "mini.csv"
@@ -28,23 +29,37 @@ REPORTE_QUE_NO_COINCIDE = [
 
 EJES_DEL_FIXTURE = ("jurisdiccion", "subjurisdiccion", "entidad", "servicio",
                     "programa")
-MEDIDAS = ("credito_presupuestado", "credito_vigente", "credito_comprometido",
-           "credito_devengado", "credito_pagado")
 
 
 def fila_csv() -> str:
     """A CSV of two rows. One row holds the full camino of the programa. The
-    other row stops at the servicio, which INV-04 must catch."""
-    cabeceras = [f"{eje}_{campo}" for eje in EJES_DEL_FIXTURE
-                 for campo in ("id", "desc")] + list(MEDIDAS)
-    completa = ["88", "Capital Humano", "1", "Capital Humano", "0",
-                "Capital Humano", "100", "ANSES", "21", "Jubilaciones"]
-    corta = completa[:8] + ["", ""]
-    return "\n".join([
-        ",".join(cabeceras),
-        ",".join(completa + ["999", "999", "60", "60", "60"]),
-        ",".join(corta + ["999", "999", "40", "40", "40"]),
-    ]) + "\n"
+    other row stops at the servicio, which INV-04 must catch.
+
+    The header carries every column that the build reads. A shorter header
+    fails on its own, and that is another test.
+    """
+    cabeceras = list(COLUMNAS_NECESARIAS)
+    valores = {
+        "jurisdiccion_id": "88", "jurisdiccion_desc": "Capital Humano",
+        "subjurisdiccion_id": "1", "subjurisdiccion_desc": "Capital Humano",
+        "entidad_id": "0", "entidad_desc": "Capital Humano",
+        "servicio_id": "100", "servicio_desc": "ANSES",
+    }
+
+    def fila(programa: str, monto: str) -> str:
+        celdas = dict.fromkeys(cabeceras, "")
+        celdas.update(valores)
+        celdas["programa_id"] = programa
+        celdas["programa_desc"] = "Jubilaciones" if programa else ""
+        celdas["credito_presupuestado"] = "999"
+        celdas["credito_vigente"] = "999"
+        celdas["credito_comprometido"] = monto
+        celdas["credito_devengado"] = monto
+        celdas["credito_pagado"] = monto
+        return ",".join(celdas[columna] for columna in cabeceras)
+
+    return "\n".join([",".join(cabeceras), fila("21", "60"),
+                       fila("", "40")]) + "\n"
 
 
 VERIFICACION_QUE_PASA = verify.Verificacion(97_000_000.0, 97_000_000.0, 0.0,
@@ -127,6 +142,41 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(resultado.estado, "fallido")
         self.assertIn("INV-04", resultado.verificacion.motivo)
         self.assertFalse((self.destino / "2025").exists())
+
+
+class TestFallosDeLaFuente(unittest.TestCase):
+    """A source that stalls or that gives no date must fail one exercise. It
+    must not stop the run, and it must publish nothing for that exercise."""
+
+    def setUp(self):
+        self.temporal = tempfile.TemporaryDirectory()
+        self.destino = pathlib.Path(self.temporal.name)
+        self.addCleanup(self.temporal.cleanup)
+
+    def _main_con(self, leer_cabecera):
+        """Fail at the header. The build reads the header first, so it starts
+        no download and this test reaches no network."""
+        with mock.patch("build.sources.leer_cabecera", leer_cabecera):
+            return main(["--destino", str(self.destino), "--ejercicio", "2025"])
+
+    def test_un_tiempo_limite_reporta_el_ejercicio_como_fallido(self):
+        def agotar(url):
+            raise TimeoutError("the read timed out")
+
+        self.assertEqual(self._main_con(agotar), SIN_PUBLICACION)
+        self.assertFalse((self.destino / "2025").exists())
+
+    def test_una_cabecera_sin_fecha_no_publica(self):
+        """INV-03. The build must not publish a number with no date."""
+        def sin_fecha(url):
+            raise ValueError("the source gives no Last-Modified for this file")
+
+        self.assertEqual(self._main_con(sin_fecha), SIN_PUBLICACION)
+        self.assertFalse((self.destino / "2025").exists())
+        manifiesto = self.destino / "manifest.json"
+        if manifiesto.exists():
+            datos = json.loads(manifiesto.read_text(encoding="utf-8"))
+            self.assertEqual(datos["ejercicios"], [])
 
 
 class TestTotalAnterior(unittest.TestCase):
