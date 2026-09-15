@@ -319,3 +319,20 @@ spending, under each institutional leaf.
 
 **The full tree of one exercise is 1 MB. The entry screen is 1.3 KB.** A server
 that computes an aggregate at the time of the request is not necessary.
+
+### What the build really writes (2026-09-15)
+
+The measurement above stores one number per nodo. The build stores five. The
+deviation against the approved budget needs `presupuestado`. The part of the
+authorized budget that the state executed needs `vigente`. The ladder of the
+execution needs `pagado`. So the files are larger than the table above.
+
+| Exercise | `institucional.json` raw | gzip | Nodos | Object files | Median | Largest | Total gzip |
+|---|---|---|---|---|---|---|---|
+| 2024 | 1,396 KB | 210 KB | 8,869 | 2,904 | 412 B | 7.0 KB | 3.08 MB |
+| 2025 | 1,154 KB | **177 KB** | 7,470 | 2,418 | 532 B | **6.6 KB** | 2.91 MB |
+| 2026 | 918 KB | 137 KB | 6,014 | 1,871 | 602 B | 6.2 KB | 2.22 MB |
+
+The three exercises build in 15.8 seconds, and they occupy 62 MB on disk before
+compression. The first paint reads the first level only, which stays small, so
+the growth does not move the target of 1.5 seconds.
