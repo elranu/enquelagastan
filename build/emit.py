@@ -51,9 +51,9 @@ def escribir_ejercicio(arbol: dict, ejercicio: int,
     hojas = [
         camino for camino in arbol
         if nivel(camino) == NIVELES_INSTITUCIONALES
-        # A camino with no hijos ends the institutional axis early. It
-        # counts as a hoja, but it gets no object file: it has no
-        # descendant, so its group in `grupos` is empty.
+        # A camino with no hijos ends its path early. It still counts
+        # as a hoja. It has no descendant. Its group in `grupos` stays
+        # empty. It gets no object file.
         or (nivel(camino) < NIVELES_INSTITUCIONALES and not arbol[camino].hijos)
     ]
 
