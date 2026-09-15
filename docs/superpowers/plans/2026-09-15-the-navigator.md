@@ -2035,7 +2035,7 @@ Add to `.github/workflows/build.yml`, before the step that builds:
           node-version: "22"
 
       - name: Run the tests of the navigator
-        run: node --test test/
+        run: node --test
 ```
 
 The step must run before the build, so a navigator that fails its tests never reaches the publication.
@@ -2069,7 +2069,7 @@ The README says today that the screens do not exist. They exist now. Rewrite the
 - [ ] **Step 5: Run everything**
 
 ```bash
-node --test test/
+node --test
 python -m unittest discover -s tests -v
 python -m build --destino site/data
 python3 -m http.server 8000 --directory site
