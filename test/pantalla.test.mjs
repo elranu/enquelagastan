@@ -3,10 +3,10 @@ import assert from "node:assert/strict";
 
 import {
   dibujarAusente, dibujarFuentes, dibujarNodo, dibujarRaiz, indiceParaClave,
-  vistaDeAusente, vistaDeFuentes, vistaDeNodo, vistaDeRaiz,
+  resolverPantalla, vistaDeAusente, vistaDeFuentes, vistaDeNodo, vistaDeRaiz,
 } from "../site/app/pantalla.js";
 import { SOBRE_LO_APROBADO } from "../site/app/desviacion.js";
-import { falsoDocumento, textoDe } from "./falso-documento.mjs";
+import { controles, falsoDocumento, textoDe } from "./falso-documento.mjs";
 
 const ESTADO = {
   ejercicio: 2025,
@@ -197,4 +197,106 @@ test("todas las pantallas enlazan a la pantalla de fuentes", () => {
   // UC-06 is a must: every screen must offer a way to check the source.
   const raiz = dibujarRaiz(vistaDeRaiz(ESTADO), falsoDocumento());
   assert.match(textoDe(raiz), /De dónde salen estos números/);
+});
+
+test("la pantalla escribe la palabra que corresponde a cada tipo de desviacion", () => {
+  // PALABRA_DE_LA_DESVIACION exists so that no screen shows one concept and
+  // names it the other. Assert the rendered word for both types.
+  const alto = textoDe(dibujarNodo(vistaDeNodo(CON_CADENA, "45-1-0"), falsoDocumento()));
+  assert.match(alto, /sobre lo aprobado/);
+  assert.doesNotMatch(alto, /reasignación/);
+
+  const hondo = { ...ESTADO, indice: {
+    "1-2-3-4-5-6-7-8": { n: "Actividad", d: 12, p: 10, v: 13, g: 11, k: [] } } };
+  const texto = textoDe(
+    dibujarNodo(vistaDeNodo(hondo, "1-2-3-4-5-6-7-8"), falsoDocumento()),
+  );
+  assert.match(texto, /de reasignación dentro del proyecto/);
+  assert.doesNotMatch(texto, /sobre lo aprobado/);
+});
+
+test("la pantalla del ausente dibuja las dos salidas como controles", () => {
+  const vista = vistaDeAusente(ESTADO, "88-9-9", { ejercicio: 2024, monto: 12 });
+  const pantalla = dibujarAusente(vista, falsoDocumento());
+  // The miga carries "88" and the year strip carries "2024", so a test that
+  // looks only at the values passes with no exit at all. Read the controls.
+  const subir = controles(pantalla, "data-clave")
+    .find((control) => control.texto === "Subir al nivel que sí existe");
+  const volver = controles(pantalla, "data-anio")
+    .find((control) => control.texto === "Volver a 2024");
+  assert.equal(subir.valor, "88", "subir al ancestro que existe");
+  assert.equal(volver.valor, "2024", "volver al ejercicio de origen");
+});
+
+test("la pantalla del ausente lleva miga de pan", () => {
+  // Without it, a P2b reached by a shared URL has no working control.
+  const vista = vistaDeAusente(ESTADO, "88-9-9", { ejercicio: 2024, monto: 12 });
+  const pantalla = dibujarAusente(vista, falsoDocumento());
+  const tramos = controles(pantalla, "data-clave").map((control) => control.texto);
+  assert.ok(tramos.includes("Inicio"));
+  assert.ok(tramos.includes("Capital Humano"));
+});
+
+test("la raiz con un grupo otros nombra el grupo en la miga", () => {
+  const pantalla = dibujarRaiz(vistaDeRaiz(ESTADO, ["90", "50"]), falsoDocumento());
+  const tramos = controles(pantalla, "data-clave").map((control) => control.texto);
+  assert.deepEqual(tramos, ["Inicio", "otros"]);
+});
+
+test("la raiz sin grupo no dibuja miga", () => {
+  const pantalla = dibujarRaiz(vistaDeRaiz(ESTADO), falsoDocumento());
+  assert.equal(controles(pantalla, "data-clave").length, 0);
+});
+
+test("la pantalla de fuentes ofrece una salida", () => {
+  // The flow diagram draws P4 --> P1, and an article links to P4 directly.
+  const pantalla = dibujarFuentes(vistaDeFuentes(MANIFIESTO), falsoDocumento());
+  assert.ok(controles(pantalla, "href").some((control) => control.valor === "#/"));
+});
+
+test("una hoja con gasto real no dibuja torta vacia", () => {
+  // What matters for the chart is "no children", not "no spending".
+  const hoja = { ...ESTADO, indice: { "7": { n: "Hoja", d: 9, p: 8, v: 9, g: 8, k: [] } } };
+  const pantalla = dibujarNodo(vistaDeNodo(hoja, "7"), falsoDocumento());
+  const etiquetas = pantalla.hijos.map((hijo) => hijo.etiqueta);
+  assert.ok(!etiquetas.includes("svg"), "no pie chart without children");
+  assert.doesNotMatch(textoDe(pantalla), /Sin ejecución/, "it did spend");
+});
+
+// resolverPantalla holds the routing decision, so a test reads it without a
+// DOM. app.js keeps only the DOM and the history.
+
+test("resolverPantalla salta el nodo de un solo hijo", () => {
+  assert.deepEqual(resolverPantalla(CON_CADENA, "45"), { tipo: "saltar", clave: "45-1-0" });
+  assert.deepEqual(resolverPantalla(CON_CADENA, "45-1-0", null),
+    { tipo: "nodo", clave: "45-1-0", grupo: null });
+});
+
+test("resolverPantalla manda a la pantalla del ausente", () => {
+  assert.deepEqual(resolverPantalla(ESTADO, "88-9-9"), { tipo: "ausente", clave: "88-9-9" });
+});
+
+test("resolverPantalla descarta un grupo otros de otro ejercicio", () => {
+  // The arrow of the year keeps the clave, so a group can survive into an
+  // exercise whose index does not hold its claves.
+  const grupo = { ejercicio: 2024, deClave: "88-1", claves: ["88-1-5", "88-1-6"] };
+  const enOtroEjercicio = resolverPantalla(ESTADO, "88-1", grupo);
+  assert.equal(enOtroEjercicio.grupo, null);
+  const delMismo = resolverPantalla(ESTADO, "88-1",
+    { ...grupo, ejercicio: 2025, claves: ["88-1"] });
+  assert.deepEqual(delMismo.grupo, ["88-1"]);
+});
+
+test("resolverPantalla descarta un grupo otros de otra clave", () => {
+  const grupo = { ejercicio: 2025, deClave: "90", claves: ["50"] };
+  assert.equal(resolverPantalla(ESTADO, "88-1", grupo).grupo, null);
+});
+
+test("el ausente sin ejercicio de origen no ofrece volver al mismo ejercicio", () => {
+  // A shared URL gives no origin. "Volver a 2025" while on 2025 is inert.
+  const vista = vistaDeAusente(ESTADO, "88-9-9", { ejercicio: 2025 });
+  const pantalla = dibujarAusente(vista, falsoDocumento());
+  assert.equal(controles(pantalla, "data-anio")
+    .filter((control) => control.texto.startsWith("Volver")).length, 0);
+  assert.ok(controles(pantalla, "data-clave").length > 0, "the miga is the exit");
 });

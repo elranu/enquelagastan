@@ -4,8 +4,10 @@
 // Every decision lives in the functions that give a view. The functions that
 // draw hold no decision, so a test reads a view without a browser.
 
-import { hijosDe, migaDePan, nivelDe, NIVELES_INSTITUCIONALES, raices, totalDe }
-  from "./arbol.js";
+import {
+  hijosDe, migaDePan, nivelDe, NIVELES_INSTITUCIONALES, raices, saltarHijoUnico,
+  totalDe,
+} from "./arbol.js";
 import { cargarObjeto } from "./datos.js";
 import { desviacionDe, ejecucionDe, REASIGNACION_INTERNA, SOBRE_LO_APROBADO }
   from "./desviacion.js";
@@ -44,6 +46,9 @@ export function vistaDeRaiz(estado, grupo = null) {
     total: entrada.total_devengado / 1_000_000,
     ejecucion: ejecucionDe(comoNodo),
     desviacion: desviacionDe(comoNodo, ""),
+    // The headline stays the total of the country. The miga names the group,
+    // so the visitor reads a part of "otros" as a part and not as the whole.
+    miga: grupo ? [{ clave: "", nombre: NOMBRE_OTROS }] : [],
     porciones: porcionesDe(indice, claves, "d").porciones,
     procedencia: procedenciaDe(entrada, indice, ""),
   };
@@ -90,15 +95,47 @@ export function vistaDeNodo(estado, clave, grupo = null) {
 }
 
 export function vistaDeAusente(estado, clave, origen) {
+  const ancestro = ancestroQueExiste(estado.indice, clave);
   return {
     ejercicio: estado.ejercicio,
     anios: estado.disponibles,
     clavePedida: clave,
     nombre: origen.nombre ?? clave.split("-").at(-1),
     origen,
-    ancestro: ancestroQueExiste(estado.indice, clave),
+    ancestro,
+    // A shared URL can land here with no history behind it. The miga is then
+    // the only control that moves the visitor up the tree.
+    miga: migaDePan(estado.indice, ancestro ?? ""),
     procedencia: procedenciaDe(estado.entrada, estado.indice, ""),
   };
+}
+
+export function resolverPantalla(estado, clave, grupoOtros = null) {
+  // The one decision of the navigator: what to draw for a requested clave.
+  // app.js keeps only the DOM and the history, so a test reads this rule.
+  //
+  // The group "otros" names no nodo, so the URL cannot carry it. It belongs
+  // to one exercise and one clave. The arrow of the year keeps the clave, so
+  // a group of another exercise must go, or its claves miss the new index.
+  const grupo = grupoOtros
+    && grupoOtros.ejercicio === estado.ejercicio
+    && grupoOtros.deClave === clave
+    ? grupoOtros.claves
+    : null;
+  if (clave === "") {
+    return { tipo: "raiz", clave: "", grupo };
+  }
+  if (!estado.indice[clave]) {
+    return { tipo: "ausente", clave };
+  }
+  // The visitor never lands on a nodo with one child. A chain that crosses
+  // the object level needs a second pass, because the index of the new clave
+  // is not loaded yet. app.js repeats until the destino stops moving.
+  const { destino } = saltarHijoUnico(estado.indice, clave);
+  if (destino !== clave) {
+    return { tipo: "saltar", clave: destino };
+  }
+  return { tipo: "nodo", clave, grupo };
 }
 
 function texto(documento, etiqueta, contenido, clase) {
@@ -125,6 +162,21 @@ export function dibujarTiraDeAnios(vista, documento) {
   return tira;
 }
 
+export function dibujarMiga(vista, documento) {
+  const miga = documento.createElement("nav");
+  miga.setAttribute("class", "miga");
+  miga.setAttribute("aria-label", "Camino");
+  const inicio = texto(documento, "button", "Inicio", "tramo");
+  inicio.setAttribute("data-clave", "");
+  miga.appendChild(inicio);
+  for (const tramo of vista.miga) {
+    const paso = texto(documento, "button", tramo.nombre, "tramo");
+    paso.setAttribute("data-clave", tramo.clave);
+    miga.appendChild(paso);
+  }
+  return miga;
+}
+
 export function dibujarProcedencia(procedencia, documento) {
   const pie = documento.createElement("footer");
   pie.setAttribute("class", "procedencia");
@@ -148,6 +200,9 @@ export function dibujarRaiz(vista, documento = document) {
   const seccion = documento.createElement("section");
   seccion.setAttribute("class", "pantalla pantalla-raiz");
   seccion.appendChild(dibujarTiraDeAnios(vista, documento));
+  if (vista.miga.length > 0) {
+    seccion.appendChild(dibujarMiga(vista, documento));
+  }
   seccion.appendChild(texto(documento, "h1", vista.titulo));
 
   const cifra = documento.createElement("p");
@@ -191,18 +246,7 @@ export function dibujarNodo(vista, documento = document) {
   seccion.setAttribute("class", "pantalla pantalla-nodo");
   seccion.appendChild(dibujarTiraDeAnios(vista, documento));
 
-  const miga = documento.createElement("nav");
-  miga.setAttribute("class", "miga");
-  miga.setAttribute("aria-label", "Camino");
-  const inicio = texto(documento, "button", "Inicio", "tramo");
-  inicio.setAttribute("data-clave", "");
-  miga.appendChild(inicio);
-  for (const tramo of vista.miga) {
-    const paso = texto(documento, "button", tramo.nombre, "tramo");
-    paso.setAttribute("data-clave", tramo.clave);
-    miga.appendChild(paso);
-  }
-  seccion.appendChild(miga);
+  seccion.appendChild(dibujarMiga(vista, documento));
 
   seccion.appendChild(texto(documento, "h1", vista.titulo));
 
@@ -227,7 +271,9 @@ export function dibujarNodo(vista, documento = document) {
   if (vista.sinEjecucion) {
     seccion.appendChild(texto(documento, "p",
       "Sin ejecución en este ejercicio.", "sin-ejecucion"));
-  } else {
+  } else if (vista.porciones.length > 0) {
+    // A leaf with real spending has no child to divide. An empty pie chart
+    // and an empty legend say nothing, so draw neither.
     seccion.appendChild(dibujarTorta(vista.porciones, documento));
     const leyenda = documento.createElement("ul");
     leyenda.setAttribute("class", "leyenda");
@@ -290,6 +336,10 @@ export function dibujarFuentes(vista, documento = document) {
     + "informe oficial Cuenta Ahorro Inversión Financiamiento. Si los dos no "
     + "coinciden, no publica nada."));
 
+  const volver = texto(documento, "a", "Volver al inicio", "principal");
+  volver.setAttribute("href", "#/");
+  seccion.appendChild(volver);
+
   const codigo = texto(documento, "a", "El código de este proyecto");
   codigo.setAttribute("href", REPOSITORIO);
   seccion.appendChild(codigo);
@@ -300,6 +350,7 @@ export function dibujarAusente(vista, documento = document) {
   const seccion = documento.createElement("section");
   seccion.setAttribute("class", "pantalla pantalla-ausente");
   seccion.appendChild(dibujarTiraDeAnios(vista, documento));
+  seccion.appendChild(dibujarMiga(vista, documento));
 
   seccion.appendChild(texto(documento, "h1",
     `"${vista.nombre}" no existe en el ejercicio ${vista.ejercicio}`));
@@ -316,11 +367,16 @@ export function dibujarAusente(vista, documento = document) {
     subir.setAttribute("data-clave", vista.ancestro);
     seccion.appendChild(subir);
   }
-  const volver = texto(documento, "button",
-    `Volver a ${vista.origen.ejercicio}`, "secundario");
-  volver.setAttribute("data-anio", String(vista.origen.ejercicio));
-  volver.setAttribute("data-clave", vista.clavePedida);
-  seccion.appendChild(volver);
+  if (vista.origen.ejercicio !== vista.ejercicio) {
+    // A shared URL gives no exercise of origin, so origen falls back to the
+    // one on screen. A button that returns to the exercise of the screen
+    // says nothing and does nothing. The miga above is the exit there.
+    const volver = texto(documento, "button",
+      `Volver a ${vista.origen.ejercicio}`, "secundario");
+    volver.setAttribute("data-anio", String(vista.origen.ejercicio));
+    volver.setAttribute("data-clave", vista.clavePedida);
+    seccion.appendChild(volver);
+  }
 
   seccion.appendChild(dibujarProcedencia(vista.procedencia, documento));
   return seccion;
