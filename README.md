@@ -1,9 +1,16 @@
-# Designpowers
+# Enquelagastan
 
-A Claude Code plugin repository and a GitHub template. It extends
+A navigable map of the public spending of the Argentine national state. The data is open
+already, but it arrives as thousands of rows with codes. This project shows it on one
+screen: the total spending as a pie chart, the fiscal result beside it, and a drill down to
+the jurisdiction, the entity, the program, the activity and the object of the spending. It
+asks for no login, and for no knowledge of budget terms. The users are the citizens, the
+journalists and the researchers of Argentina.
+
+The repository carries the Designpowers stack: it extends
 [Superpowers](https://github.com/obra/superpowers) with design stages between an approved
-design spec and the implementation plan, and ships the `ranu` lead-orchestrator profile:
-an output style and a roster of seven agents.
+design spec and the implementation plan, and the `ranu` lead-orchestrator profile: an
+output style and a roster of seven agents.
 
 The idea: between brainstorming and the implementation plan, the user and the agent must
 reach shared understanding. They reach it by **modeling** (diagrams, from macro to micro)
@@ -25,23 +32,12 @@ gate at every level. Every artifact carries enough detail for the next agent.
 | On any failure | `designpowers:troubleshooting` on top of `superpowers:systematic-debugging` | Designpowers |
 
 The full map, the level loop, the artifacts and the numbers per stage are in
-[docs/WORKFLOW.md](docs/WORKFLOW.md). The design rationale is in
-[docs/proposals/2026-09-08-structure-proposal.md](docs/proposals/2026-09-08-structure-proposal.md).
-
-## Status
-
-Version 0.1.0. Every stage skill, the router, the hooks, the agents and the test
-scenarios are in place. Three scenarios have a logged pass: 01 redirect, 02 eventstorming
-level 1, 06 reuse gate on a real repository. Scenarios 03, 04, 05 and 07 have their setup
-and expected results written and wait for their first logged run. The template was
-instantiated once (project `dogwalk`); the first field bug, an absolute path written by
-`scripts/setup.sh`, is fixed.
+[docs/WORKFLOW.md](docs/WORKFLOW.md).
 
 ## What is inside
 
 ```
-.claude-plugin/marketplace.json     marketplace "designpowers": plugins designpowers and ranu
-plugins/designpowers/               the methodology plugin
+plugins/designpowers/               the design stages
   skills/using-designpowers/        router, injected at session start
   skills/eventstorming/
   skills/wireframing/
@@ -53,86 +49,26 @@ plugins/designpowers/               the methodology plugin
 plugins/ranu/                       the orchestrator profile
   output-styles/lead-orchestrator.md
   agents/                           architect, deep-reviewer, explore, implementer, locator, researcher, troubleshooter
-.claude/skills/init/                the /init of a new project: install, adapt, kickoff
+.claude-plugin/marketplace.json     marketplace "designpowers": plugins designpowers and ranu
 .claude/settings.json               marketplaces, enabled plugins, hooks, permissions
 .claude/hooks/enable-profile.mjs    enables the profile of the developer by git email
-docs/WORKFLOW.md                    the map
+.claude/skills/init/                the /init that ran once, at the start of this repository
+docs/WORKFLOW.md                    the map of the design flow
 docs/WRITING_STYLE.md               ASD-STE100 rules for every file in the repo
-tests/scenarios/                    one pressure scenario per skill
-scripts/setup.sh                    installs the dependencies for this repository only
-CONTEXT.md                          the glossary of the project, empty in the template
+scripts/setup.sh                    installs the plugins for this repository only
+CONTEXT.md                          the glossary of the project
 ```
 
 Dependencies, installed as plugins and never copied: Superpowers
 (`claude-plugins-official`), Ponytail (`DietrichGebert/ponytail`), and three plugins from
 `wshobson/agents` (`comprehensive-review`, `incident-response`, `c4-architecture`).
 
-## Use as a template
-
-1. On GitHub, choose "Use this template", then clone your new repository.
-2. Open Claude Code in it and run:
-
-```bash
-/init
-```
-
-That is the whole setup. `/init` in a repository made from this template is not the
-built-in command: the template ships its own, in `.claude/skills/init/SKILL.md`. It does
-three things in order.
-
-| Step | What happens |
-|---|---|
-| 1. Tools | It runs `scripts/setup.sh`, which installs the six plugins at project scope and prints `ok` or `MISSING` for each one. Claude Code never installs a plugin on its own, and a plugin that is enabled but not installed does not load. |
-| 2. Documents | It rewrites the title, the purpose and the layout of `README.md`, `CLAUDE.md` and `AGENTS.md` so they describe your project, and it removes the parts that belong to the template. It keeps the hard rules, the design flow and the pointer rule word for word. |
-| 3. Kickoff | It asks one question: what is this project about, and who is it for. Your answer starts `superpowers:brainstorming`, and from there the design flow runs. |
-
-**One restart.** Claude Code reads the plugin list at the start of a session, so plugins
-installed during step 1 load in the next session. `/init` tells you when to restart. Say
-`ready` when you come back and it continues at step 2.
-
-Afterwards, two optional items:
-
-- Put your git email in `.claude/profiles.json` to enable the `ranu` profile at session
-  start, or enable it by hand in `.claude/settings.local.json`. See
-  `plugins/ranu/README.md`.
-- `npx skills add WH-2099/mermaid-skill` and `npx skills add cheriftj/c4-model-skill`.
-
-If `/init` runs the built-in command instead of this one, invoke the template skill by
-name and report it: the precedence of a project skill over a built-in command of the same
-name is not documented.
-
-## Add to an existing project
-
-Add to `.claude/settings.json` of that project:
-
-```json
-{
-  "extraKnownMarketplaces": {
-    "designpowers": { "source": { "source": "github", "repo": "elranu/Designpowers" } },
-    "ponytail": { "source": { "source": "github", "repo": "DietrichGebert/ponytail" } },
-    "claude-code-workflows": { "source": { "source": "github", "repo": "wshobson/agents" } }
-  },
-  "enabledPlugins": {
-    "superpowers@claude-plugins-official": true,
-    "designpowers@designpowers": true,
-    "ponytail@ponytail": true,
-    "comprehensive-review@claude-code-workflows": true,
-    "incident-response@claude-code-workflows": true,
-    "c4-architecture@claude-code-workflows": true
-  }
-}
-```
-
-Then add the "Design flow" section of this repository's `CLAUDE.md` to that project's
-`CLAUDE.md`. The profile plugin `ranu@designpowers` is opt-in per developer.
-
 ## Start the process
 
-1. **First session.** In a repository made from the template, run `/init`. It installs
-   the plugins, adapts the documents and asks the kickoff question. See "Use as a
-   template" above. In a repository where you added Designpowers by hand, run
-   `scripts/setup.sh` and restart the session. At the start of the next session two hooks
-   run: Superpowers injects `using-superpowers`, Designpowers injects
+1. **First session.** `/init` ran once here: it installed the six plugins, adapted the
+   documents and asked the kickoff question. To install the plugins again on another
+   machine, run `scripts/setup.sh` and restart the session. At the start of every session
+   two hooks run: Superpowers injects `using-superpowers`, Designpowers injects
    `using-designpowers`.
 2. **Check.** Type `/plugin` and confirm that `superpowers`, `designpowers`, `ponytail`
    and the three `claude-code-workflows` plugins are enabled. Type `/` and confirm that
@@ -179,18 +115,6 @@ Run one stage alone with its slash command. Each one checks its inputs first:
 Small changes and spikes do not enter the design stages. Brainstorming routes them to
 implementation as Superpowers does. To skip the design stages for one feature, say so;
 the skip is recorded in the design spec.
-
-## Tests
-
-Each file in `tests/scenarios/` describes a pressure test: the documents to give a fresh
-subagent, the prompt, the expected behavior, the counter cases and a result log. Run one
-by following its setup and record the result in its log.
-
-Validate the manifests with:
-
-```bash
-claude plugin validate . && claude plugin validate plugins/designpowers && claude plugin validate plugins/ranu
-```
 
 ## Credits
 
