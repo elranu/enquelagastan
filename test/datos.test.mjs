@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  cargarInstitucional, cargarJson, caminoDeClave, claveDeCamino, olvidar,
+  cargarInstitucional, cargarJson, cargarManifiesto, cargarObjeto,
+  caminoDeClave, claveDeCamino, olvidar,
 } from "../site/app/datos.js";
 
 function falsoTraer(cuerpo, ok = true, estado = 200) {
@@ -37,4 +38,19 @@ test("una respuesta que no es ok levanta un error", async () => {
   olvidar();
   const { traer } = falsoTraer(null, false, 404);
   await assert.rejects(() => cargarJson("data/x.json", traer), /404/);
+});
+
+test("cada cargador construye la ruta que le corresponde", async () => {
+  // The two loaders below manifest were never called from a test, so the
+  // route they build to reach the seam traer had no cover.
+  olvidar();
+  const { traer, llamadas } = falsoTraer({});
+  await cargarManifiesto(traer);
+  await cargarInstitucional(2025, traer);
+  await cargarObjeto(2025, "88-1-0-100-21-0-0-1-0", traer);
+  assert.deepEqual(llamadas, [
+    "data/manifest.json",
+    "data/2025/institucional.json",
+    "data/2025/objeto/88-1-0-100-21-0-0-1-0.json",
+  ]);
 });
