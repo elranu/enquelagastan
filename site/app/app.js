@@ -1,10 +1,12 @@
 // Join the modules, and answer a change of the URL.
+//
+// This module holds the DOM and the history, and no rule of the navigator.
+// resolverPantalla in pantalla.js holds the decision, so a test reads it.
 
-import { saltarHijoUnico } from "./arbol.js";
 import { cargarInstitucional, cargarManifiesto } from "./datos.js";
 import {
   dibujarAusente, dibujarFuentes, dibujarNodo, dibujarRaiz, indiceParaClave,
-  vistaDeAusente, vistaDeFuentes, vistaDeNodo, vistaDeRaiz,
+  resolverPantalla, vistaDeAusente, vistaDeFuentes, vistaDeNodo, vistaDeRaiz,
 } from "./pantalla.js";
 import {
   ejercicioDeEntrada, ejerciciosDisponibles, escribirRuta, leerRuta,
@@ -18,7 +20,9 @@ const app = document.getElementById("app");
 let ultimo = null;
 
 // The children of the slice "otros" that the visitor opened, if any. It is
-// not part of the URL: "otros" names no real nodo, only a group of them.
+// not part of the URL: "otros" names no real nodo, only a group of them. It
+// belongs to one exercise and one clave, and resolverPantalla drops it when
+// the screen shows another one.
 let grupoOtros = null;
 
 function vaciar(elemento) {
@@ -31,6 +35,35 @@ function vaciar(elemento) {
 // name it, because its first segment is always a year, so app.js checks the
 // raw hash before it asks ruta.js for anything.
 const RUTA_DE_FUENTES = "#/fuentes";
+
+async function irA(ruta) {
+  // A route equal to the one on screen fires no hashchange. The crumb "otros"
+  // and the arrow back to the exercise of origin both do that, so draw here
+  // or the click of the visitor does nothing.
+  if (ruta === window.location.hash) {
+    await dibujar();
+    return;
+  }
+  window.location.hash = ruta;
+}
+
+function esAusencia(error) {
+  // Only a 404 says the camino is absent. A lost connection, a 503 or a bad
+  // JSON is our failure, and the visitor must not read it as a line of the
+  // budget that does not exist. datos.js writes the status in the message.
+  return / answered 404$/.test(error.message);
+}
+
+async function indiceDe(ejercicio, institucional, clave) {
+  try {
+    return await indiceParaClave(ejercicio, institucional, clave);
+  } catch (error) {
+    if (esAusencia(error)) {
+      return institucional;
+    }
+    throw error;
+  }
+}
 
 async function dibujar() {
   const manifiesto = await cargarManifiesto();
@@ -46,56 +79,52 @@ async function dibujar() {
   const ejercicio = disponibles.includes(pedido.ejercicio)
     ? pedido.ejercicio
     : ejercicioDeEntrada(disponibles);
-  if (ejercicio !== pedido.ejercicio) {
-    // A missing or invalid year (a fresh visit with no hash, for one) still
-    // draws the right exercise, but the URL must say so too. Every click
-    // reads the exercise from the URL, so a click right after this draw
-    // would otherwise ask for the exercise "null".
-    history.replaceState(null, "", escribirRuta(ejercicio, pedido.clave));
-  }
   const entrada = manifiesto.ejercicios
     .find((fila) => fila.ejercicio === ejercicio);
-  const indiceInstitucional = await cargarInstitucional(ejercicio);
-  const estadoBase = { ejercicio, entrada, indice: indiceInstitucional, disponibles };
+  const institucional = await cargarInstitucional(ejercicio);
+  const base = { ejercicio, entrada, indice: institucional, disponibles };
 
-  if (grupoOtros && grupoOtros.deClave !== pedido.clave) {
-    grupoOtros = null;
+  // The visitor never lands on a nodo with one child. A chain that crosses
+  // the object level needs more than one pass, because the index of the next
+  // clave is not loaded yet. Repeat until the destino stops moving.
+  let clave = pedido.clave;
+  let estado = base;
+  let decision = null;
+  for (;;) {
+    estado = { ...base, indice: await indiceDe(ejercicio, institucional, clave) };
+    decision = resolverPantalla(estado, clave, grupoOtros);
+    if (decision.tipo !== "saltar") {
+      break;
+    }
+    clave = decision.clave;
+  }
+  grupoOtros = decision.grupo ? grupoOtros : null;
+
+  // Replace, never push. A jumped clave and a missing year both rewrite the
+  // URL. A push would leave the skipped clave in the history, and Back would
+  // return there and jump forward again, with no way out.
+  const ruta = escribirRuta(ejercicio, clave);
+  if (ruta !== window.location.hash) {
+    history.replaceState(null, "", ruta);
   }
 
-  if (pedido.clave === "") {
-    const grupo = grupoOtros ? grupoOtros.claves : null;
-    app.appendChild(dibujarRaiz(vistaDeRaiz(estadoBase, grupo), document));
+  if (decision.tipo === "raiz") {
+    app.appendChild(dibujarRaiz(vistaDeRaiz(estado, decision.grupo), document));
     ultimo = { ejercicio, clave: "", nombre: null, monto: null };
     return;
   }
 
-  // A nodo at or below the object level needs its file joined first. A 404
-  // there means the clave is absent, same as a miss above that level. Both
-  // cases fall through to the screen of the absent camino.
-  const indice = await indiceParaClave(ejercicio, indiceInstitucional, pedido.clave)
-    .catch(() => indiceInstitucional);
-  const estado = { ...estadoBase, indice };
-
-  if (!indice[pedido.clave]) {
-    const origen = ultimo && ultimo.clave === pedido.clave
+  if (decision.tipo === "ausente") {
+    const origen = ultimo && ultimo.clave === clave
       ? { ejercicio: ultimo.ejercicio, monto: ultimo.monto, nombre: ultimo.nombre }
       : { ejercicio };
-    app.appendChild(dibujarAusente(vistaDeAusente(estado, pedido.clave, origen), document));
+    app.appendChild(dibujarAusente(vistaDeAusente(estado, clave, origen), document));
     return;
   }
 
-  // The visitor never lands on a nodo with one child. When the requested
-  // clave is a link in a chain, move on to the first nodo that divides.
-  const { destino } = saltarHijoUnico(indice, pedido.clave);
-  if (destino !== pedido.clave) {
-    window.location.hash = escribirRuta(ejercicio, destino);
-    return;
-  }
-
-  const grupo = grupoOtros ? grupoOtros.claves : null;
-  app.appendChild(dibujarNodo(vistaDeNodo(estado, pedido.clave, grupo), document));
+  app.appendChild(dibujarNodo(vistaDeNodo(estado, clave, decision.grupo), document));
   ultimo = {
-    ejercicio, clave: pedido.clave, nombre: indice[pedido.clave].n, monto: indice[pedido.clave].d,
+    ejercicio, clave, nombre: estado.indice[clave].n, monto: estado.indice[clave].d,
   };
 }
 
@@ -105,7 +134,7 @@ async function manejarClick(evento) {
     // The arrow changes the exercise and nothing else: keep the clave that
     // is already on screen.
     const clave = leerRuta(window.location.hash).clave;
-    window.location.hash = escribirRuta(Number(anio.dataset.anio), clave);
+    await irA(escribirRuta(Number(anio.dataset.anio), clave));
     return;
   }
 
@@ -114,14 +143,11 @@ async function manejarClick(evento) {
     const destinos = destinoEl.dataset.destino.split(" ").filter(Boolean);
     const pedido = leerRuta(window.location.hash);
     if (destinos.length === 1) {
-      const indiceInstitucional = await cargarInstitucional(pedido.ejercicio);
-      const indice = await indiceParaClave(pedido.ejercicio, indiceInstitucional, destinos[0]);
-      const { destino } = saltarHijoUnico(indice, destinos[0]);
-      window.location.hash = escribirRuta(pedido.ejercicio, destino);
+      await irA(escribirRuta(pedido.ejercicio, destinos[0]));
     } else {
       // Several destinos mean the slice "otros": stay on this clave and
       // redraw with only that group.
-      grupoOtros = { deClave: pedido.clave, claves: destinos };
+      grupoOtros = { ejercicio: pedido.ejercicio, deClave: pedido.clave, claves: destinos };
       await dibujar();
     }
     return;
@@ -131,15 +157,7 @@ async function manejarClick(evento) {
   if (claveEl) {
     grupoOtros = null;
     const pedido = leerRuta(window.location.hash);
-    const ruta = escribirRuta(pedido.ejercicio, claveEl.dataset.clave);
-    if (ruta === window.location.hash) {
-      // The crumb "otros" points at the clave already on screen, so the hash
-      // does not change. Redraw here, or the browser fires no hashchange
-      // and the click of the visitor does nothing.
-      await dibujar();
-    } else {
-      window.location.hash = ruta;
-    }
+    await irA(escribirRuta(pedido.ejercicio, claveEl.dataset.clave));
   }
 }
 
@@ -155,8 +173,14 @@ function informar(error) {
   vaciar(app);
   const aviso = document.createElement("p");
   aviso.className = "error";
-  aviso.textContent = `No pudimos cargar los datos. ${error.message}`;
+  aviso.textContent = "No pudimos mostrar esta pantalla. "
+    + `Probá de nuevo en un rato. (${error.message})`;
   app.appendChild(aviso);
+  const salida = document.createElement("a");
+  salida.className = "principal";
+  salida.href = "#/";
+  salida.textContent = "Volver al inicio";
+  app.appendChild(salida);
 }
 
 dibujar().catch(informar);
