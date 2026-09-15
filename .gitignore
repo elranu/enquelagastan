@@ -8,8 +8,10 @@ __pycache__/
 # The build writes site/data/*.json. Keep two files tracked. The manifest
 # records every change in the official numbers. The heartbeat records the
 # date of every run, and its commit keeps the repository active.
+# site/app/ holds the hand-written navigator code. Track it in full.
 /site/*
 !/site/data/
+!/site/app/
 /site/data/*
 !/site/data/manifest.json
 !/site/data/heartbeat.json
