@@ -2,8 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  dibujarAusente, dibujarFuentes, dibujarNodo, dibujarRaiz, indiceParaClave,
-  resolverPantalla, vistaDeAusente, vistaDeFuentes, vistaDeNodo, vistaDeRaiz,
+  dibujarAusente, dibujarFuentes, dibujarNodo, dibujarRaiz, esAusencia,
+  indiceParaClave, resolverPantalla, vistaDeAusente, vistaDeFuentes,
+  vistaDeNodo, vistaDeRaiz,
 } from "../site/app/pantalla.js";
 import { SOBRE_LO_APROBADO } from "../site/app/desviacion.js";
 import { controles, falsoDocumento, textoDe } from "./falso-documento.mjs";
@@ -299,4 +300,18 @@ test("el ausente sin ejercicio de origen no ofrece volver al mismo ejercicio", (
   assert.equal(controles(pantalla, "data-anio")
     .filter((control) => control.texto.startsWith("Volver")).length, 0);
   assert.ok(controles(pantalla, "data-clave").length > 0, "the miga is the exit");
+});
+
+// esAusencia holds the rule that tells absence from a failure of ours.
+// A test reads it here, with no import of app.js.
+
+test("esAusencia es verdadero solo para un 404", () => {
+  assert.equal(esAusencia({ estadoHttp: 404 }), true);
+  assert.equal(esAusencia({ estadoHttp: 503 }), false);
+});
+
+test("un error sin estadoHttp no cuenta como ausencia", () => {
+  // No property means no response came back: a lost connection or a bad
+  // JSON body. That is our failure, never a missing line of the budget.
+  assert.equal(esAusencia(new Error("Failed to fetch")), false);
 });

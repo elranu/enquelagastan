@@ -5,8 +5,9 @@
 
 import { cargarInstitucional, cargarManifiesto } from "./datos.js";
 import {
-  dibujarAusente, dibujarFuentes, dibujarNodo, dibujarRaiz, indiceParaClave,
-  resolverPantalla, vistaDeAusente, vistaDeFuentes, vistaDeNodo, vistaDeRaiz,
+  dibujarAusente, dibujarFuentes, dibujarNodo, dibujarRaiz, esAusencia,
+  indiceParaClave, resolverPantalla, vistaDeAusente, vistaDeFuentes,
+  vistaDeNodo, vistaDeRaiz,
 } from "./pantalla.js";
 import {
   ejercicioDeEntrada, ejerciciosDisponibles, escribirRuta, leerRuta,
@@ -47,14 +48,9 @@ async function irA(ruta) {
   window.location.hash = ruta;
 }
 
-function esAusencia(error) {
-  // Only a 404 says the camino is absent. A lost connection, a 503 or a bad
-  // JSON is our failure, and the visitor must not read it as a line of the
-  // budget that does not exist. datos.js writes the status in the message.
-  return / answered 404$/.test(error.message);
-}
-
 async function indiceDe(ejercicio, institucional, clave) {
+  // esAusencia in pantalla.js holds the rule. A test reads it there, since
+  // this module cannot be imported without a DOM.
   try {
     return await indiceParaClave(ejercicio, institucional, clave);
   } catch (error) {

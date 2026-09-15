@@ -40,6 +40,24 @@ test("una respuesta que no es ok levanta un error", async () => {
   await assert.rejects(() => cargarJson("data/x.json", traer), /404/);
 });
 
+test("un 404 deja el estado en su propia propiedad del error", async () => {
+  olvidar();
+  const { traer } = falsoTraer(null, false, 404);
+  await assert.rejects(
+    () => cargarJson("data/x.json", traer),
+    (error) => error.estadoHttp === 404,
+  );
+});
+
+test("un 503 deja el estado en su propia propiedad del error", async () => {
+  olvidar();
+  const { traer } = falsoTraer(null, false, 503);
+  await assert.rejects(
+    () => cargarJson("data/x.json", traer),
+    (error) => error.estadoHttp === 503,
+  );
+});
+
 test("cada cargador construye la ruta que le corresponde", async () => {
   // Two loaders build a route below manifest.json. No earlier test called
   // them. Nothing checked the route they pass to the seam traer.

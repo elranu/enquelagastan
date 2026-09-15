@@ -138,6 +138,14 @@ export function resolverPantalla(estado, clave, grupoOtros = null) {
   return { tipo: "nodo", clave, grupo };
 }
 
+export function esAusencia(error) {
+  // Only a 404 means the camino is absent from the exercise. Every other
+  // failure is ours: a lost connection, a 503, a bad JSON body.
+  // estadoHttp exists so this check reads the real status, not the message.
+  // An error with no estadoHttp came from no response, so it is never a 404.
+  return error.estadoHttp === 404;
+}
+
 function texto(documento, etiqueta, contenido, clase) {
   const elemento = documento.createElement(etiqueta);
   elemento.textContent = contenido;

@@ -25,7 +25,11 @@ export async function cargarJson(ruta, traer = fetch) {
   }
   const respuesta = await traer(ruta);
   if (!respuesta.ok) {
-    throw new Error(`${ruta} answered ${respuesta.status}`);
+    const error = new Error(`${ruta} answered ${respuesta.status}`);
+    // estadoHttp exists so a reader checks the true status, not this text.
+    // A rewrite of the message above must not hide a real failure as absence.
+    error.estadoHttp = respuesta.status;
+    throw error;
   }
   const datos = await respuesta.json();
   memoria.set(ruta, datos);
