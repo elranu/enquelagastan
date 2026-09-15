@@ -89,3 +89,37 @@ product and it does not exist in the source. The visitor can open it.
 The source of one number: the file, its date of publication, and, at the lowest
 nodo of a branch, the codes of the camino. Every number of this product shows
 its procedencia.
+
+### monto
+
+An amount of money in millions of pesos, **of one ejercicio**. A monto of 2024
+and a monto of 2026 do not share a unit, because the prices changed. The two
+are not comparable until a price index converts them. See `docs/adr/0001-monto-carries-its-exercise.md`.
+
+### nivel de control presupuestario
+
+The level of the tree where the `credito vigente` is a legal limit. It is the
+proyecto, and every level above it. The measurement of the exercise 2025 found
+0 nodos above that level where the devengado passes the vigente, in 2,673
+nodos.
+
+### reasignacion interna
+
+The movement of money between the actividades of one proyecto. Below the nivel
+de control presupuestario an actividad can spend more than its own vigente,
+because a sister actividad spends less. In 2025, 303 actividades spend more
+than their own vigente, and in the 303 cases the proyecto respects its limit.
+
+### desviacion
+
+The difference between the devengado and the presupuestado, as a part of the
+presupuestado. **The word names two different facts, and the level decides
+which one.** Above the nivel de control it says that the state spent
+differently from the vote of the Congress. Below it, it says that money moved
+inside a proyecto, which is a reasignacion interna.
+
+### verificacion
+
+The comparison between the total that this project computes and the total of
+the official report. The product does not publish an exercise when the two do
+not agree.
