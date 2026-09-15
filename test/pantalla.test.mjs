@@ -49,9 +49,9 @@ test("las porciones de la vista usan lo devengado, no lo aprobado", () => {
 });
 
 test("un grupo otros en la raiz muestra solo sus claves", () => {
-  // UC-03: the visitor can open the slice "otros" from the root too, and
-  // the total, the ejecucion and the deviation still describe the whole
-  // exercise, only the pie chart narrows to the group.
+  // UC-03: the visitor can open the slice "otros" from the root too. The
+  // total, the ejecucion and the deviation still describe the whole
+  // exercise. Only the pie chart narrows to the group.
   const vista = vistaDeRaiz(ESTADO, ["90", "50"]);
   assert.deepEqual(vista.porciones.map((porcion) => porcion.nombre), ["Deuda", "Economia"]);
   assert.equal(vista.total, 105.25);

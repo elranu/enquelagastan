@@ -12,9 +12,9 @@ import {
 
 const app = document.getElementById("app");
 
-// The last nodo the visitor actually saw. The arrow of the year keeps this
-// clave and only changes the exercise, so this is the source of the exercise
-// of origin when the new exercise turns out to lack that clave.
+// The last nodo the visitor actually saw. The arrow of the year keeps the
+// clave and only changes the exercise. This is the exercise of origin when
+// the new exercise lacks that clave.
 let ultimo = null;
 
 // The children of the slice "otros" that the visitor opened, if any. It is
@@ -70,8 +70,8 @@ async function dibujar() {
   }
 
   // A nodo at or below the object level needs its file joined first. A 404
-  // there means the clave is absent in this exercise, same as a miss above
-  // that level: both fall through to the screen of the absent camino.
+  // there means the clave is absent, same as a miss above that level. Both
+  // cases fall through to the screen of the absent camino.
   const indice = await indiceParaClave(ejercicio, indiceInstitucional, pedido.clave)
     .catch(() => indiceInstitucional);
   const estado = { ...estadoBase, indice };
