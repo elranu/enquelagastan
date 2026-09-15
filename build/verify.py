@@ -111,6 +111,16 @@ TOLERANCIA_MILLONES = 1e-6
 """The absolute floor of the same check, for amounts near zero."""
 
 
+MEDIDAS_PUBLICADAS = ("presupuestado", "vigente", "devengado", "pagado")
+"""The measures that this check compares.
+
+These are exactly the four measures that emit._nodo_a_json writes into the
+published JSON. The navigator draws each one of them, so each one of them must
+add up. The comprometido stays out, because the build computes it and publishes
+it nowhere. A measure that enters _nodo_a_json must enter this tuple too.
+"""
+
+
 def nodos_que_no_suman(arbol: dict) -> list:
     """INV-04. The sum of the children of a nodo equals the total of the nodo.
 
@@ -120,19 +130,24 @@ def nodos_que_no_suman(arbol: dict) -> list:
     other check sees it. The navigator would draw a pie whose slices cover less
     than the parent.
 
-    Give one tuple per nodo that does not agree: the camino, the devengado of
-    the nodo, and the sum of its children.
+    One measure alone does not see every gap. The exercise 2025 holds 31,470
+    rows whose devengado is zero and whose vigente is not. A cut camino among
+    those rows keeps the devengado balanced and breaks the vigente.
+
+    Give one tuple per nodo and per measure that does not agree: the camino,
+    the name of the measure, the amount of the nodo, and the sum of its
+    children. All amounts are in millions.
     """
     malos = []
     for camino, nodo in arbol.items():
         if not nodo.hijos:
             continue
-        propio = nodo.medidas.devengado.millones
-        suma = sum(
-            arbol[camino + (codigo,)].medidas.devengado.millones
-            for codigo in nodo.hijos
-        )
-        limite = max(TOLERANCIA_MILLONES, abs(propio) * TOLERANCIA_RELATIVA)
-        if abs(propio - suma) > limite:
-            malos.append((camino, propio, suma))
+        hijos = [arbol[camino + (codigo,)] for codigo in nodo.hijos]
+        for medida in MEDIDAS_PUBLICADAS:
+            propio = getattr(nodo.medidas, medida).millones
+            suma = sum(getattr(hijo.medidas, medida).millones
+                       for hijo in hijos)
+            limite = max(TOLERANCIA_MILLONES, abs(propio) * TOLERANCIA_RELATIVA)
+            if abs(propio - suma) > limite:
+                malos.append((camino, medida, propio, suma))
     return sorted(malos)

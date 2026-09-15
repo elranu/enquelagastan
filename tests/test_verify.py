@@ -24,14 +24,25 @@ REPORTE = [
 ]
 
 
-def _fila(codigos, devengado):
+def _fila(codigos, devengado, vigente="0,0"):
     """One row of the source, as csv.DictReader gives it."""
     ejes = ("jurisdiccion", "subjurisdiccion", "entidad", "servicio",
             "programa")
     fila = {f"{eje}_id": codigo for eje, codigo in zip(ejes, codigos)}
     fila.update({f"{eje}_desc": "x" for eje in ejes})
     fila["credito_devengado"] = devengado
+    fila["credito_vigente"] = vigente
     return fila
+
+
+FILAS_CON_UN_HUECO_SOLO_EN_VIGENTE = [
+    _fila(("88", "1", "0", "100", "21"), "60,0", vigente="60,0"),
+    # This camino stops at the servicio. Its devengado is zero, so the
+    # devengado of the parent still equals the sum of its children. Its
+    # vigente is not zero, so the vigente does not add up. The exercise 2025
+    # holds 31,470 rows of this shape.
+    _fila(("88", "1", "0", "100"), "0,0", vigente="40,0"),
+]
 
 
 FILAS_CON_UN_CAMINO_CORTO = [
@@ -67,8 +78,28 @@ class TestSumaDeLosHijos(unittest.TestCase):
         self.assertAlmostEqual(arbol[servicio].medidas.devengado.millones,
                                100.0)
         reportados = nodos_que_no_suman(arbol)
-        self.assertEqual([camino for camino, _, _ in reportados], [servicio])
-        _, del_nodo, de_los_hijos = reportados[0]
+        self.assertEqual({camino for camino, _, _, _ in reportados},
+                         {servicio})
+        por_medida = {medida: (propio, suma)
+                      for _, medida, propio, suma in reportados}
+        self.assertIn("devengado", por_medida)
+        del_nodo, de_los_hijos = por_medida["devengado"]
+        self.assertAlmostEqual(del_nodo, 100.0)
+        self.assertAlmostEqual(de_los_hijos, 60.0)
+
+    def test_atrapa_un_hueco_que_solo_esta_en_el_vigente(self):
+        """The devengado of the parent equals the sum of its children, and the
+        vigente does not. A check that reads the devengado alone passes, and
+        the navigator draws a pie whose slices cover less than the parent."""
+        arbol = construir(FILAS_CON_UN_HUECO_SOLO_EN_VIGENTE, 2025)
+        servicio = ("88", "1", "0", "100")
+        reportados = nodos_que_no_suman(arbol)
+        self.assertEqual(
+            [(camino, medida) for camino, medida, _, _ in reportados],
+            [(servicio, "vigente")],
+            "the devengado balances, so only the vigente must be reported",
+        )
+        _, _, del_nodo, de_los_hijos = reportados[0]
         self.assertAlmostEqual(del_nodo, 100.0)
         self.assertAlmostEqual(de_los_hijos, 60.0)
 

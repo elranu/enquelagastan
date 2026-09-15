@@ -50,7 +50,7 @@ def _bajar_csv(ejercicio: int, carpeta: pathlib.Path) -> pathlib.Path:
 
 def _leer_reporte(ejercicio: int) -> list:
     url = sources.URL_REPORTE_OFICIAL.format(ejercicio=ejercicio)
-    with urllib.request.urlopen(url) as respuesta:
+    with urllib.request.urlopen(url, timeout=sources.TIEMPO_LIMITE) as respuesta:
         return json.loads(respuesta.read().decode("utf-8"))
 
 
@@ -99,11 +99,11 @@ def construir_ejercicio(ejercicio, destino, leer_cabecera=_leer_cabecera,
 
     no_suman = verify.nodos_que_no_suman(arbol)
     if no_suman:
-        camino, propio, suma = no_suman[0]
+        camino, medida, propio, suma = no_suman[0]
         motivo = (
             f"{len(no_suman)} nodo(s) do not equal the sum of their children. "
-            f"INV-04. The first one is {camino}: the nodo holds {propio} and "
-            f"its children add to {suma}, in millions."
+            f"INV-04. The first one is {camino}, in the measure {medida}: the "
+            f"nodo holds {propio} and its children add to {suma}, in millions."
         )
         verificacion_suma = replace(verificacion, paso=False, motivo=motivo)
         return Resultado("fallido", verificacion_suma, cabecera=cabecera)
