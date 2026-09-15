@@ -1,8 +1,8 @@
 """The open files of the national spending.
 
-These files need no token. The official site offers the same URLs on its own
-page of open data, so the number that this project shows can be checked against
-the file that the state publishes. Licence CC BY 4.0.
+These files need no token. The official site offers these same URLs. A reader
+can check any number of this product against the file that the state
+publishes. Licence CC BY 4.0.
 """
 
 import pathlib
