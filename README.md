@@ -3,11 +3,22 @@
 A navigable map of the public spending of the Argentine national state.
 
 The data is open already. It arrives as thousands of rows with codes for the
-jurisdiccion, the programa and the object of the spending: one exercise is
-113,217 rows with 13 levels. This project shows it on one screen, and it goes
-down with a tap to the place where the money stops.
+jurisdiccion, the programa and the object of the spending. One exercise, 2025,
+is 113,217 rows with 13 levels.
 
 No login. No knowledge of budget terms.
+
+## What this project is today
+
+The build works today. It downloads the open files. It adds up their rows.
+It checks the total against the official report. It writes the result as
+JSON files. It runs every day.
+
+The screens do not exist yet. Their design lives in
+`docs/designpowers/2026-09-14-public-spending-navigator/02-wireframes.md`.
+
+The plan calls for a map of the whole spending on one screen. A tap will
+take the reader down, one level at a time, to the object of the spending.
 
 ## The numbers are the numbers of the state
 
@@ -30,9 +41,11 @@ The difference of one peso comes from the decimals of the source file.
 
 ## Check a number yourself
 
-Every screen names the file that produced its number, with the date of
-publication. At the lowest level of a branch it also names the codes of the
-rows.
+The screens will name the file that produced each number, with its date of
+publication. At the lowest level of a branch, they will also name the codes
+of the rows.
+
+Today, check a number by hand:
 
 ```bash
 curl -O https://dgsiaf-repo.mecon.gob.ar/repository/pa/datasets/2025/credito-anual-2025.zip

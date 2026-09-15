@@ -325,7 +325,8 @@ that computes an aggregate at the time of the request is not necessary.
 The measurement above stores one number per nodo. The build stores five. The
 deviation against the approved budget needs `presupuestado`. The part of the
 authorized budget that the state executed needs `vigente`. The ladder of the
-execution needs `pagado`. So the files are larger than the table above.
+execution needs `pagado`. The files are larger than the table above for that
+reason.
 
 | Exercise | `institucional.json` raw | gzip | Nodos | Object files | Median | Largest | Total gzip |
 |---|---|---|---|---|---|---|---|
@@ -333,6 +334,6 @@ execution needs `pagado`. So the files are larger than the table above.
 | 2025 | 1,154 KB | **177 KB** | 7,470 | 2,418 | 532 B | **6.6 KB** | 2.91 MB |
 | 2026 | 918 KB | 137 KB | 6,014 | 1,871 | 602 B | 6.2 KB | 2.22 MB |
 
-The three exercises build in 15.8 seconds, and they occupy 62 MB on disk before
-compression. The first paint reads the first level only, which stays small, so
-the growth does not move the target of 1.5 seconds.
+The three exercises build in 15.8 seconds. They occupy 62 MB on disk before
+compression. The first paint reads the first level only, which stays small.
+The growth does not move the target of 1.5 seconds.

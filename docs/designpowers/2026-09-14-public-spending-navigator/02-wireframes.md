@@ -272,9 +272,9 @@ no permission error.
 
 The 200 ms of UC-02 come from the design spec. The institutional file is
 already in the browser, so a movement inside the institutional axis touches no
-network. **The built file weighs 177 KB after gzip and not the 113 KB that the
-design estimated**, because the build stores the five measures that the screens
-need. See section 14 of `00-data-sources.md`.
+network. **The built file weighs 177 KB after gzip, not the 113 KB that the
+design estimated.** The build stores the five measures that the screens need.
+See section 14 of `00-data-sources.md`.
 
 ### Gate
 
