@@ -1,0 +1,38 @@
+/* The smallest set of rules that makes the screen readable. Task 12 refines
+   this with the skills of design. */
+:root {
+  --tinta: #1a1a1a;
+  --fondo: #fbfbf9;
+  --tenue: #6b6b6b;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--tinta);
+  font: 16px/1.5 system-ui, sans-serif;
+}
+main { max-width: 40rem; margin: 0 auto; padding: 1rem; }
+h1 { font-size: 1.5rem; line-height: 1.2; margin: 0.5rem 0; }
+.total { font-size: 1.75rem; font-weight: 700; margin: 0; }
+.detalle { color: var(--tenue); margin: 0.25rem 0 1.5rem; }
+.anios, .miga { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+button { font: inherit; cursor: pointer; border: 1px solid var(--tinta);
+         background: transparent; border-radius: 0.5rem; padding: 0.5rem 0.75rem; }
+button[aria-current="true"] { background: var(--tinta); color: var(--fondo); }
+:focus-visible { outline: 3px solid #0b57d0; outline-offset: 2px; }
+.torta { width: 100%; height: auto; max-width: 22rem; display: block;
+         margin: 0 auto 1rem; }
+.porcion { cursor: pointer; stroke: var(--fondo); stroke-width: 2; }
+.porcion-0 { fill: #2b4a7d; } .porcion-1 { fill: #3e6ea8; }
+.porcion-2 { fill: #5f93c4; } .porcion-3 { fill: #86b4d8; }
+.porcion-4 { fill: #aed0e8; } .porcion-5 { fill: #c9def0; }
+.porcion-6 { fill: #dceaf6; } .porcion-7 { fill: #8a8a8a; }
+.porcion[data-otros] { fill: #9a9a9a; }
+.leyenda { list-style: none; padding: 0; margin: 0 0 2rem; }
+.leyenda li { cursor: pointer; padding: 0.6rem 0.25rem;
+              border-bottom: 1px solid #e6e6e2; }
+.procedencia { border-top: 1px solid #e6e6e2; padding-top: 0.75rem;
+               color: var(--tenue); font-size: 0.875rem; }
+.procedencia .codigos { font-family: ui-monospace, monospace; word-break: break-all; }

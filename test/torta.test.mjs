@@ -2,19 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { caminoDeArco, dibujarTorta } from "../site/app/torta.js";
-
-// A small stand-in for the document. The test needs no browser.
-function falsoDocumento() {
-  const crear = (etiqueta) => ({
-    etiqueta,
-    atributos: {},
-    hijos: [],
-    textContent: "",
-    setAttribute(nombre, valor) { this.atributos[nombre] = valor; },
-    appendChild(hijo) { this.hijos.push(hijo); return hijo; },
-  });
-  return { createElementNS: (espacio, etiqueta) => crear(etiqueta) };
-}
+import { falsoDocumento } from "./falso-documento.mjs";
 
 const PORCIONES = [
   { nombre: "Capital Humano", monto: 60, parte: 0.6, esOtros: false, destino: ["88"] },
