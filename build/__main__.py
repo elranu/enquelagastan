@@ -1,11 +1,12 @@
 """The pipeline of the build.
 
-Read the header. Stop when nothing changed. Download, aggregate, verify, and
-write. A verification that fails writes nothing. The previous publication
-stays.
+Download, aggregate, verify, and write. Every exercise runs every time. A
+verification that fails writes nothing for that exercise, and it does not stop
+another exercise.
 """
 
 import argparse
+import datetime
 import json
 import pathlib
 import sys
@@ -56,15 +57,17 @@ def _total_del_ejercicio(arbol: dict, ejercicio: int) -> Monto:
 
 def construir_ejercicio(ejercicio, destino, leer_cabecera=_leer_cabecera,
                         bajar_csv=_bajar_csv, leer_reporte=_leer_reporte,
-                        cabecera_anterior=None, total_anterior=None) -> Resultado:
+                        total_anterior=None) -> Resultado:
     """Build one exercise. Verify before writing.
 
     INV-02: a verification that fails writes nothing.
+
+    The build downloads the file every run. It does not compare the header
+    against the last run. The file is 3.5 MB, and three of them cost nothing
+    once a day. A build that skipped the work also skipped the write, and the
+    workflow then published a site with no data.
     """
     cabecera = leer_cabecera(ejercicio)
-    if cabecera_anterior is not None and cabecera == cabecera_anterior:
-        return Resultado("sin-cambios", cabecera=cabecera)
-
     with tempfile.TemporaryDirectory() as temporal:
         ruta_csv = bajar_csv(ejercicio, pathlib.Path(temporal))
         arbol = construir(leer_filas(ruta_csv), ejercicio)
@@ -85,6 +88,17 @@ def construir_ejercicio(ejercicio, destino, leer_cabecera=_leer_cabecera,
     )
     if not verificacion_caida.paso:
         return Resultado("fallido", verificacion_caida, cabecera=cabecera)
+
+    no_suman = verify.nodos_que_no_suman(arbol)
+    if no_suman:
+        camino, propio, suma = no_suman[0]
+        motivo = (
+            f"{len(no_suman)} nodo(s) do not equal the sum of their children. "
+            f"INV-04. The first one is {camino}: the nodo holds {propio} and "
+            f"its children add to {suma}, in millions."
+        )
+        verificacion_suma = replace(verificacion, paso=False, motivo=motivo)
+        return Resultado("fallido", verificacion_suma, cabecera=cabecera)
 
     pasados = verify.nodos_que_pasan_el_limite(arbol)
     if pasados:
@@ -118,21 +132,18 @@ def _leer_manifiesto_anterior(destino: pathlib.Path) -> dict:
         return {}
 
 
-def _valores_anteriores(anteriores: dict, ejercicio: int):
-    """Give the cabecera_anterior and total_anterior of one exercise.
+def _total_anterior(anteriores: dict, ejercicio: int):
+    """Give the total_devengado that the last build published.
 
-    Give (None, None) when the manifest holds no entry for it, or an entry
-    that is missing a field this needs.
+    Give None when the manifest holds no entry for this exercise, or an entry
+    with no total. The check that reads this value then treats the run as the
+    first build.
     """
     entrada = anteriores.get(ejercicio)
-    if entrada is None:
-        return None, None
-    try:
-        cabecera_anterior = sources.Cabecera(entrada["publicado"],
-                                             entrada["largo"])
-        return cabecera_anterior, entrada["total_devengado"]
-    except (KeyError, TypeError):
-        return None, None
+    if not isinstance(entrada, dict):
+        return None
+    total = entrada.get("total_devengado")
+    return total if isinstance(total, (int, float)) else None
 
 
 def main(argv=None) -> int:
@@ -146,16 +157,17 @@ def main(argv=None) -> int:
     entradas = dict(anteriores)
     fallo = False
     for ejercicio in (opciones.ejercicio or EJERCICIOS):
-        cabecera_anterior, total_anterior = _valores_anteriores(
-            anteriores, ejercicio)
         resultado = construir_ejercicio(
             ejercicio, destino,
-            cabecera_anterior=cabecera_anterior,
-            total_anterior=total_anterior,
+            total_anterior=_total_anterior(anteriores, ejercicio),
         )
         print(f"{ejercicio}: {resultado.estado}")
         if resultado.estado == "fallido":
             print(f"  {resultado.verificacion.motivo}", file=sys.stderr)
+            # This exercise wrote no file in this run. The other exercises
+            # still publish. The run exits non-zero, so a person looks.
+            print(f"  the exercise {ejercicio} holds no data in this run",
+                  file=sys.stderr)
             fallo = True
         elif resultado.estado == "publicado":
             entradas[ejercicio] = {
@@ -171,6 +183,10 @@ def main(argv=None) -> int:
     viejas = [anteriores[ejercicio] for ejercicio in sorted(anteriores)]
     if nuevas != viejas:
         emit.escribir_manifiesto(destino, nuevas)
+    emit.escribir_latido(
+        destino,
+        datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d"),
+    )
     return 1 if fallo else 0
 
 

@@ -23,6 +23,8 @@ def url_credito(ejercicio: int) -> str:
 
 
 def url_recursos(ejercicio: int) -> str:
+    """The file of the revenue. The screen of the fiscal result needs it, and
+    that screen is future work. See the design spec, P3."""
     return f"{REPOSITORIO}/{ejercicio}/recursos-anual-{ejercicio}.zip"
 
 
@@ -33,9 +35,8 @@ class Cabecera:
 
 
 def leer_cabecera(url: str, abrir=urllib.request.urlopen) -> Cabecera:
-    """Read the header of the file. The build downloads nothing when the value
-    of Last-Modified did not change, so it needs no knowledge of the cadence of
-    the publisher."""
+    """Read the header of the file. The manifest records Last-Modified and
+    Content-Length, so a reader can see which file made a published number."""
     peticion = urllib.request.Request(url, method="HEAD")
     with abrir(peticion) as respuesta:
         cabeceras = respuesta.headers
