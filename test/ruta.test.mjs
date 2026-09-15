@@ -8,9 +8,9 @@ import {
 
 const MANIFIESTO = {
   ejercicios: [
-    { ejercicio: 2024, en_este_artefacto: true },
     { ejercicio: 2025, en_este_artefacto: true },
     { ejercicio: 2026, en_este_artefacto: false },
+    { ejercicio: 2024, en_este_artefacto: true },
   ],
 };
 

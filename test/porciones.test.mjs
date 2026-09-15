@@ -75,8 +75,10 @@ test("abre un otros sin grandes y no arma otro otros", () => {
 });
 
 test("un total de cero no rompe", () => {
-  const vacio = { "x": { n: "Sin ejecucion", d: 0 } };
-  const { total, porciones } = porcionesDe(vacio, ["x"], "d");
+  // Two montos cancel to zero here. Without the guard, a nonzero monto
+  // would divide by that zero total.
+  const vacio = { "x": { n: "Positivo", d: 5 }, "y": { n: "Negativo", d: -5 } };
+  const { total, porciones } = porcionesDe(vacio, ["x", "y"], "d");
   assert.equal(total, 0);
   assert.deepEqual(porciones, []);
 });

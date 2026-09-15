@@ -44,6 +44,8 @@ test("cada porcion lleva su destino y su nombre accesible", () => {
   assert.equal(primera.atributos["data-destino"], "88");
   assert.match(primera.hijos[0].textContent, /Capital Humano/);
   assert.match(primera.hijos[0].textContent, /60/);
+  assert.equal(primera.atributos["role"], "listitem");
+  assert.equal(primera.atributos["tabindex"], "0");
 });
 
 test("una sola porcion dibuja un circulo y no un arco", () => {
