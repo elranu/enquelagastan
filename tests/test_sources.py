@@ -5,6 +5,7 @@ import unittest
 import zipfile
 
 from build.sources import (
+    TIEMPO_LIMITE,
     Cabecera,
     descargar_y_abrir,
     leer_cabecera,
@@ -47,7 +48,8 @@ class TestSources(unittest.TestCase):
         )
 
     def test_lee_la_cabecera_sin_bajar_el_archivo(self):
-        def abrir(peticion):
+        def abrir(peticion, timeout=None):
+            self.assertEqual(timeout, TIEMPO_LIMITE)
             self.assertEqual(peticion.get_method(), "HEAD")
             return FalsaRespuesta(
                 {"Last-Modified": "Wed, 08 Jul 2026 10:39:43 GMT",
@@ -58,18 +60,49 @@ class TestSources(unittest.TestCase):
         self.assertEqual(cabecera,
                          Cabecera("Wed, 08 Jul 2026 10:39:43 GMT", 3641337))
 
-    def test_una_cabecera_sin_last_modified(self):
-        def abrir(peticion):
-            return FalsaRespuesta({})
+    def test_una_cabecera_sin_last_modified_para_el_ejercicio(self):
+        """INV-03: every number names the file that made it and the date of
+        that file. A number with no date has no provenance."""
+        def abrir(peticion, timeout=None):
+            return FalsaRespuesta({"Content-Length": "10"})
+
+        with self.assertRaisesRegex(ValueError, "Last-Modified"):
+            leer_cabecera("http://x", abrir=abrir)
+
+    def test_una_cabecera_sin_content_length_publica(self):
+        """Content-Length is not part of INV-03. The build compares it between
+        runs, and nothing else reads it. A host that answers with a chunked
+        encoding sends no length, and that must not stop an exercise."""
+        def abrir(peticion, timeout=None):
+            return FalsaRespuesta({"Last-Modified": "Wed, 08 Jul 2026 10:39:43 GMT"})
 
         self.assertEqual(leer_cabecera("http://x", abrir=abrir),
-                         Cabecera("", 0))
+                         Cabecera("Wed, 08 Jul 2026 10:39:43 GMT", 0))
+
+    def test_la_cabecera_deja_pasar_el_tiempo_limite(self):
+        """A host that accepts the connection and then stalls must not hold the
+        scheduled job until the platform kills it."""
+        def abrir(peticion, timeout=None):
+            raise TimeoutError("the read timed out")
+
+        with self.assertRaises(TimeoutError):
+            leer_cabecera("http://x", abrir=abrir)
+
+    def test_la_descarga_deja_pasar_el_tiempo_limite(self):
+        def abrir(peticion, timeout=None):
+            self.assertEqual(timeout, TIEMPO_LIMITE)
+            raise TimeoutError("the read timed out")
+
+        with tempfile.TemporaryDirectory() as directorio:
+            with self.assertRaises(TimeoutError):
+                descargar_y_abrir("http://x/datos.zip",
+                                  pathlib.Path(directorio), abrir=abrir)
 
     def test_descarga_y_abre_el_unico_csv(self):
         contenido = b"jurisdiccion;monto\n001;1000\n"
         cuerpo_zip = zip_en_memoria([("gastos.csv", contenido)])
 
-        def abrir(peticion):
+        def abrir(peticion, timeout=None):
             return io.BytesIO(cuerpo_zip)
 
         with tempfile.TemporaryDirectory() as directorio:
@@ -82,7 +115,7 @@ class TestSources(unittest.TestCase):
     def test_descarga_falla_sin_ningun_csv(self):
         cuerpo_zip = zip_en_memoria([("notas.txt", b"esto no es un csv")])
 
-        def abrir(peticion):
+        def abrir(peticion, timeout=None):
             return io.BytesIO(cuerpo_zip)
 
         with tempfile.TemporaryDirectory() as directorio:
@@ -96,7 +129,7 @@ class TestSources(unittest.TestCase):
             ("recursos.csv", b"2"),
         ])
 
-        def abrir(peticion):
+        def abrir(peticion, timeout=None):
             return io.BytesIO(cuerpo_zip)
 
         with tempfile.TemporaryDirectory() as directorio:

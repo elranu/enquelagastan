@@ -28,6 +28,17 @@ def url_recursos(ejercicio: int) -> str:
     return f"{REPOSITORIO}/{ejercicio}/recursos-anual-{ejercicio}.zip"
 
 
+TIEMPO_LIMITE = 120
+"""The limit in seconds of one read of the network.
+
+The whole build of three exercises takes about 16 seconds, downloads included.
+So a single read that passes two minutes is a host that stalled, and not a slow
+day. Without a limit the scheduled job runs until the platform kills it, the
+heartbeat never lands, and nobody reads the failure. This limit makes the
+failure loud and fast. Raise it only if a real download ever needs more.
+"""
+
+
 @dataclass(frozen=True)
 class Cabecera:
     last_modified: str
@@ -36,14 +47,26 @@ class Cabecera:
 
 def leer_cabecera(url: str, abrir=urllib.request.urlopen) -> Cabecera:
     """Read the header of the file. The manifest records Last-Modified and
-    Content-Length, so a reader can see which file made a published number."""
+    Content-Length, so a reader can see which file made a published number.
+
+    Raise when the header carries no Last-Modified. INV-03 needs that date.
+    """
     peticion = urllib.request.Request(url, method="HEAD")
-    with abrir(peticion) as respuesta:
+    with abrir(peticion, timeout=TIEMPO_LIMITE) as respuesta:
         cabeceras = respuesta.headers
-        return Cabecera(
-            cabeceras.get("Last-Modified", ""),
-            int(cabeceras.get("Content-Length", 0) or 0),
+    last_modified = (cabeceras.get("Last-Modified") or "").strip()
+    if not last_modified:
+        raise ValueError(
+            f"{url} gives no Last-Modified. INV-03: every number of this "
+            "product names the file that made it and the date of that file. "
+            "A number with no date has no provenance, so this exercise fails."
         )
+    # Content-Length is not part of INV-03. The manifest records it, and the
+    # only reader compares one run against the next. A host that answers with
+    # a chunked encoding sends no length. That must not stop an exercise, so a
+    # missing length stays 0.
+    return Cabecera(last_modified,
+                    int(cabeceras.get("Content-Length", 0) or 0))
 
 
 def descargar_y_abrir(url: str, destino: pathlib.Path,
@@ -52,7 +75,8 @@ def descargar_y_abrir(url: str, destino: pathlib.Path,
     destino.mkdir(parents=True, exist_ok=True)
     zip_local = destino / url.rsplit("/", 1)[-1]
     peticion = urllib.request.Request(url)
-    with abrir(peticion) as respuesta, open(zip_local, "wb") as archivo:
+    with abrir(peticion, timeout=TIEMPO_LIMITE) as respuesta, \
+            open(zip_local, "wb") as archivo:
         shutil.copyfileobj(respuesta, archivo)
     with zipfile.ZipFile(zip_local) as comprimido:
         nombres = [n for n in comprimido.namelist() if n.lower().endswith(".csv")]
