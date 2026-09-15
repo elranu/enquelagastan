@@ -46,6 +46,13 @@ async function dibujar() {
   const ejercicio = disponibles.includes(pedido.ejercicio)
     ? pedido.ejercicio
     : ejercicioDeEntrada(disponibles);
+  if (ejercicio !== pedido.ejercicio) {
+    // A missing or invalid year (a fresh visit with no hash, for one) still
+    // draws the right exercise, but the URL must say so too. Every click
+    // reads the exercise from the URL, so a click right after this draw
+    // would otherwise ask for the exercise "null".
+    history.replaceState(null, "", escribirRuta(ejercicio, pedido.clave));
+  }
   const entrada = manifiesto.ejercicios
     .find((fila) => fila.ejercicio === ejercicio);
   const indiceInstitucional = await cargarInstitucional(ejercicio);
@@ -56,7 +63,8 @@ async function dibujar() {
   }
 
   if (pedido.clave === "") {
-    app.appendChild(dibujarRaiz(vistaDeRaiz(estadoBase), document));
+    const grupo = grupoOtros ? grupoOtros.claves : null;
+    app.appendChild(dibujarRaiz(vistaDeRaiz(estadoBase, grupo), document));
     ultimo = { ejercicio, clave: "", nombre: null, monto: null };
     return;
   }
@@ -123,7 +131,15 @@ async function manejarClick(evento) {
   if (claveEl) {
     grupoOtros = null;
     const pedido = leerRuta(window.location.hash);
-    window.location.hash = escribirRuta(pedido.ejercicio, claveEl.dataset.clave);
+    const ruta = escribirRuta(pedido.ejercicio, claveEl.dataset.clave);
+    if (ruta === window.location.hash) {
+      // The crumb "otros" points at the clave already on screen, so the hash
+      // does not change. Redraw here, or the browser fires no hashchange
+      // and the click of the visitor does nothing.
+      await dibujar();
+    } else {
+      window.location.hash = ruta;
+    }
   }
 }
 

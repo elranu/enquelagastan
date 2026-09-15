@@ -26,10 +26,13 @@ function totalesDeLaRaiz(indice) {
   };
 }
 
-export function vistaDeRaiz(estado) {
+export function vistaDeRaiz(estado, grupo = null) {
   const { indice, entrada, ejercicio, disponibles } = estado;
   const totales = totalesDeLaRaiz(indice);
   const comoNodo = { n: "", d: totales.d, p: totales.p, v: totales.v, g: totales.g };
+  // A visitor who opens the slice "otros" gets the same screen, with the pie
+  // chart limited to that group instead of every jurisdiccion. See app.js.
+  const claves = grupo ?? totales.claves;
   return {
     ejercicio,
     anios: disponibles,
@@ -41,7 +44,7 @@ export function vistaDeRaiz(estado) {
     total: entrada.total_devengado / 1_000_000,
     ejecucion: ejecucionDe(comoNodo),
     desviacion: desviacionDe(comoNodo, ""),
-    porciones: porcionesDe(indice, totales.claves, "d").porciones,
+    porciones: porcionesDe(indice, claves, "d").porciones,
     procedencia: procedenciaDe(entrada, indice, ""),
   };
 }
