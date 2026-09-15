@@ -29,15 +29,19 @@ The build proves that on every run. It computes the total of the exercise and
 compares it against the official report "Cuenta Ahorro Inversion
 Financiamiento". **When the two do not agree, nothing is published.**
 
-On the exercise 2025:
+On the exercise 2025, the build compares one number:
 
 | | This project | The official report |
 |---|---|---|
 | Total spending | 123,533,955,013,702 | 123,533,955,013,702 |
-| Total revenue | 134,812,992,323,522 | 134,812,992,323,521 |
-| Financial result | 11,279,037,309,820 | 11,279,037,309,820 |
 
-The difference of one peso comes from the decimals of the source file.
+The build reads the spending. It does not read the revenue yet. The revenue
+and the fiscal result belong to a screen that does not exist yet.
+
+A person measured the revenue of 2025 by hand on 2026-09-14, and found
+134,812,992,323,522 pesos. The same measurement gives a fiscal result of
+11,279,037,309,820 pesos. **No check of this project proves those two
+numbers.** Read them as notes, and not as a machine check.
 
 ## Check a number yourself
 
@@ -58,7 +62,8 @@ print(f'{total * 1_000_000:,.0f}')
 
 It prints `123,533,955,013,702`, the same total the table above gives.
 
-The source stores each amount in millions of pesos. The script multiplies the total by one million.
+The source stores each amount in millions of pesos. The script multiplies
+the total by one million.
 
 The same method works for any branch of the tree, once the reader filters
 the file's rows by that branch's codes.
@@ -81,8 +86,8 @@ python -m unittest discover -s tests -v
 python -m build --destino site/data
 ```
 
-The build reads the header of the source file first, and it downloads nothing
-when the file did not change.
+The build downloads the file of every exercise on every run. Three files of
+3.5 MB once a day cost nothing.
 
 ## The source
 
