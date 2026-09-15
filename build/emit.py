@@ -8,6 +8,8 @@ no network.
 
 import json
 import pathlib
+import shutil
+import tempfile
 
 from build.tree import nivel
 
@@ -55,10 +57,40 @@ def _escribir(ruta: pathlib.Path, datos: dict) -> None:
 
 def escribir_ejercicio(arbol: dict, ejercicio: int,
                        destino: pathlib.Path) -> dict:
-    """Write the institutional file. Write one file per leaf. Give a summary."""
-    carpeta = destino / str(ejercicio)
+    """Write the institutional file. Write one file per leaf. Give a summary.
+
+    The exercise lands whole or it does not land. The build writes into a
+    staging directory beside the destination, and it moves that directory into
+    place after the last file. A write that raises leaves nothing, so the
+    upload never publishes a half exercise. The move also removes the previous
+    directory of this exercise, so a branch that the source removed does not
+    stay on disk.
+    """
+    # Every file key first. The guard of the separator then raises before any
+    # file lands, and not in the middle of the loop.
+    claves = {camino: clave_de_archivo(camino) for camino in arbol}
+
+    destino.mkdir(parents=True, exist_ok=True)
+    # The staging directory is inside the destination, so the move stays on
+    # one file system and cannot copy across devices.
+    provisional = pathlib.Path(
+        tempfile.mkdtemp(prefix=f".{ejercicio}-", dir=destino))
+    try:
+        resumen = _escribir_en(arbol, claves, provisional)
+        carpeta = destino / str(ejercicio)
+        if carpeta.exists():
+            shutil.rmtree(carpeta)
+        provisional.replace(carpeta)
+    except BaseException:
+        shutil.rmtree(provisional, ignore_errors=True)
+        raise
+    return resumen
+
+
+def _escribir_en(arbol: dict, claves: dict, carpeta: pathlib.Path) -> dict:
+    """Write every file of one exercise into one directory."""
     institucional = {
-        clave_de_archivo(camino): _nodo_a_json(nodo)
+        claves[camino]: _nodo_a_json(nodo)
         for camino, nodo in arbol.items()
         if nivel(camino) <= NIVELES_INSTITUCIONALES
     }
@@ -77,11 +109,9 @@ def escribir_ejercicio(arbol: dict, ejercicio: int,
     for camino, nodo in arbol.items():
         if nivel(camino) > NIVELES_INSTITUCIONALES:
             prefijo = camino[:NIVELES_INSTITUCIONALES]
-            grupos.setdefault(prefijo, {})[clave_de_archivo(camino)] = \
-                _nodo_a_json(nodo)
+            grupos.setdefault(prefijo, {})[claves[camino]] = _nodo_a_json(nodo)
     for hoja, debajo in grupos.items():
-        _escribir(carpeta / "objeto" / f"{clave_de_archivo(hoja)}.json",
-                  debajo)
+        _escribir(carpeta / "objeto" / f"{claves[hoja]}.json", debajo)
     return {"nodos": len(arbol), "institucional": len(institucional),
             "hojas": len(hojas)}
 
