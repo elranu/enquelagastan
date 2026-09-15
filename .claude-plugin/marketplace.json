@@ -1,0 +1,19 @@
+{
+  "name": "designpowers",
+  "description": "Design stages for Superpowers, plus the ranu orchestrator profile.",
+  "owner": {
+    "name": "ranu"
+  },
+  "plugins": [
+    {
+      "name": "designpowers",
+      "source": "./plugins/designpowers",
+      "description": "Design stages for Superpowers: EventStorming, wireframing, domain modeling, spec consolidation, reuse-first implementation and troubleshooting"
+    },
+    {
+      "name": "ranu",
+      "source": "./plugins/ranu",
+      "description": "Working profile of ranu: lead-orchestrator output style and subagent roster"
+    }
+  ]
+}

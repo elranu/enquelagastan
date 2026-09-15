@@ -1,0 +1,9 @@
+{
+  "name": "designpowers",
+  "version": "0.1.0",
+  "description": "Design stages for Superpowers: EventStorming, wireframing, domain modeling, spec consolidation, reuse-first implementation and troubleshooting",
+  "author": {
+    "name": "ranu"
+  },
+  "license": "MIT"
+}

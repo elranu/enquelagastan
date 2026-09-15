@@ -1,0 +1,67 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/enable-profile.mjs"]
+          }
+        ]
+      }
+    ]
+  },
+  "extraKnownMarketplaces": {
+    "designpowers": {
+      "source": {
+        "source": "directory",
+        "path": "./"
+      }
+    },
+    "ponytail": {
+      "source": {
+        "source": "github",
+        "repo": "DietrichGebert/ponytail"
+      }
+    },
+    "claude-code-workflows": {
+      "source": {
+        "source": "github",
+        "repo": "wshobson/agents"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true,
+    "designpowers@designpowers": true,
+    "ponytail@ponytail": true,
+    "comprehensive-review@claude-code-workflows": true,
+    "incident-response@claude-code-workflows": true,
+    "c4-architecture@claude-code-workflows": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npm test *)",
+      "Bash(tsc *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git checkout *)",
+      "Bash(git switch *)",
+      "Bash(git stash *)",
+      "Bash(git status *)",
+      "Bash(git push *)",
+      "Bash(git cherry-pick *)",
+      "Bash(npx tsc *)",
+      "Bash(npx tsx *)"
+    ],
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.*)"
+    ],
+    "ask": [
+      "Bash(git reset *)"
+    ]
+  }
+}
