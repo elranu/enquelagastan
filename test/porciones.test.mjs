@@ -31,7 +31,9 @@ test("las partes suman uno", () => {
 });
 
 test("ordena de mayor a menor y deja otros al final", () => {
-  const { porciones } = porcionesDe(INDICE, ["c", "a", "d", "b", "e"], "d");
+  // The claves arrive with the large amounts out of order. The assertion
+  // below holds only when porcionesDe sorts them.
+  const { porciones } = porcionesDe(INDICE, ["e", "d", "b", "c", "a"], "d");
   assert.deepEqual(porciones.map((p) => p.monto), [60, 30, 5, 5]);
   assert.equal(porciones.at(-1).esOtros, true);
 });
