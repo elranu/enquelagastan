@@ -41,8 +41,8 @@ test("una respuesta que no es ok levanta un error", async () => {
 });
 
 test("cada cargador construye la ruta que le corresponde", async () => {
-  // The two loaders below manifest were never called from a test, so the
-  // route they build to reach the seam traer had no cover.
+  // Two loaders build a route below manifest.json. No earlier test called
+  // them. Nothing checked the route they pass to the seam traer.
   olvidar();
   const { traer, llamadas } = falsoTraer({});
   await cargarManifiesto(traer);

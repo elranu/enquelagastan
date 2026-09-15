@@ -17,9 +17,8 @@ test("el monto largo se lee con puntos de miles", () => {
 test("el monto corto usa la escala larga del castellano", () => {
   assert.equal(montoCorto(123_533_955.013701), "123,5 billones");
   assert.equal(montoCorto(73_826_008.379115), "73,8 billones");
-  // The argument is millones de pesos. 1.2 millones de pesos gives 1,2
-  // millones, and not 1_200 (that input is 1.200 millones de pesos, which
-  // reads as "1.200,0 millones").
+  // The value 1.2 gives "1,2 millones". The brief's original literal,
+  // 1_200, is 1.200 millones de pesos and gives "1.200,0 millones".
   assert.equal(montoCorto(1.2), "1,2 millones");
   assert.equal(montoCorto(0.5), "500.000");
 });
