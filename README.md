@@ -41,18 +41,28 @@ The difference of one peso comes from the decimals of the source file.
 
 ## Check a number yourself
 
-The screens will name the file that produced each number, with its date of
-publication. At the lowest level of a branch, they will also name the codes
-of the rows.
-
-Today, check a number by hand:
+Check the headline total today, with no trust in this project:
 
 ```bash
 curl -O https://dgsiaf-repo.mecon.gob.ar/repository/pa/datasets/2025/credito-anual-2025.zip
 unzip credito-anual-2025.zip
+python3 -c "
+import csv
+total = 0.0
+for fila in csv.DictReader(open('credito-anual-2025.csv', encoding='utf-8-sig')):
+    valor = fila['credito_devengado'].replace('.', '').replace(',', '.')
+    total += float(valor or 0)
+print(f'{total * 1_000_000:,.0f}')
+"
 ```
 
-Then add the column `credito_devengado` over the rows that carry those codes.
+It prints `123,533,955,013,702`, the same total the table above gives.
+
+The script multiplies the total by one million because the source stores
+each amount in millions of pesos.
+
+The same method works for any branch of the tree, once the reader filters
+the file's rows by that branch's codes.
 
 ## The measure
 
