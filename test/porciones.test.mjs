@@ -42,6 +42,36 @@ test("sin porciones chicas no arma otros", () => {
   assert.ok(porciones.every((p) => p.esOtros === false));
 });
 
+test("sin nada grande no arma otros y da una porcion por miembro", () => {
+  const indice = {};
+  const claves = [];
+  for (let i = 0; i < 30; i += 1) {
+    const clave = `c${i}`;
+    indice[clave] = { n: `Chica ${i}`, d: 1 };
+    claves.push(clave);
+  }
+  const { porciones } = porcionesDe(indice, claves, "d");
+  assert.equal(porciones.length, 30);
+  assert.ok(porciones.every((p) => p.nombre !== NOMBRE_OTROS));
+});
+
+test("abre un otros sin grandes y no arma otro otros", () => {
+  const indice = { "g": { n: "Grande", d: 30 } };
+  const claves = ["g"];
+  for (let i = 0; i < 26; i += 1) {
+    const clave = `c${i}`;
+    indice[clave] = { n: `Chica ${i}`, d: 70 / 26 };
+    claves.push(clave);
+  }
+  const nivel1 = porcionesDe(indice, claves, "d");
+  const otros = nivel1.porciones.find((p) => p.esOtros);
+  assert.ok(otros, "the top level groups the 26 small children into otros");
+
+  const nivel2 = porcionesDe(indice, otros.destino, "d");
+  assert.equal(nivel2.porciones.length, 26);
+  assert.ok(nivel2.porciones.every((p) => p.nombre !== NOMBRE_OTROS));
+});
+
 test("un total de cero no rompe", () => {
   const vacio = { "x": { n: "Sin ejecucion", d: 0 } };
   const { total, porciones } = porcionesDe(vacio, ["x"], "d");

@@ -23,8 +23,14 @@ export function porcionesDe(indice, claves, medida) {
     return { total, porciones: [] };
   }
 
-  const grandes = valores.filter((valor) => valor.monto / total >= UMBRAL);
-  const chicas = valores.filter((valor) => valor.monto / total < UMBRAL);
+  let grandes = valores.filter((valor) => valor.monto / total >= UMBRAL);
+  let chicas = valores.filter((valor) => valor.monto / total < UMBRAL);
+  if (grandes.length === 0) {
+    // No child reaches the threshold. Group nothing here, so a tap on this
+    // slice never returns the same slice.
+    grandes = chicas;
+    chicas = [];
+  }
   grandes.sort((uno, otro) => otro.monto - uno.monto);
 
   const porciones = grandes.map((valor) => ({
