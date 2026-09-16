@@ -171,8 +171,8 @@ export function dibujarTiraDeAnios(vista, documento) {
 }
 
 function comoPaso(documento, boton) {
-  // A step stays a control: the <li> only wraps it, so a screen reader
-  // still reads a list, and a visitor still presses a real button.
+  // A step stays a control: the <li> only wraps it. A screen reader
+  // still reads a list, and a visitor still presses a button.
   const paso = documento.createElement("li");
   paso.appendChild(boton);
   return paso;
