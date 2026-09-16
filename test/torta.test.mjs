@@ -32,8 +32,9 @@ test("cada porcion lleva su destino y su nombre accesible", () => {
   assert.equal(primera.atributos["data-destino"], "88");
   assert.match(primera.hijos[0].textContent, /Capital Humano/);
   assert.match(primera.hijos[0].textContent, /60/);
-  assert.equal(primera.atributos["role"], "listitem");
-  assert.equal(primera.atributos["tabindex"], "0");
+  assert.equal(primera.atributos.role, undefined);
+  assert.equal(primera.atributos.tabindex, undefined,
+    "the legend row is the tab stop, and never the wedge too");
 });
 
 test("una sola porcion dibuja un circulo y no un arco", () => {
@@ -43,17 +44,14 @@ test("una sola porcion dibuja un circulo y no un arco", () => {
   assert.equal(svg.hijos.filter((h) => h.etiqueta === "path").length, 0);
 });
 
-test("la porcion lleva un aria-label, porque listitem no toma nombre del title", () => {
+test("la torta se esconde de un lector de pantalla", () => {
+  // The chart repeats the legend below it, row for row. A screen reader
+  // reads the rows, which are real buttons, and never the same list twice.
   const svg = dibujarTorta(PORCIONES, falsoDocumento());
-  const primera = svg.hijos[0];
-  assert.equal(primera.atributos["aria-label"], "Capital Humano, 60.0%");
-  assert.match(primera.hijos[0].textContent, /Capital Humano/, "the title stays, for hover");
-});
-
-test("el circulo de una sola porcion tambien lleva su aria-label", () => {
-  const sola = [{ nombre: "Unica", monto: 10, parte: 1, esOtros: false, destino: ["9"] }];
-  const svg = dibujarTorta(sola, falsoDocumento());
-  assert.equal(svg.hijos[0].atributos["aria-label"], "Unica, 100.0%");
+  assert.equal(svg.atributos["aria-hidden"], "true");
+  assert.equal(svg.atributos.role, undefined);
+  assert.match(svg.hijos[0].hijos[0].textContent, /Capital Humano/,
+    "the title stays, for hover");
 });
 
 test("la porcion otros lleva su marca", () => {

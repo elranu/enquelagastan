@@ -5,8 +5,8 @@
 
 const ESPACIO = "http://www.w3.org/2000/svg";
 
-export const RADIO = 100;
-export const CENTRO = 110;
+const RADIO = 100;
+const CENTRO = 110;
 
 function punto(angulo) {
   return {
@@ -34,7 +34,11 @@ function porCiento(parte) {
 export function dibujarTorta(porciones, documento = document) {
   const svg = documento.createElementNS(ESPACIO, "svg");
   svg.setAttribute("viewBox", `0 0 ${CENTRO * 2} ${CENTRO * 2}`);
-  svg.setAttribute("role", "list");
+  // The chart is a picture of the legend below it. Every slice is a row of
+  // that legend, with the same name, the same share and the same destino.
+  // A screen reader reads the rows, which are real buttons, and it never
+  // reads the same list twice.
+  svg.setAttribute("aria-hidden", "true");
   svg.setAttribute("class", "torta");
 
   // One slice fills the circle. An arc of a full turn collapses to a point,
@@ -46,14 +50,10 @@ export function dibujarTorta(porciones, documento = document) {
     circulo.setAttribute("r", RADIO);
     circulo.setAttribute("class", "porcion porcion-0");
     circulo.setAttribute("data-destino", porciones[0].destino.join(" "));
-    circulo.setAttribute("role", "listitem");
-    circulo.setAttribute("tabindex", "0");
-    const nombre = `${porciones[0].nombre}, ${porCiento(1)}`;
-    // A listitem takes no name from a child title, so aria-label carries
-    // the name. The title stays: a mouse still shows it on hover.
-    circulo.setAttribute("aria-label", nombre);
+    // The title is what a mouse shows on hover. It is not an accessible
+    // name: the chart is hidden from assistive technology.
     const titulo = documento.createElementNS(ESPACIO, "title");
-    titulo.textContent = nombre;
+    titulo.textContent = `${porciones[0].nombre}, ${porCiento(1)}`;
     circulo.appendChild(titulo);
     svg.appendChild(circulo);
     return svg;
@@ -66,17 +66,11 @@ export function dibujarTorta(porciones, documento = document) {
     forma.setAttribute("d", caminoDeArco(angulo, hasta));
     forma.setAttribute("class", `porcion porcion-${orden}`);
     forma.setAttribute("data-destino", porcion.destino.join(" "));
-    forma.setAttribute("role", "listitem");
-    forma.setAttribute("tabindex", "0");
     if (porcion.esOtros) {
       forma.setAttribute("data-otros", "si");
     }
-    const nombre = `${porcion.nombre}, ${porCiento(porcion.parte)}`;
-    // A listitem takes no name from a child title, so aria-label carries
-    // the name. The title stays: a mouse still shows it on hover.
-    forma.setAttribute("aria-label", nombre);
     const titulo = documento.createElementNS(ESPACIO, "title");
-    titulo.textContent = nombre;
+    titulo.textContent = `${porcion.nombre}, ${porCiento(porcion.parte)}`;
     forma.appendChild(titulo);
     svg.appendChild(forma);
     angulo = hasta;
