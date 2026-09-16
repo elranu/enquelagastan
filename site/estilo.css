@@ -149,8 +149,9 @@ button[aria-current="true"] {
    pushes the headline off the screen of a telephone.
    So the miga is one row that scrolls. "Inicio" stays at the start, because
    it is the way out. The chip that is half visible at the end is the cue
-   that more camino is there. The name of the level the visitor is on is the
-   h1 below, so the miga never has to carry it. */
+   that more camino is there. The miga does carry the level the visitor is
+   on, as its last chip. That chip carries aria-current, so the rule below
+   fills it. */
 .miga {
   margin-bottom: var(--e-4);
   overflow-x: auto;
@@ -192,8 +193,12 @@ button[aria-current="true"] {
 }
 
 /* Each step now sits alone in its own <li>, so :last-child on the button
-   itself would match every step. Read the last step from the list instead. */
-.miga li:last-child .tramo { color: var(--tinta); font-weight: 500; }
+   itself would match every step. Read the last step from the list instead.
+   The current step already gets its color from button[aria-current="true"].
+   This rule sets no color there, or a fixed color would return and hide
+   the text again. */
+.miga li:last-child .tramo { font-weight: 500; }
+.miga li:last-child .tramo:not([aria-current="true"]) { color: var(--tinta); }
 
 /* Above the width of a telephone the column is wider, so a chip may show
    more of its name before it stops. */

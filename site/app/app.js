@@ -93,79 +93,89 @@ export function iniciar({ documento, ventana, historia }) {
     const mia = generacion;
     const vigente = () => mia === generacion;
 
-    const manifiesto = await cargarManifiesto();
-    if (!vigente()) {
-      return;
-    }
-
-    if (ventana.location.hash === RUTA_DE_FUENTES) {
-      mostrar(dibujarFuentes(vistaDeFuentes(manifiesto), documento),
-        "De dónde salen estos números");
-      return;
-    }
-
-    const disponibles = ejerciciosDisponibles(manifiesto);
-    const pedido = leerRuta(ventana.location.hash);
-    const ejercicio = disponibles.includes(pedido.ejercicio)
-      ? pedido.ejercicio
-      : ejercicioDeEntrada(disponibles);
-    const entrada = manifiesto.ejercicios
-      .find((fila) => fila.ejercicio === ejercicio);
-    const institucional = await cargarInstitucional(ejercicio);
-    if (!vigente()) {
-      return;
-    }
-    const base = { ejercicio, entrada, indice: institucional, disponibles };
-
-    // The visitor never lands on a nodo with one child. A chain that crosses
-    // the object level needs more than one pass, because the index of the next
-    // clave is not loaded yet. Repeat until the destino stops moving.
-    let clave = pedido.clave;
-    let estado = base;
-    let decision = null;
-    for (;;) {
-      estado = { ...base, indice: await indiceDe(ejercicio, institucional, clave) };
+    // A stale run must write nothing, whether it succeeds or fails.
+    // A rejection throws at the await, so no vigente check runs on its own.
+    // The catch below adds that check, for a failure and not only for a
+    // success.
+    try {
+      const manifiesto = await cargarManifiesto();
       if (!vigente()) {
         return;
       }
-      decision = resolverPantalla(estado, clave, grupoOtros);
-      if (decision.tipo !== "saltar") {
-        break;
+
+      if (ventana.location.hash === RUTA_DE_FUENTES) {
+        mostrar(dibujarFuentes(vistaDeFuentes(manifiesto), documento),
+          "De dónde salen estos números");
+        return;
       }
-      clave = decision.clave;
-    }
-    grupoOtros = decision.grupo ? grupoOtros : null;
 
-    // Replace, never push. A jumped clave and a missing year both rewrite the
-    // URL. A push would leave the skipped clave in the history, and Back would
-    // return there and jump forward again, with no way out.
-    const ruta = escribirRuta(ejercicio, clave);
-    if (ruta !== ventana.location.hash) {
-      historia.replaceState(null, "", ruta);
-    }
+      const disponibles = ejerciciosDisponibles(manifiesto);
+      const pedido = leerRuta(ventana.location.hash);
+      const ejercicio = disponibles.includes(pedido.ejercicio)
+        ? pedido.ejercicio
+        : ejercicioDeEntrada(disponibles);
+      const entrada = manifiesto.ejercicios
+        .find((fila) => fila.ejercicio === ejercicio);
+      const institucional = await cargarInstitucional(ejercicio);
+      if (!vigente()) {
+        return;
+      }
+      const base = { ejercicio, entrada, indice: institucional, disponibles };
 
-    if (decision.tipo === "raiz") {
-      const vista = vistaDeRaiz(estado, decision.grupo);
-      mostrar(dibujarRaiz(vista, documento), resumen(vista));
-      ultimo = { ejercicio, clave: "", nombre: null, monto: null };
-      return;
-    }
+      // The visitor never lands on a nodo with one child. A chain that crosses
+      // the object level needs more than one pass, because the index of the next
+      // clave is not loaded yet. Repeat until the destino stops moving.
+      let clave = pedido.clave;
+      let estado = base;
+      let decision = null;
+      for (;;) {
+        estado = { ...base, indice: await indiceDe(ejercicio, institucional, clave) };
+        if (!vigente()) {
+          return;
+        }
+        decision = resolverPantalla(estado, clave, grupoOtros);
+        if (decision.tipo !== "saltar") {
+          break;
+        }
+        clave = decision.clave;
+      }
+      grupoOtros = decision.grupo ? grupoOtros : null;
 
-    if (decision.tipo === "ausente") {
-      const origen = ultimo && ultimo.clave === clave
-        ? { ejercicio: ultimo.ejercicio, monto: ultimo.monto, nombre: ultimo.nombre }
-        : { ejercicio };
-      const vista = vistaDeAusente(estado, clave, origen);
-      mostrar(dibujarAusente(vista, documento),
-        `${vista.nombre} no existe en el ejercicio ${vista.ejercicio}`);
-      return;
-    }
+      // Replace, never push. A jumped clave and a missing year both rewrite the
+      // URL. A push would leave the skipped clave in the history, and Back would
+      // return there and jump forward again, with no way out.
+      const ruta = escribirRuta(ejercicio, clave);
+      if (ruta !== ventana.location.hash) {
+        historia.replaceState(null, "", ruta);
+      }
 
-    const vista = vistaDeNodo(estado, clave, decision.grupo);
-    mostrar(dibujarNodo(vista, documento), resumen(vista));
-    ultimo = {
-      ejercicio, clave, nombre: estado.indice[clave].n, monto: estado.indice[clave].d,
-    };
+      if (decision.tipo === "raiz") {
+        const vista = vistaDeRaiz(estado, decision.grupo);
+        mostrar(dibujarRaiz(vista, documento), resumen(vista));
+        ultimo = { ejercicio, clave: "", nombre: null, monto: null };
+        return;
+      }
+
+      if (decision.tipo === "ausente") {
+        const origen = ultimo && ultimo.clave === clave
+          ? { ejercicio: ultimo.ejercicio, monto: ultimo.monto, nombre: ultimo.nombre }
+          : { ejercicio };
+        const vista = vistaDeAusente(estado, clave, origen);
+        mostrar(dibujarAusente(vista, documento),
+          `${vista.nombre} no existe en el ejercicio ${vista.ejercicio}`);
+        return;
+      }
+
+      const vista = vistaDeNodo(estado, clave, decision.grupo);
+      mostrar(dibujarNodo(vista, documento), resumen(vista));
+      ultimo = {
+        ejercicio, clave, nombre: estado.indice[clave].n, monto: estado.indice[clave].d,
+      };
+    } catch (error) {
+      if (vigente()) {
+        informar(error);
+      }
+    }
   }
 
   async function manejarClick(evento) {

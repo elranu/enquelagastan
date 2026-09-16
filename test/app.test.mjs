@@ -172,6 +172,41 @@ test("una segunda navegacion no deja dos pantallas encima", async () => {
   assert.doesNotMatch(texto, /Personal/, "and nothing of the run it left");
 });
 
+test("un pedido abandonado que despues falla no borra la pantalla vigente", async () => {
+  // A visitor on a nodo of level 8 taps a slice, and the object file fails
+  // instead of arriving. 30 ms later the visitor taps "Inicio". The failure
+  // of the first run must not erase the second run, already on screen.
+  olvidar();
+  const objeto = `data/2025/objeto/${CADENA}.json`;
+  let rechazar;
+  const pendiente = new Promise((_resolver, reject) => { rechazar = reject; });
+  globalThis.fetch = async (ruta) => (ruta === objeto ? pendiente : {
+    ok: CUERPOS[ruta] !== undefined,
+    status: CUERPOS[ruta] === undefined ? 404 : 200,
+    json: async () => CUERPOS[ruta],
+  });
+  const documento = falsoDocumento();
+  const ventana = falsaVentana(`#/2025/${CADENA}`);
+  const historia = falsaHistoria();
+  const navegador = iniciar({ documento, ventana, historia });
+  const app = documento.getElementById("app");
+
+  const primera = navegador.dibujar();
+  await respirar();
+  await respirar();
+
+  ventana.location.hash = "#/2025";
+  await navegador.dibujar();
+
+  rechazar(new Error("Failed to fetch"));
+  await primera;
+
+  assert.equal(app.hijos.length, 1, "one screen, and never the error page");
+  const texto = textoDe(app);
+  assert.match(texto, /111\.000\.000 pesos/, "the root, still on screen");
+  assert.doesNotMatch(texto, /No pudimos mostrar esta pantalla/, "and not the failure");
+});
+
 test("el ejercicio que se abandona no reescribe la url", async () => {
   const objeto = `data/2025/objeto/${CADENA}.json`;
   const sitio = montar(`#/2025/${CADENA}`, [objeto]);

@@ -47,6 +47,27 @@ test("un 503 deja el estado en su propia propiedad del error", async () => {
   );
 });
 
+test("dos lecturas concurrentes de una misma ruta piden el archivo una sola vez", async () => {
+  // Two screens can ask for one route before the first request settles.
+  // The memory must hold the promise itself, and not only the settled
+  // value, or the second read would start a second request of its own.
+  olvidar();
+  const llamadas = [];
+  let responder;
+  const traer = async (ruta) => {
+    llamadas.push(ruta);
+    await new Promise((seguir) => { responder = seguir; });
+    return { ok: true, status: 200, json: async () => ({ "88": { n: "Capital Humano" } }) };
+  };
+  const ruta = "data/2025/institucional.json";
+  const primera = cargarJson(ruta, traer);
+  const segunda = cargarJson(ruta, traer);
+  responder();
+  const [uno, dos] = await Promise.all([primera, segunda]);
+  assert.equal(llamadas.length, 1, "one file, one request");
+  assert.equal(uno, dos);
+});
+
 test("cada cargador construye la ruta que le corresponde", async () => {
   // Two loaders build a route below manifest.json. No earlier test called
   // them. Nothing checked the route they pass to the seam traer.
