@@ -64,6 +64,20 @@ main {
   padding-bottom: max(var(--e-5), env(safe-area-inset-bottom));
 }
 
+/* ---- The frame of a screen -------------------------------------------- */
+
+/* Every screen is a column. The foot goes to the bottom of it, so the line
+   that names the source is at the foot of a short screen too. INV-03 asks
+   for a source that is always visible, and a source floating in the middle
+   of a blank page is not that. */
+.pantalla {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - 4rem);
+}
+
+.pantalla > .procedencia { margin-top: auto; }
+
 /* ---- Controls -------------------------------------------------------- */
 
 /* Every control carries a shape, so it never reads as the text beside it. */
@@ -171,14 +185,31 @@ button[aria-current="true"] {
 
 .tramo:last-child { color: var(--tinta); font-weight: 500; }
 
+/* Above the width of a telephone the column is wider, so a chip may show
+   more of its name before it stops. */
+@media (min-width: 30rem) {
+  .tramo { max-width: 20rem; }
+}
+
 /* ---- The headline ----------------------------------------------------- */
 
 h1 {
   font-size: clamp(1.375rem, 5vw, 1.75rem);
   line-height: 1.15;
   letter-spacing: -0.015em;
-  text-wrap: balance;
   margin: 0 0 var(--e-2);
+}
+
+/* The title of the root is one short phrase that this project writes, so it
+   can be balanced across its lines. */
+.pantalla-raiz h1, .pantalla-fuentes h1 { text-wrap: balance; }
+
+/* The title of a nodo is a name that the state writes. A name of an
+   actividad runs past 60 characters, so it wraps instead, and a long word
+   breaks rather than leave the column. */
+.pantalla-nodo h1, .pantalla-ausente h1 {
+  text-wrap: pretty;
+  overflow-wrap: break-word;
 }
 
 .total {
@@ -309,7 +340,6 @@ h1 {
 
 /* ---- The screen of an absent camino ----------------------------------- */
 
-.pantalla-ausente h1 { text-wrap: pretty; }
 
 .pantalla-ausente .origen {
   color: var(--tenue);
@@ -322,11 +352,13 @@ h1 {
   color: var(--fondo);
 }
 
-.secundario { margin-inline-start: var(--e-2); }
+/* The screen is a column, so a button that is a direct child would stretch
+   to the width of the column. Every exit hugs its own label instead. */
+.pantalla > .principal, .pantalla > .secundario { align-self: flex-start; }
 
-.pantalla-ausente .principal, .pantalla-ausente .secundario {
-  margin-bottom: var(--e-5);
-}
+.pantalla-ausente .principal { margin-bottom: var(--e-3); }
+
+.pantalla-ausente .secundario { margin-bottom: var(--e-5); }
 
 /* ---- The screen of the sources ---------------------------------------- */
 
