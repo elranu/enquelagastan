@@ -11,18 +11,7 @@ export function olvidar() {
   memoria.clear();
 }
 
-export function claveDeCamino(camino) {
-  return camino.join("-");
-}
-
-export function caminoDeClave(clave) {
-  return clave === "" ? [] : clave.split("-");
-}
-
-export async function cargarJson(ruta, traer = fetch) {
-  if (memoria.has(ruta)) {
-    return memoria.get(ruta);
-  }
+async function pedir(ruta, traer) {
   const respuesta = await traer(ruta);
   if (!respuesta.ok) {
     const error = new Error(`${ruta} answered ${respuesta.status}`);
@@ -31,9 +20,23 @@ export async function cargarJson(ruta, traer = fetch) {
     error.estadoHttp = respuesta.status;
     throw error;
   }
-  const datos = await respuesta.json();
-  memoria.set(ruta, datos);
-  return datos;
+  return respuesta.json();
+}
+
+export function cargarJson(ruta, traer = fetch) {
+  // The memory holds the promise and not the settled value. Two screens can
+  // ask for one route at the same time. The second one then waits for the
+  // first request, and starts no second one.
+  if (memoria.has(ruta)) {
+    return memoria.get(ruta);
+  }
+  const pedido = pedir(ruta, traer).catch((error) => {
+    // A failure is never remembered. The next visit asks again.
+    memoria.delete(ruta);
+    throw error;
+  });
+  memoria.set(ruta, pedido);
+  return pedido;
 }
 
 export function cargarManifiesto(traer) {

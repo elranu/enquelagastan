@@ -2,8 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  cargarInstitucional, cargarJson, cargarManifiesto, cargarObjeto,
-  caminoDeClave, claveDeCamino, olvidar,
+  cargarInstitucional, cargarJson, cargarManifiesto, cargarObjeto, olvidar,
 } from "../site/app/datos.js";
 
 function falsoTraer(cuerpo, ok = true, estado = 200) {
@@ -14,16 +13,6 @@ function falsoTraer(cuerpo, ok = true, estado = 200) {
   };
   return { traer, llamadas };
 }
-
-test("une un camino en una clave", () => {
-  assert.equal(claveDeCamino(["88", "1", "0"]), "88-1-0");
-  assert.equal(claveDeCamino([]), "");
-});
-
-test("parte una clave en un camino", () => {
-  assert.deepEqual(caminoDeClave("88-1-0"), ["88", "1", "0"]);
-  assert.deepEqual(caminoDeClave(""), []);
-});
 
 test("lee el archivo una sola vez", async () => {
   olvidar();

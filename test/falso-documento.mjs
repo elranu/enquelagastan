@@ -7,10 +7,39 @@ export function falsoDocumento() {
     textContent: "",
     setAttribute(nombre, valor) { this.atributos[nombre] = valor; },
     appendChild(hijo) { this.hijos.push(hijo); return hijo; },
+    removeChild(hijo) { this.hijos = this.hijos.filter((otro) => otro !== hijo); },
+    get firstChild() { return this.hijos[0] ?? null; },
+    addEventListener() {},
   });
+  // app.js asks the document for #app and for #aviso. The same element comes
+  // back for one id, so a test reads what the navigator wrote there.
+  const porId = new Map();
   return {
     createElement: crear,
     createElementNS: (espacio, etiqueta) => crear(etiqueta),
+    getElementById(id) {
+      if (!porId.has(id)) {
+        porId.set(id, crear("div"));
+      }
+      return porId.get(id);
+    },
+  };
+}
+
+// A stand-in for the window and the history. The hash is a plain value, so a
+// test moves the visitor with one assignment and no browser.
+export function falsaVentana(hash = "#/") {
+  return {
+    location: { hash },
+    addEventListener() {},
+  };
+}
+
+export function falsaHistoria() {
+  const escrituras = [];
+  return {
+    escrituras,
+    replaceState(estado, titulo, ruta) { escrituras.push(ruta); },
   };
 }
 
