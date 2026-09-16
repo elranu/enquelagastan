@@ -100,16 +100,16 @@ button, .principal, .secundario {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  button:hover, .principal:hover, .secundario:hover, .leyenda li:hover {
+  button:hover, .principal:hover, .secundario:hover {
     background: #f1f1ec;
   }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  button, .principal, .secundario, .leyenda li, .porcion {
+  button, .principal, .secundario, .porcion {
     transition: transform 160ms var(--curva), background-color 150ms ease;
   }
-  button:active, .principal:active, .secundario:active, .leyenda li:active {
+  button:active, .principal:active, .secundario:active {
     transform: scale(0.97);
   }
 }
@@ -274,14 +274,8 @@ h1 {
 
 /* Nearly half of the "otros" slices are under 0,5% of the circle, which is a
    wedge of under two degrees. The wedge keeps its true angle, because the
-   angle is the money. A ring around the box of the wedge is what a keyboard
-   sees, since a ring around the wedge itself would be a hairline too. */
-.porcion:focus-visible {
-  outline: 3px solid var(--foco);
-  outline-offset: 1px;
-  stroke: var(--foco);
-  stroke-width: 3;
-}
+   angle is the money. A finger and a keyboard both use the row of the legend
+   below, which runs the full width of the column. */
 
 @media (hover: hover) and (pointer: fine) {
   .porcion:hover { stroke: var(--tinta); stroke-width: 3; }
@@ -298,25 +292,40 @@ h1 {
   margin: 0 0 var(--e-5);
 }
 
-.leyenda li {
+.leyenda .fila {
   cursor: pointer;
+  /* The row is a <button> now, so it undoes what the shape of a control
+     brings: the box, the fill, the weight and the centred content. */
+  border: 0;
+  border-bottom: 1px solid var(--linea);
+  background: transparent;
+  font-weight: 400;
+  text-align: start;
+  justify-content: flex-start;
   display: flex;
   align-items: flex-start;
   gap: var(--e-2);
   width: 100%;
   min-height: 3rem;
   padding: var(--e-2) var(--e-2);
-  border-bottom: 1px solid var(--linea);
   font-variant-numeric: tabular-nums;
   text-wrap: pretty;
   overflow-wrap: break-word;
   border-radius: var(--radio) var(--radio) 0 0;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .leyenda .fila:hover { background: #f1f1ec; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .leyenda .fila:active { transform: scale(0.97); }
+}
+
 /* The swatch ties the row to its wedge. It repeats what the chart shows, so
    it is decoration and never the only cue: the row says the name, the share
    and the amount as text. */
-.leyenda li::before {
+.leyenda .fila::before {
   content: "";
   flex: 0 0 auto;
   width: 0.875rem;
@@ -328,14 +337,14 @@ h1 {
   background: var(--linea-fuerte);
 }
 
-.leyenda li.leyenda-0::before { background: var(--porcion-0); }
-.leyenda li.leyenda-1::before { background: var(--porcion-1); }
-.leyenda li.leyenda-2::before { background: var(--porcion-2); }
-.leyenda li.leyenda-3::before { background: var(--porcion-3); }
-.leyenda li.leyenda-4::before { background: var(--porcion-4); }
-.leyenda li.leyenda-5::before { background: var(--porcion-5); }
-.leyenda li.leyenda-6::before { background: var(--porcion-6); }
-.leyenda li.leyenda-7::before { background: var(--porcion-7); }
+.leyenda-0 .fila::before { background: var(--porcion-0); }
+.leyenda-1 .fila::before { background: var(--porcion-1); }
+.leyenda-2 .fila::before { background: var(--porcion-2); }
+.leyenda-3 .fila::before { background: var(--porcion-3); }
+.leyenda-4 .fila::before { background: var(--porcion-4); }
+.leyenda-5 .fila::before { background: var(--porcion-5); }
+.leyenda-6 .fila::before { background: var(--porcion-6); }
+.leyenda-7 .fila::before { background: var(--porcion-7); }
 
 /* ---- The screen of a nodo --------------------------------------------- */
 
@@ -453,3 +462,33 @@ a {
   color: var(--aviso);
   text-wrap: pretty;
 }
+
+/* ---- What only a screen reader reads ---------------------------------- */
+
+/* The live region says what changed after a navigation. It has no size on
+   the page, and it is never focusable, so nothing here is hidden from a
+   visitor who can see. */
+.solo-lectores {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- The screen of a failure ------------------------------------------ */
+
+/* The technical detail is English inside Spanish copy. It helps a person who
+   reports the fault, so it stays, under the message and never as it. */
+.detalle-tecnico {
+  margin-top: var(--e-4);
+  color: var(--tenue);
+  font-size: 0.875rem;
+  overflow-wrap: break-word;
+}
+
+/* The line that says what a group of "otros" is a part of. */
+.parte-de { color: var(--tenue); margin-top: 0; }

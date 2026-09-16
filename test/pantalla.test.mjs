@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 
 import {
   dibujarAusente, dibujarFuentes, dibujarMiga, dibujarNodo, dibujarRaiz,
-  esAusencia, indiceParaClave, resolverPantalla, vistaDeAusente,
-  vistaDeFuentes, vistaDeNodo, vistaDeRaiz,
+  esAusencia, estadoDeLaFila, indiceParaClave, resolverPantalla,
+  vistaDeAusente, vistaDeFuentes, vistaDeNodo, vistaDeRaiz,
 } from "../site/app/pantalla.js";
 import { SOBRE_LO_APROBADO } from "../site/app/desviacion.js";
 import { controles, falsoDocumento, textoDe } from "./falso-documento.mjs";
@@ -49,13 +49,25 @@ test("las porciones de la vista usan lo devengado, no lo aprobado", () => {
   ]);
 });
 
-test("un grupo otros en la raiz muestra solo sus claves", () => {
-  // UC-03: the visitor can open the slice "otros" from the root too. The
-  // total, the ejecucion and the deviation still describe the whole
-  // exercise. Only the pie chart narrows to the group.
+test("un grupo otros en la raiz describe al grupo y no al pais", () => {
+  // UC-03: the visitor can open the slice "otros" from the root. The
+  // headline is then the total of the group. A total of the country over a
+  // share of the group would read as a share of the country.
   const vista = vistaDeRaiz(ESTADO, ["90", "50"]);
   assert.deepEqual(vista.porciones.map((porcion) => porcion.nombre), ["Deuda", "Economia"]);
-  assert.equal(vista.total, 105.25);
+  assert.equal(vista.total, 40);
+  assert.equal(vista.parteDe, "del gasto del Estado nacional");
+  assert.ok(Math.abs(vista.parteDelTotal - 0.4) < 1e-9);
+  assert.equal(vista.ejecucion, null, "the execution describes the whole");
+  assert.equal(vista.desviacion, null, "the deviation describes the whole");
+});
+
+test("la pantalla del grupo escribe el total del grupo", () => {
+  const texto = textoDe(dibujarRaiz(vistaDeRaiz(ESTADO, ["90", "50"]),
+    falsoDocumento()));
+  assert.match(texto, /40\.000\.000 pesos/);
+  assert.match(texto, /Parte del gasto del Estado nacional/);
+  assert.doesNotMatch(texto, /de lo autorizado/);
 });
 
 test("la vista ofrece solo los ejercicios que estan", () => {
@@ -74,14 +86,20 @@ test("la pantalla nombra el ejercicio, el total y la fuente", () => {
   assert.match(texto, /credito-anual-2025/, "UC-06: every screen names its source");
 });
 
-test("cada fila de la leyenda toma foco y responde como un control", () => {
+test("cada fila de la leyenda es un boton de verdad dentro de su li", () => {
   // A wedge can be under two degrees, too small for a finger or an eye. The
-  // legend row is the reliable target, so a keyboard user must reach it too.
+  // legend row is the reliable target. A native button answers Enter and
+  // Space on its own, and an <li> with role="button" announces neither a
+  // list nor a button correctly.
   const pantalla = dibujarRaiz(vistaDeRaiz(ESTADO), falsoDocumento());
   const leyenda = pantalla.hijos.find((hijo) => hijo.atributos.class === "leyenda");
   for (const fila of leyenda.hijos) {
-    assert.equal(fila.atributos.tabindex, "0", "a keyboard must reach the row");
-    assert.equal(fila.atributos.role, "button", "the row acts like a control");
+    assert.equal(fila.etiqueta, "li");
+    assert.equal(fila.atributos.role, undefined, "no ARIA over a real control");
+    const boton = fila.hijos[0];
+    assert.equal(boton.etiqueta, "button");
+    assert.equal(boton.atributos.tabindex, undefined, "a button is already a stop");
+    assert.ok(boton.atributos["data-destino"]);
   }
 });
 
@@ -107,7 +125,7 @@ test("el nodo muestra su parte del total nacional", () => {
 test("la miga conserva los tramos que el navegador saltea", () => {
   const vista = vistaDeNodo(CON_CADENA, "45-1-0");
   assert.deepEqual(vista.miga.map((t) => t.nombre),
-    ["Procuracion", "Procuracion", "Defensa Juridica"]);
+    ["Procuracion", "Defensa Juridica"]);
 });
 
 test("la miga de pan es una lista ordenada de pasos", () => {
@@ -337,4 +355,52 @@ test("un error sin estadoHttp no cuenta como ausencia", () => {
   // No property means no response came back: a lost connection or a bad
   // JSON body. That is our failure, never a missing line of the budget.
   assert.equal(esAusencia(new Error("Failed to fetch")), false);
+});
+
+test("la pantalla de fuentes no dice verificado de lo que no esta", () => {
+  // The build of one exercise can fail. Its entry stays in the manifest,
+  // because its total is the baseline of the next build. The strip of years
+  // offers no arrow to it. A journalist who reads "verificado" here looks
+  // for a screen that this artifact does not hold.
+  const vista = vistaDeFuentes({
+    ejercicios: [
+      { ejercicio: 2025, archivo: "x/a.zip", publicado: "Wed, 08 Jul 2026 10:39:43 GMT", verificado: true, en_este_artefacto: true },
+      { ejercicio: 2026, archivo: "x/b.zip", publicado: "Tue, 15 Sep 2026 10:35:57 GMT", verificado: true, en_este_artefacto: false },
+    ],
+  });
+  assert.deepEqual(vista.filas.map((fila) => estadoDeLaFila(fila)),
+    ["verificado", "no está en esta versión del sitio"]);
+  const texto = textoDe(dibujarFuentes(vista, falsoDocumento()));
+  assert.match(texto, /8 jul 2026/, "the date reads in Spanish");
+  assert.doesNotMatch(texto, /GMT/);
+});
+
+test("el ultimo tramo de la miga dice que es la pantalla de ahora", () => {
+  const conCamino = dibujarMiga(
+    { miga: [{ clave: "88", nombre: "Capital Humano" }], migaActual: true },
+    falsoDocumento(),
+  );
+  const pasos = conCamino.hijos[0].hijos;
+  assert.equal(pasos.at(-1).hijos[0].atributos["aria-current"], "true");
+  assert.equal(pasos[0].hijos[0].atributos["aria-current"], undefined);
+});
+
+test("la miga de una pantalla ausente no marca ningun tramo", () => {
+  // There the miga names the way up, and never the screen the visitor is on.
+  const miga = dibujarMiga(
+    { miga: [{ clave: "88", nombre: "Capital Humano" }], migaActual: false },
+    falsoDocumento(),
+  );
+  for (const paso of miga.hijos[0].hijos) {
+    assert.equal(paso.hijos[0].atributos["aria-current"], undefined);
+  }
+});
+
+test("el tramo que junta nombres repetidos sigue siendo el de esta pantalla", () => {
+  // The crumb points at the shallowest clave of the run, and a tap on it
+  // jumps forward to the screen the visitor is on. So it carries
+  // aria-current, and the style that marks it says the truth.
+  const vista = vistaDeNodo(CON_CADENA, "45-1-0");
+  assert.equal(vista.miga.at(-1).clave, "45-1-0");
+  assert.equal(vista.migaActual, true);
 });

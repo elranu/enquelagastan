@@ -17,6 +17,12 @@ export function leerRuta(hash) {
 }
 
 export function escribirRuta(ejercicio, clave) {
+  // A bare "#/" carries no exercise, and a failed screen is reached from it.
+  // A route of "#/null" is not a route: it must never go to the URL bar, and
+  // never to a link that somebody shares.
+  if (!Number.isFinite(ejercicio)) {
+    return "#/";
+  }
   return clave === "" ? `#/${ejercicio}` : `#/${ejercicio}/${clave}`;
 }
 
@@ -39,14 +45,6 @@ export function ejercicioDeEntrada(disponibles, hoy = new Date().getFullYear()) 
   // one before the last" would then step back one year too far.
   const cerrados = disponibles.filter((ejercicio) => ejercicio < hoy);
   return cerrados.at(-1) ?? disponibles.at(-1);
-}
-
-export function vecino(disponibles, ejercicio, paso) {
-  const posicion = disponibles.indexOf(ejercicio);
-  if (posicion < 0) {
-    return null;
-  }
-  return disponibles[posicion + paso] ?? null;
 }
 
 export function ancestroQueExiste(indice, clave) {

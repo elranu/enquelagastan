@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  conSigno, montoCorto, montoLargo, pesosDe, porcentaje,
+  conSigno, fechaCorta, montoCorto, montoLargo, pesosDe, porcentaje,
 } from "../site/app/formato.js";
 
 test("un millon de la fuente son un millon de pesos por uno", () => {
@@ -32,4 +32,17 @@ test("el signo dice de que lado esta la desviacion", () => {
   assert.equal(conSigno(0.31), "+31%");
   assert.equal(conSigno(-0.41), "-41%");
   assert.equal(conSigno(0), "0%");
+});
+
+test("la fecha se lee en español y no como un encabezado HTTP", () => {
+  assert.equal(fechaCorta("Wed, 08 Jul 2026 10:39:43 GMT"), "8 jul 2026");
+  assert.equal(fechaCorta("Fri, 04 Jul 2025 10:44:09 GMT"), "4 jul 2025");
+});
+
+test("una fecha que no se entiende pasa como vino", () => {
+  // A wrong date is worse than an English one, and "Invalid Date" says
+  // nothing to anybody.
+  assert.equal(fechaCorta("ayer a la tarde"), "ayer a la tarde");
+  assert.equal(fechaCorta(undefined), "");
+  assert.equal(fechaCorta(""), "");
 });

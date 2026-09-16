@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   ancestroQueExiste, ejercicioDeEntrada, ejerciciosDisponibles, escribirRuta,
-  leerRuta, vecino,
+  leerRuta,
 } from "../site/app/ruta.js";
 
 const MANIFIESTO = {
@@ -41,14 +41,6 @@ test("la entrada muestra el ultimo ejercicio cerrado", () => {
   assert.equal(ejercicioDeEntrada([2026], 2026), 2026);
 });
 
-test("el vecino respeta el orden y los bordes", () => {
-  const anios = [2024, 2025];
-  assert.equal(vecino(anios, 2024, 1), 2025);
-  assert.equal(vecino(anios, 2025, -1), 2024);
-  assert.equal(vecino(anios, 2025, 1), null);
-  assert.equal(vecino(anios, 2024, -1), null);
-});
-
 test("sube al ancestro que existe en el otro ejercicio", () => {
   const indice = { "88": { n: "Capital Humano", k: ["1"] },
                    "88-1": { n: "ANSES", k: [] } };
@@ -60,4 +52,12 @@ test("sube al ancestro que existe en el otro ejercicio", () => {
 test("la raiz siempre existe", () => {
   const indice = { "88": { n: "Capital Humano", k: [] } };
   assert.equal(ancestroQueExiste(indice, ""), "");
+});
+
+test("una url sin ejercicio nunca se escribe como #/null", () => {
+  // The screen of a failure is reached from a bare "#/", and its exit
+  // carries no exercise. dibujar picks the exercise of entry and rewrites
+  // the URL, so the route here only has to stay a route.
+  assert.equal(escribirRuta(null, ""), "#/");
+  assert.equal(escribirRuta(Number.NaN, "88"), "#/");
 });

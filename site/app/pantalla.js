@@ -11,7 +11,8 @@ import {
 import { cargarObjeto } from "./datos.js";
 import { desviacionDe, ejecucionDe, REASIGNACION_INTERNA, SOBRE_LO_APROBADO }
   from "./desviacion.js";
-import { conSigno, montoCorto, montoLargo, porcentaje } from "./formato.js";
+import { conSigno, fechaCorta, montoCorto, montoLargo, porcentaje }
+  from "./formato.js";
 import { NOMBRE_OTROS, porcionesDe } from "./porciones.js";
 import { procedenciaDe } from "./procedencia.js";
 import { ancestroQueExiste } from "./ruta.js";
@@ -28,30 +29,55 @@ function totalesDeLaRaiz(indice) {
   };
 }
 
+export const TITULO_DE_LA_RAIZ = "En qué la gastó el Estado nacional";
+export const TITULO_DE_UN_GRUPO = "Otros";
+
+// A screen that shows the slice "otros" describes that group and nothing
+// else. Its headline is the total of the group, and a line says what the
+// group is a part of. The execution and the deviation of the parent describe
+// the parent, so this screen prints neither. A share of 34,7% under the total
+// of the country reads as 34,7% of the country.
+function vistaDeGrupo(base, grupo, indice, deNombre, raizTotal) {
+  const { total, porciones } = porcionesDe(indice, grupo, "d");
+  return {
+    ...base,
+    titulo: TITULO_DE_UN_GRUPO,
+    total,
+    parteDe: deNombre,
+    parteDelTotal: raizTotal > 0 ? total / raizTotal : null,
+    ejecucion: null,
+    desviacion: null,
+    porciones,
+  };
+}
+
 export function vistaDeRaiz(estado, grupo = null) {
   const { indice, entrada, ejercicio, disponibles } = estado;
   const totales = totalesDeLaRaiz(indice);
   const comoNodo = { n: "", d: totales.d, p: totales.p, v: totales.v, g: totales.g };
-  // A visitor who opens the slice "otros" gets the same screen, with the pie
-  // chart limited to that group instead of every jurisdiccion. See app.js.
-  const claves = grupo ?? totales.claves;
-  return {
+  const base = {
     ejercicio,
     anios: disponibles,
-    titulo: "En qué la gastó el Estado nacional",
+    titulo: TITULO_DE_LA_RAIZ,
     // The headline shows the verified total from the manifest, not the sum.
     // Each jurisdiccion below rounds to 6 decimals of a million pesos.
     // Summing 15 of them can drift from the true total by a few pesos.
     // Never replace this line with totales.d for that reason.
     total: entrada.total_devengado / 1_000_000,
+    parteDe: null,
+    parteDelTotal: null,
     ejecucion: ejecucionDe(comoNodo),
     desviacion: desviacionDe(comoNodo, ""),
-    // The headline stays the total of the country. The miga names the group,
-    // so the visitor reads a part of "otros" as a part and not as the whole.
     miga: grupo ? [{ clave: "", nombre: NOMBRE_OTROS }] : [],
-    porciones: porcionesDe(indice, claves, "d").porciones,
+    migaActual: true,
+    porciones: porcionesDe(indice, totales.claves, "d").porciones,
     procedencia: procedenciaDe(entrada, indice, ""),
   };
+  if (!grupo) {
+    return base;
+  }
+  return vistaDeGrupo(base, grupo, indice, "del gasto del Estado nacional",
+    totales.d);
 }
 
 export async function indiceParaClave(ejercicio, indice, clave, traer) {
@@ -69,28 +95,40 @@ export async function indiceParaClave(ejercicio, indice, clave, traer) {
 export function vistaDeNodo(estado, clave, grupo = null) {
   const { indice, entrada, ejercicio, disponibles } = estado;
   const nodo = indice[clave];
-  // A visitor who opens the slice "otros" gets the same nodo, with the pie
-  // chart limited to that group instead of every child. See app.js.
-  const hijos = grupo ?? hijosDe(indice, clave);
+  const hijos = hijosDe(indice, clave);
   const { total, porciones } = hijos.length > 0
     ? porcionesDe(indice, hijos, "d")
     : { total: nodo.d, porciones: [] };
   const raizTotal = totalDe(indice, raices(indice), "d");
-  return {
+  const miga = migaDePan(indice, clave);
+  const base = {
     ejercicio,
     anios: disponibles,
     clave,
     titulo: nodo.n,
     total: nodo.d,
+    parteDe: null,
     parteDelTotal: raizTotal > 0 ? nodo.d / raizTotal : null,
     ejecucion: ejecucionDe(nodo),
     desviacion: desviacionDe(nodo, clave),
-    miga: grupo
-      ? [...migaDePan(indice, clave), { clave, nombre: NOMBRE_OTROS }]
-      : migaDePan(indice, clave),
+    miga,
+    // The last crumb is the screen the visitor is on. A run of equal names
+    // collapses to the shallowest clave of that run. A tap on that crumb
+    // jumps forward to this same screen, so the crumb is still this one.
+    migaActual: miga.length === 0 || miga.at(-1).clave === clave
+      || saltarHijoUnico(indice, miga.at(-1).clave) === clave,
     porciones: total > 0 ? porciones : [],
     sinEjecucion: nodo.d === 0,
     procedencia: procedenciaDe(entrada, indice, clave),
+  };
+  if (!grupo) {
+    return base;
+  }
+  return {
+    ...vistaDeGrupo(base, grupo, indice, `de ${nodo.n}`, raizTotal),
+    miga: [...miga, { clave, nombre: NOMBRE_OTROS }],
+    migaActual: true,
+    sinEjecucion: false,
   };
 }
 
@@ -106,6 +144,8 @@ export function vistaDeAusente(estado, clave, origen) {
     // A shared URL can land here with no history behind it. The miga is then
     // the only control that moves the visitor up the tree.
     miga: migaDePan(estado.indice, ancestro ?? ""),
+    // The miga names the way up, and never the screen the visitor is on.
+    migaActual: false,
     procedencia: procedenciaDe(estado.entrada, estado.indice, ""),
   };
 }
@@ -131,7 +171,7 @@ export function resolverPantalla(estado, clave, grupoOtros = null) {
   // The visitor never lands on a nodo with one child. A chain that crosses
   // the object level needs a second pass, because the index of the new clave
   // is not loaded yet. app.js repeats until the destino stops moving.
-  const { destino } = saltarHijoUnico(estado.indice, clave);
+  const destino = saltarHijoUnico(estado.indice, clave);
   if (destino !== clave) {
     return { tipo: "saltar", clave: destino };
   }
@@ -144,6 +184,25 @@ export function esAusencia(error) {
   // estadoHttp exists so this check reads the real status, not the message.
   // An error with no estadoHttp came from no response, so it is never a 404.
   return error.estadoHttp === 404;
+}
+
+function dibujarLeyenda(porciones, documento) {
+  // The row is a real button inside its <li>, and never an <li> that carries
+  // role="button". A native control answers Enter and Space on its own, and
+  // a screen reader reads a list of buttons with no ARIA at all.
+  const leyenda = documento.createElement("ul");
+  leyenda.setAttribute("class", "leyenda");
+  porciones.forEach((porcion, orden) => {
+    const fila = documento.createElement("li");
+    fila.setAttribute("class", `leyenda-${orden}`);
+    const boton = texto(documento, "button",
+      `${porcion.nombre} · ${porcentaje(porcion.parte)} · ${montoCorto(porcion.monto)}`,
+      "fila");
+    boton.setAttribute("data-destino", porcion.destino.join(" "));
+    fila.appendChild(boton);
+    leyenda.appendChild(fila);
+  });
+  return leyenda;
 }
 
 function texto(documento, etiqueta, contenido, clase) {
@@ -187,11 +246,18 @@ export function dibujarMiga(vista, documento) {
   const pasos = documento.createElement("ol");
   const inicio = texto(documento, "button", "Inicio", "tramo");
   inicio.setAttribute("data-clave", "");
+  const botones = [inicio];
   pasos.appendChild(comoPaso(documento, inicio));
   for (const tramo of vista.miga) {
     const paso = texto(documento, "button", tramo.nombre, "tramo");
     paso.setAttribute("data-clave", tramo.clave);
+    botones.push(paso);
     pasos.appendChild(comoPaso(documento, paso));
+  }
+  // The last step is the screen the visitor is on, and the style already
+  // says so. The year strip marks its year the same way.
+  if (vista.migaActual) {
+    botones.at(-1).setAttribute("aria-current", "true");
   }
   miga.appendChild(pasos);
   return miga;
@@ -202,7 +268,8 @@ export function dibujarProcedencia(procedencia, documento) {
   pie.setAttribute("class", "procedencia");
   const archivo = procedencia.archivo.split("/").pop();
   pie.appendChild(texto(documento, "p",
-    `Fuente: Presupuesto Abierto · ${archivo} · ${procedencia.fecha}`));
+    `Fuente: Presupuesto Abierto · ${archivo} · `
+    + `${fechaCorta(procedencia.fecha)}`));
   if (procedencia.codigos) {
     const lista = procedencia.codigos
       .map(({ eje, codigo }) => `${eje}_id=${codigo}`)
@@ -214,6 +281,13 @@ export function dibujarProcedencia(procedencia, documento) {
   fuentes.setAttribute("href", "#/fuentes");
   pie.appendChild(fuentes);
   return pie;
+}
+
+function dibujarParteDe(seccion, vista, documento) {
+  if (vista.parteDe) {
+    seccion.appendChild(texto(documento, "p",
+      `Parte ${vista.parteDe}.`, "parte-de"));
+  }
 }
 
 export function dibujarRaiz(vista, documento = document) {
@@ -231,6 +305,9 @@ export function dibujarRaiz(vista, documento = document) {
   seccion.appendChild(cifra);
 
   const detalle = [];
+  if (vista.parteDelTotal !== null) {
+    detalle.push(`${porcentaje(vista.parteDelTotal)} del gasto total`);
+  }
   if (vista.ejecucion !== null) {
     detalle.push(`${porcentaje(vista.ejecucion)} de lo autorizado`);
   }
@@ -238,24 +315,11 @@ export function dibujarRaiz(vista, documento = document) {
     detalle.push(`${conSigno(vista.desviacion.valor)} sobre lo aprobado`);
   }
   seccion.appendChild(texto(documento, "p", detalle.join(" · "), "detalle"));
+  dibujarParteDe(seccion, vista, documento);
 
   seccion.appendChild(dibujarTorta(vista.porciones, documento));
 
-  const leyenda = documento.createElement("ul");
-  leyenda.setAttribute("class", "leyenda");
-  vista.porciones.forEach((porcion, orden) => {
-    const fila = texto(documento, "li",
-      `${porcion.nombre} · ${porcentaje(porcion.parte)} · ${montoCorto(porcion.monto)}`,
-      `leyenda-${orden}`);
-    fila.setAttribute("data-destino", porcion.destino.join(" "));
-    // The row is a control, not plain text. A keyboard must reach it and
-    // answer Enter or Space. app.js listens for both and reuses the click
-    // handler, so this file holds no second copy of that logic.
-    fila.setAttribute("role", "button");
-    fila.setAttribute("tabindex", "0");
-    leyenda.appendChild(fila);
-  });
-  seccion.appendChild(leyenda);
+  seccion.appendChild(dibujarLeyenda(vista.porciones, documento));
 
   seccion.appendChild(dibujarProcedencia(vista.procedencia, documento));
   return seccion;
@@ -292,6 +356,7 @@ export function dibujarNodo(vista, documento = document) {
     detalle.push(`${conSigno(vista.desviacion.valor)} ${palabra}`);
   }
   seccion.appendChild(texto(documento, "p", detalle.join(" · "), "detalle"));
+  dibujarParteDe(seccion, vista, documento);
 
   if (vista.sinEjecucion) {
     seccion.appendChild(texto(documento, "p",
@@ -300,21 +365,7 @@ export function dibujarNodo(vista, documento = document) {
     // A leaf with real spending has no child to divide. An empty pie chart
     // and an empty legend say nothing, so draw neither.
     seccion.appendChild(dibujarTorta(vista.porciones, documento));
-    const leyenda = documento.createElement("ul");
-    leyenda.setAttribute("class", "leyenda");
-    vista.porciones.forEach((porcion, orden) => {
-      const fila = texto(documento, "li",
-        `${porcion.nombre} · ${porcentaje(porcion.parte)} · ${montoCorto(porcion.monto)}`,
-        `leyenda-${orden}`);
-      fila.setAttribute("data-destino", porcion.destino.join(" "));
-      // The row is a control, not plain text. A keyboard must reach it and
-      // answer Enter or Space. app.js listens for both and reuses the click
-      // handler, so this file holds no second copy of that logic.
-      fila.setAttribute("role", "button");
-      fila.setAttribute("tabindex", "0");
-      leyenda.appendChild(fila);
-    });
-    seccion.appendChild(leyenda);
+    seccion.appendChild(dibujarLeyenda(vista.porciones, documento));
   }
 
   seccion.appendChild(dibujarProcedencia(vista.procedencia, documento));
@@ -330,8 +381,19 @@ export function vistaDeFuentes(manifiesto) {
       archivo: entrada.archivo,
       publicado: entrada.publicado,
       verificado: entrada.verificado === true,
+      // An exercise whose build failed holds no file in this artifact, and
+      // the year strip offers no arrow to it. This screen says what the
+      // artifact holds, so it must not call that exercise verified.
+      enEsteArtefacto: entrada.en_este_artefacto !== false,
     })),
   };
+}
+
+export function estadoDeLaFila(fila) {
+  if (!fila.enEsteArtefacto) {
+    return "no está en esta versión del sitio";
+  }
+  return fila.verificado ? "verificado" : "sin verificar";
 }
 
 export function dibujarFuentes(vista, documento = document) {
@@ -354,17 +416,16 @@ export function dibujarFuentes(vista, documento = document) {
     enlace.setAttribute("href", fila.archivo);
     celda.appendChild(enlace);
     linea.appendChild(celda);
-    linea.appendChild(texto(documento, "td", fila.publicado));
-    linea.appendChild(texto(documento, "td",
-      fila.verificado ? "verificado" : "sin verificar"));
+    linea.appendChild(texto(documento, "td", fechaCorta(fila.publicado)));
+    linea.appendChild(texto(documento, "td", estadoDeLaFila(fila)));
     tabla.appendChild(linea);
   }
   seccion.appendChild(tabla);
 
   seccion.appendChild(texto(documento, "p",
-    "En cada corrida, el build suma el total del ejercicio y lo compara con el "
-    + "informe oficial Cuenta Ahorro Inversión Financiamiento. Si los dos no "
-    + "coinciden, no publica nada."));
+    "En cada corrida, el build suma el total de cada ejercicio y lo compara "
+    + "con el informe oficial Cuenta Ahorro Inversión Financiamiento. El "
+    + "ejercicio cuyo total no coincide no se publica, y esta tabla lo dice."));
 
   const volver = texto(documento, "a", "Volver al inicio", "principal");
   volver.setAttribute("href", "#/");
@@ -373,6 +434,43 @@ export function dibujarFuentes(vista, documento = document) {
   const codigo = texto(documento, "a", "El código de este proyecto");
   codigo.setAttribute("href", REPOSITORIO);
   seccion.appendChild(codigo);
+  return seccion;
+}
+
+export function vistaDeError(error) {
+  return {
+    mensaje: "No pudimos mostrar esta pantalla. Probá de nuevo en un rato.",
+    // The technical detail helps a person who reports the fault. It is
+    // English inside Spanish copy, so it sits under the message and never
+    // reads as the message.
+    detalle: error && error.message ? String(error.message) : null,
+  };
+}
+
+export function dibujarError(vista, documento = document) {
+  const seccion = documento.createElement("section");
+  seccion.setAttribute("class", "pantalla pantalla-error");
+  seccion.appendChild(texto(documento, "p", vista.mensaje, "error"));
+
+  // The exit is a button and never a link to "#/". From the home route a
+  // link to "#/" changes no hash, fires no event, and does nothing.
+  const salida = texto(documento, "button", "Volver al inicio", "principal");
+  salida.setAttribute("data-clave", "");
+  seccion.appendChild(salida);
+
+  if (vista.detalle) {
+    seccion.appendChild(texto(documento, "p", vista.detalle, "detalle-tecnico"));
+  }
+
+  // Every screen of this product names where its numbers come from. This one
+  // read no manifest, so it names the source and nothing more.
+  const pie = documento.createElement("footer");
+  pie.setAttribute("class", "procedencia");
+  pie.appendChild(texto(documento, "p", "Fuente: Presupuesto Abierto"));
+  const fuentes = texto(documento, "a", "De dónde salen estos números");
+  fuentes.setAttribute("href", "#/fuentes");
+  pie.appendChild(fuentes);
+  seccion.appendChild(pie);
   return seccion;
 }
 

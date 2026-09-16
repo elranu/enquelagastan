@@ -33,22 +33,30 @@ test("los hijos llevan el camino completo", () => {
 });
 
 test("salta la cadena hasta el nodo que divide", () => {
-  const { destino, saltados } = saltarHijoUnico(INDICE, "45");
-  assert.equal(destino, "45-1-0");
-  assert.deepEqual(saltados, ["Defensa", "Defensa"]);
+  assert.equal(saltarHijoUnico(INDICE, "45"), "45-1-0");
 });
 
 test("no salta cuando el nodo ya divide", () => {
-  const { destino, saltados } = saltarHijoUnico(INDICE, "88");
-  assert.equal(destino, "88");
-  assert.deepEqual(saltados, []);
+  assert.equal(saltarHijoUnico(INDICE, "88"), "88");
 });
 
-test("la miga conserva los tramos salteados", () => {
+test("la miga junta los nombres repetidos en un solo tramo", () => {
+  // DGSIAF repeats the name of the parent at every code 0. Three chips that
+  // all read "Defensa" say nothing, and the style cuts them at the same
+  // width. One chip stays, and it points at the shallowest clave.
   const miga = migaDePan(INDICE, "45-1-0-7");
-  assert.deepEqual(miga.map((t) => t.clave),
-    ["45", "45-1", "45-1-0", "45-1-0-7"]);
-  assert.equal(miga.at(-1).nombre, "Curso");
+  assert.deepEqual(miga.map((t) => t.clave), ["45", "45-1-0-7"]);
+  assert.deepEqual(miga.map((t) => t.nombre), ["Defensa", "Curso"]);
+});
+
+test("la miga conserva un nombre repetido que no es adyacente", () => {
+  const indice = {
+    "1": { n: "A", k: ["2"] },
+    "1-2": { n: "B", k: ["3"] },
+    "1-2-3": { n: "A", k: [] },
+  };
+  assert.deepEqual(migaDePan(indice, "1-2-3").map((t) => t.nombre),
+    ["A", "B", "A"]);
 });
 
 test("el total suma la medida que se pide", () => {

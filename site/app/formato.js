@@ -42,3 +42,24 @@ export function conSigno(parte) {
   const signo = redondo > 0 ? "+" : "";
   return `${signo}${new Intl.NumberFormat(LOCAL).format(redondo)}%`;
 }
+
+const MESES = [
+  "ene", "feb", "mar", "abr", "may", "jun",
+  "jul", "ago", "sep", "oct", "nov", "dic",
+];
+
+export function fechaCorta(cabecera) {
+  // The build stores the Last-Modified header word for word, because that
+  // header is the raw truth. The screen is where a reader of Spanish reads
+  // it. A value that does not parse goes through as it came: a wrong date
+  // is worse than an English one, and "Invalid Date" says nothing.
+  if (!cabecera) {
+    return "";
+  }
+  const fecha = new Date(cabecera);
+  if (Number.isNaN(fecha.getTime())) {
+    return String(cabecera);
+  }
+  return `${fecha.getUTCDate()} ${MESES[fecha.getUTCMonth()]} `
+    + `${fecha.getUTCFullYear()}`;
+}
