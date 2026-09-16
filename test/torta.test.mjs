@@ -43,6 +43,19 @@ test("una sola porcion dibuja un circulo y no un arco", () => {
   assert.equal(svg.hijos.filter((h) => h.etiqueta === "path").length, 0);
 });
 
+test("la porcion lleva un aria-label, porque listitem no toma nombre del title", () => {
+  const svg = dibujarTorta(PORCIONES, falsoDocumento());
+  const primera = svg.hijos[0];
+  assert.equal(primera.atributos["aria-label"], "Capital Humano, 60.0%");
+  assert.match(primera.hijos[0].textContent, /Capital Humano/, "the title stays, for hover");
+});
+
+test("el circulo de una sola porcion tambien lleva su aria-label", () => {
+  const sola = [{ nombre: "Unica", monto: 10, parte: 1, esOtros: false, destino: ["9"] }];
+  const svg = dibujarTorta(sola, falsoDocumento());
+  assert.equal(svg.hijos[0].atributos["aria-label"], "Unica, 100.0%");
+});
+
 test("la porcion otros lleva su marca", () => {
   const svg = dibujarTorta(PORCIONES, falsoDocumento());
   assert.equal(svg.hijos.at(-1).atributos["data-otros"], "si");

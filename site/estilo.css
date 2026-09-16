@@ -152,15 +152,23 @@ button[aria-current="true"] {
    that more camino is there. The name of the level the visitor is on is the
    h1 below, so the miga never has to carry it. */
 .miga {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: var(--e-2);
   margin-bottom: var(--e-4);
   overflow-x: auto;
   overscroll-behavior-inline: contain;
   scrollbar-width: thin;
   /* The ring of a chip needs room, or the scroller cuts it. */
   padding-block: 3px 0.4rem;
+}
+
+/* The steps live in an <ol>, so a screen reader reads a list. The row of
+   chips is still this element's job, not the list's own default column. */
+.miga ol {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--e-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .tramo {
@@ -183,7 +191,9 @@ button[aria-current="true"] {
   line-height: 1.65rem;
 }
 
-.tramo:last-child { color: var(--tinta); font-weight: 500; }
+/* Each step now sits alone in its own <li>, so :last-child on the button
+   itself would match every step. Read the last step from the list instead. */
+.miga li:last-child .tramo { color: var(--tinta); font-weight: 500; }
 
 /* Above the width of a telephone the column is wider, so a chip may show
    more of its name before it stops. */

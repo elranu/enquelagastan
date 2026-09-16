@@ -2,9 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  dibujarAusente, dibujarFuentes, dibujarNodo, dibujarRaiz, esAusencia,
-  indiceParaClave, resolverPantalla, vistaDeAusente, vistaDeFuentes,
-  vistaDeNodo, vistaDeRaiz,
+  dibujarAusente, dibujarFuentes, dibujarMiga, dibujarNodo, dibujarRaiz,
+  esAusencia, indiceParaClave, resolverPantalla, vistaDeAusente,
+  vistaDeFuentes, vistaDeNodo, vistaDeRaiz,
 } from "../site/app/pantalla.js";
 import { SOBRE_LO_APROBADO } from "../site/app/desviacion.js";
 import { controles, falsoDocumento, textoDe } from "./falso-documento.mjs";
@@ -74,6 +74,17 @@ test("la pantalla nombra el ejercicio, el total y la fuente", () => {
   assert.match(texto, /credito-anual-2025/, "UC-06: every screen names its source");
 });
 
+test("cada fila de la leyenda toma foco y responde como un control", () => {
+  // A wedge can be under two degrees, too small for a finger or an eye. The
+  // legend row is the reliable target, so a keyboard user must reach it too.
+  const pantalla = dibujarRaiz(vistaDeRaiz(ESTADO), falsoDocumento());
+  const leyenda = pantalla.hijos.find((hijo) => hijo.atributos.class === "leyenda");
+  for (const fila of leyenda.hijos) {
+    assert.equal(fila.atributos.tabindex, "0", "a keyboard must reach the row");
+    assert.equal(fila.atributos.role, "button", "the row acts like a control");
+  }
+});
+
 // A chain of nodos with one child each, followed by one that divides. The
 // visitor never stops at "45" or "45-1"; only their names go to the miga.
 const CON_CADENA = {
@@ -97,6 +108,18 @@ test("la miga conserva los tramos que el navegador saltea", () => {
   const vista = vistaDeNodo(CON_CADENA, "45-1-0");
   assert.deepEqual(vista.miga.map((t) => t.nombre),
     ["Procuracion", "Procuracion", "Defensa Juridica"]);
+});
+
+test("la miga de pan es una lista ordenada de pasos", () => {
+  // A screen reader must read the camino as a list: how many steps it
+  // holds, and which one the visitor is on. A step stays a button.
+  const vista = { miga: [{ clave: "88", nombre: "Capital Humano" }] };
+  const miga = dibujarMiga(vista, falsoDocumento());
+  const lista = miga.hijos.find((hijo) => hijo.etiqueta === "ol");
+  assert.ok(lista, "the steps live inside an ordered list");
+  assert.deepEqual(lista.hijos.map((item) => item.etiqueta), ["li", "li"]);
+  assert.equal(lista.hijos[0].hijos[0].etiqueta, "button", "a step is a control");
+  assert.equal(lista.hijos[1].hijos[0].textContent, "Capital Humano");
 });
 
 test("la hoja muestra los codigos exactos al pie", () => {

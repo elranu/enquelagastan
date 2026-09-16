@@ -161,6 +161,22 @@ app.addEventListener("click", (evento) => {
   manejarClick(evento).catch(informar);
 });
 
+// A legend row and a slice of the chart are not native buttons, so the
+// browser answers neither Enter nor Space on its own. Both carry
+// data-destino, and manejarClick already finds its target from that
+// attribute, so the keyboard path reuses it instead of a second copy.
+app.addEventListener("keydown", (evento) => {
+  if (evento.key !== "Enter" && evento.key !== " ") {
+    return;
+  }
+  if (!evento.target.closest("[data-destino]")) {
+    return;
+  }
+  // Space would scroll the page on an element with no native behaviour.
+  evento.preventDefault();
+  manejarClick(evento).catch(informar);
+});
+
 window.addEventListener("hashchange", () => {
   dibujar().catch(informar);
 });

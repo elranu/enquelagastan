@@ -48,8 +48,12 @@ export function dibujarTorta(porciones, documento = document) {
     circulo.setAttribute("data-destino", porciones[0].destino.join(" "));
     circulo.setAttribute("role", "listitem");
     circulo.setAttribute("tabindex", "0");
+    const nombre = `${porciones[0].nombre}, ${porCiento(1)}`;
+    // A listitem takes no name from a child title, so aria-label carries
+    // the name. The title stays: a mouse still shows it on hover.
+    circulo.setAttribute("aria-label", nombre);
     const titulo = documento.createElementNS(ESPACIO, "title");
-    titulo.textContent = `${porciones[0].nombre}, ${porCiento(1)}`;
+    titulo.textContent = nombre;
     circulo.appendChild(titulo);
     svg.appendChild(circulo);
     return svg;
@@ -67,8 +71,12 @@ export function dibujarTorta(porciones, documento = document) {
     if (porcion.esOtros) {
       forma.setAttribute("data-otros", "si");
     }
+    const nombre = `${porcion.nombre}, ${porCiento(porcion.parte)}`;
+    // A listitem takes no name from a child title, so aria-label carries
+    // the name. The title stays: a mouse still shows it on hover.
+    forma.setAttribute("aria-label", nombre);
     const titulo = documento.createElementNS(ESPACIO, "title");
-    titulo.textContent = `${porcion.nombre}, ${porCiento(porcion.parte)}`;
+    titulo.textContent = nombre;
     forma.appendChild(titulo);
     svg.appendChild(forma);
     angulo = hasta;

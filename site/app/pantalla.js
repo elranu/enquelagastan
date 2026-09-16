@@ -170,18 +170,30 @@ export function dibujarTiraDeAnios(vista, documento) {
   return tira;
 }
 
+function comoPaso(documento, boton) {
+  // A step stays a control: the <li> only wraps it, so a screen reader
+  // still reads a list, and a visitor still presses a real button.
+  const paso = documento.createElement("li");
+  paso.appendChild(boton);
+  return paso;
+}
+
 export function dibujarMiga(vista, documento) {
   const miga = documento.createElement("nav");
   miga.setAttribute("class", "miga");
   miga.setAttribute("aria-label", "Camino");
+  // An ordered list tells a screen reader how many steps the camino holds,
+  // and which one the visitor is on.
+  const pasos = documento.createElement("ol");
   const inicio = texto(documento, "button", "Inicio", "tramo");
   inicio.setAttribute("data-clave", "");
-  miga.appendChild(inicio);
+  pasos.appendChild(comoPaso(documento, inicio));
   for (const tramo of vista.miga) {
     const paso = texto(documento, "button", tramo.nombre, "tramo");
     paso.setAttribute("data-clave", tramo.clave);
-    miga.appendChild(paso);
+    pasos.appendChild(comoPaso(documento, paso));
   }
+  miga.appendChild(pasos);
   return miga;
 }
 
@@ -236,6 +248,11 @@ export function dibujarRaiz(vista, documento = document) {
       `${porcion.nombre} · ${porcentaje(porcion.parte)} · ${montoCorto(porcion.monto)}`,
       `leyenda-${orden}`);
     fila.setAttribute("data-destino", porcion.destino.join(" "));
+    // The row is a control, not plain text. A keyboard must reach it and
+    // answer Enter or Space. app.js listens for both and reuses the click
+    // handler, so this file holds no second copy of that logic.
+    fila.setAttribute("role", "button");
+    fila.setAttribute("tabindex", "0");
     leyenda.appendChild(fila);
   });
   seccion.appendChild(leyenda);
@@ -290,6 +307,11 @@ export function dibujarNodo(vista, documento = document) {
         `${porcion.nombre} · ${porcentaje(porcion.parte)} · ${montoCorto(porcion.monto)}`,
         `leyenda-${orden}`);
       fila.setAttribute("data-destino", porcion.destino.join(" "));
+      // The row is a control, not plain text. A keyboard must reach it and
+      // answer Enter or Space. app.js listens for both and reuses the click
+      // handler, so this file holds no second copy of that logic.
+      fila.setAttribute("role", "button");
+      fila.setAttribute("tabindex", "0");
       leyenda.appendChild(fila);
     });
     seccion.appendChild(leyenda);
