@@ -31,8 +31,21 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Run the tests
+      - name: Run the tests of the build
         run: python -m unittest discover -s tests -v
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # The navigator runs before the build, so a navigator that fails its
+      # tests never reaches the publication.
+      #
+      # The command carries no path. Node 26 reads a bare directory as a
+      # module path, so "node --test test/" fails there. With no argument,
+      # every version discovers the tests on its own.
+      - name: Run the tests of the navigator
+        run: node --test
 
       # A check that fails stops one exercise, and never the others. The
       # build keeps going, the artifact carries every exercise that passed,
