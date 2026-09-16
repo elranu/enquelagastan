@@ -22,12 +22,6 @@ export function etiquetarCodigos(clave) {
   }));
 }
 
-export function consultaDe(clave) {
-  return etiquetarCodigos(clave)
-    .map(({ eje, codigo }) => `${eje}_id=${codigo}`)
-    .join(" AND ");
-}
-
 export function procedenciaDe(entrada, indice, clave) {
   const nodo = indice[clave];
   const esHoja = Boolean(nodo) && nodo.k.length === 0;

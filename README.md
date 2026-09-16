@@ -101,11 +101,18 @@ python -m unittest discover -s tests -v
 python -m build --destino site/data
 ```
 
-The screens need no build. Run their tests with Node 20 or later, and then
-serve the folder:
+The tests of the screens need no build. Run them with Node 20 or later:
 
 ```bash
 node --test
+```
+
+The screens themselves read what the build writes, so run the build first.
+`site/data/manifest.json` is empty in a fresh clone, and a server started
+before the build gives the screen of a failure:
+
+```bash
+python -m build --destino site/data
 python3 -m http.server 8000 --directory site
 ```
 

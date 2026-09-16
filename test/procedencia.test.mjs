@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  EJES, consultaDe, etiquetarCodigos, procedenciaDe,
+  EJES, etiquetarCodigos, procedenciaDe,
 } from "../site/app/procedencia.js";
 
 const ENTRADA = {
@@ -44,7 +44,3 @@ test("los codigos llevan los tramos que el navegador saltea", () => {
   assert.equal(codigos.at(3).codigo, "349");
 });
 
-test("la consulta se lee como un filtro del archivo", () => {
-  assert.equal(consultaDe("88-1"),
-    "jurisdiccion_id=88 AND subjurisdiccion_id=1");
-});
