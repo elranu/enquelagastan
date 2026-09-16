@@ -1,38 +1,413 @@
-/* The smallest set of rules that makes the screen readable. Task 12 refines
-   this with the skills of design. */
+/* The style of the navigator.
+   Every rule here answers one class that site/app/ emits. The copy is in
+   Spanish, because the visitor reads Spanish. The names of the classes are
+   Spanish too, because the screens write them. */
+
 :root {
-  --tinta: #1a1a1a;
-  --fondo: #fbfbf9;
-  --tenue: #6b6b6b;
   color-scheme: light;
+
+  /* Ink and surface. Every pair below meets AA on the page background. */
+  --fondo: #fbfbf9;
+  --superficie: #ffffff;
+  --tinta: #1a1a1a;          /* 16.8:1 on --fondo */
+  --tenue: #5f5f5f;          /* 6.2:1  on --fondo */
+  --linea: #e2e2dc;          /* a divider, never a control boundary */
+  --linea-fuerte: #c9c9c2;
+  --borde-control: #8a8a83;  /* 3.35:1 on --fondo, so a control is visible */
+  --foco: #0b57d0;           /* 6.2:1  on --fondo */
+  --aviso: #8a3a12;          /* 6.4:1  on --fondo */
+
+  /* The slices. The ramp runs dark to mid, and never lighter: the lightest
+     step still holds 3.25:1 against the page, so a slice stays visible.
+     Adjacent steps are close, and the 2px stroke of the page colour is what
+     separates one slice from the next. */
+  --porcion-0: #0b2545;
+  --porcion-1: #10365d;
+  --porcion-2: #164875;
+  --porcion-3: #1c5a8d;
+  --porcion-4: #226ca4;
+  --porcion-5: #2a7cb5;
+  --porcion-6: #3589c0;
+  --porcion-7: #4593c6;
+
+  /* One step of space. Space groups the screen; a line only helps where
+     space alone cannot. The gap between groups is at least twice the gap
+     inside one. */
+  --e-1: 0.25rem;
+  --e-2: 0.5rem;
+  --e-3: 1rem;
+  --e-4: 1.5rem;
+  --e-5: 2.5rem;
+
+  --radio: 0.5rem;
+  --curva: cubic-bezier(0.23, 1, 0.32, 1);
 }
-* { box-sizing: border-box; }
+
+*, *::before, *::after { box-sizing: border-box; }
+
 body {
   margin: 0;
   background: var(--fondo);
   color: var(--tinta);
-  font: 16px/1.5 system-ui, sans-serif;
+  font: 400 1rem/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
-main { max-width: 40rem; margin: 0 auto; padding: 1rem; }
-h1 { font-size: 1.5rem; line-height: 1.2; margin: 0.5rem 0; }
-.total { font-size: 1.75rem; font-weight: 700; margin: 0; }
-.detalle { color: var(--tenue); margin: 0.25rem 0 1.5rem; }
-.anios, .miga { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
-button { font: inherit; cursor: pointer; border: 1px solid var(--tinta);
-         background: transparent; border-radius: 0.5rem; padding: 0.5rem 0.75rem; }
-button[aria-current="true"] { background: var(--tinta); color: var(--fondo); }
-:focus-visible { outline: 3px solid #0b57d0; outline-offset: 2px; }
-.torta { width: 100%; height: auto; max-width: 22rem; display: block;
-         margin: 0 auto 1rem; }
-.porcion { cursor: pointer; stroke: var(--fondo); stroke-width: 2; }
-.porcion-0 { fill: #2b4a7d; } .porcion-1 { fill: #3e6ea8; }
-.porcion-2 { fill: #5f93c4; } .porcion-3 { fill: #86b4d8; }
-.porcion-4 { fill: #aed0e8; } .porcion-5 { fill: #c9def0; }
-.porcion-6 { fill: #dceaf6; } .porcion-7 { fill: #8a8a8a; }
-.porcion[data-otros] { fill: #9a9a9a; }
-.leyenda { list-style: none; padding: 0; margin: 0 0 2rem; }
-.leyenda li { cursor: pointer; padding: 0.6rem 0.25rem;
-              border-bottom: 1px solid #e6e6e2; }
-.procedencia { border-top: 1px solid #e6e6e2; padding-top: 0.75rem;
-               color: var(--tenue); font-size: 0.875rem; }
-.procedencia .codigos { font-family: ui-monospace, monospace; word-break: break-all; }
+
+main {
+  /* The measure of the prose, not of the screen. */
+  max-width: 38rem;
+  margin-inline: auto;
+  padding-inline: var(--e-3);
+  padding-block: var(--e-3) var(--e-5);
+  /* The page must reflow at 320px with no sideways scroll. */
+  padding-bottom: max(var(--e-5), env(safe-area-inset-bottom));
+}
+
+/* ---- Controls -------------------------------------------------------- */
+
+/* Every control carries a shape, so it never reads as the text beside it. */
+button, .principal, .secundario {
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* WCAG 2.5.8 asks for 24px. A finger asks for more. */
+  min-height: 2.75rem;
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid var(--borde-control);
+  border-radius: var(--radio);
+  background: var(--superficie);
+  color: var(--tinta);
+  text-decoration: none;
+  text-align: start;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button:hover, .principal:hover, .secundario:hover, .leyenda li:hover {
+    background: #f1f1ec;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  button, .principal, .secundario, .leyenda li, .porcion {
+    transition: transform 160ms var(--curva), background-color 150ms ease;
+  }
+  button:active, .principal:active, .secundario:active, .leyenda li:active {
+    transform: scale(0.97);
+  }
+}
+
+/* The ring is the only thing that tells a keyboard where it is. It never
+   sets a radius: the radius belongs to the control, so the ring follows the
+   shape the control already has. */
+:focus-visible {
+  outline: 3px solid var(--foco);
+  outline-offset: 2px;
+}
+
+/* ---- The strip of years ---------------------------------------------- */
+
+.anios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-2);
+  margin-bottom: var(--e-3);
+}
+
+.anio { font-variant-numeric: tabular-nums; }
+
+/* aria-current carries the state to a screen reader. The fill carries it to
+   an eye, and the two never disagree. */
+button[aria-current="true"] {
+  background: var(--tinta);
+  border-color: var(--tinta);
+  color: var(--fondo);
+}
+
+/* ---- The miga de pan -------------------------------------------------- */
+
+/* Q7: what the miga does on a telephone when the camino is long.
+   The tree goes 13 levels deep, and the names of an actividad run past 60
+   characters. Wrapped, that camino is eleven rows and 560 pixels, and it
+   pushes the headline off the screen of a telephone.
+   So the miga is one row that scrolls. "Inicio" stays at the start, because
+   it is the way out. The chip that is half visible at the end is the cue
+   that more camino is there. The name of the level the visitor is on is the
+   h1 below, so the miga never has to carry it. */
+.miga {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--e-2);
+  margin-bottom: var(--e-4);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  /* The ring of a chip needs room, or the scroller cuts it. */
+  padding-block: 3px 0.4rem;
+}
+
+.tramo {
+  flex: 0 0 auto;
+  font-size: 0.875rem;
+  font-weight: 400;
+  min-height: 2.25rem;
+  padding: var(--e-1) var(--e-2);
+  /* A name of an actividad can pass 60 characters. The chip stops, and the
+     full name is one tap away: the screen of that level writes it as the
+     h1. No name is lost. */
+  max-width: 13rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  color: var(--tenue);
+  background: transparent;
+  border-color: var(--borde-control);
+  line-height: 1.65rem;
+}
+
+.tramo:last-child { color: var(--tinta); font-weight: 500; }
+
+/* ---- The headline ----------------------------------------------------- */
+
+h1 {
+  font-size: clamp(1.375rem, 5vw, 1.75rem);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+  margin: 0 0 var(--e-2);
+}
+
+.total {
+  font-size: clamp(1.875rem, 8vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  /* The figure changes from screen to screen. Tabular digits hold the line. */
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+.detalle {
+  color: var(--tenue);
+  font-size: 0.9375rem;
+  text-wrap: pretty;
+  margin: var(--e-2) 0 0;
+}
+
+/* The deviation gets no colour. The state that spends over what the Congress
+   approved is a fact, and a reassignment inside a project is a legal
+   instrument. Neither one is good news or bad news, so the words carry the
+   meaning and nothing here says "right" or "wrong". */
+
+/* ---- The pie chart ---------------------------------------------------- */
+
+/* The first level is one slice of 59,8%. The chart is a headline, not a
+   graph: it gets room, and it carries no label. The legend below holds every
+   word and every number. */
+.torta {
+  display: block;
+  width: 100%;
+  max-width: 20rem;
+  height: auto;
+  margin: var(--e-5) auto var(--e-4);
+}
+
+.porcion {
+  cursor: pointer;
+  stroke: var(--fondo);
+  stroke-width: 2;
+}
+
+.porcion-0 { fill: var(--porcion-0); }
+.porcion-1 { fill: var(--porcion-1); }
+.porcion-2 { fill: var(--porcion-2); }
+.porcion-3 { fill: var(--porcion-3); }
+.porcion-4 { fill: var(--porcion-4); }
+.porcion-5 { fill: var(--porcion-5); }
+.porcion-6 { fill: var(--porcion-6); }
+.porcion-7 { fill: var(--porcion-7); }
+
+/* Nearly half of the "otros" slices are under 0,5% of the circle, which is a
+   wedge of under two degrees. The wedge keeps its true angle, because the
+   angle is the money. A ring around the box of the wedge is what a keyboard
+   sees, since a ring around the wedge itself would be a hairline too. */
+.porcion:focus-visible {
+  outline: 3px solid var(--foco);
+  outline-offset: 1px;
+  stroke: var(--foco);
+  stroke-width: 3;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .porcion:hover { stroke: var(--tinta); stroke-width: 3; }
+}
+
+/* ---- The legend ------------------------------------------------------- */
+
+/* The legend row is the reliable target. A finger cannot hit a wedge of two
+   degrees, so every row runs the full width and holds a generous hit area.
+   Each row carries the same data-destino as its slice. */
+.leyenda {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--e-5);
+}
+
+.leyenda li {
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e-2);
+  width: 100%;
+  min-height: 3rem;
+  padding: var(--e-2) var(--e-2);
+  border-bottom: 1px solid var(--linea);
+  font-variant-numeric: tabular-nums;
+  text-wrap: pretty;
+  overflow-wrap: break-word;
+  border-radius: var(--radio) var(--radio) 0 0;
+}
+
+/* The swatch ties the row to its wedge. It repeats what the chart shows, so
+   it is decoration and never the only cue: the row says the name, the share
+   and the amount as text. */
+.leyenda li::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 0.875rem;
+  height: 0.875rem;
+  /* Optical alignment: the swatch sits on the first line of the row, and
+     never in the middle of a row that wrapped. */
+  margin-top: 0.32em;
+  border-radius: 0.25rem;
+  background: var(--linea-fuerte);
+}
+
+.leyenda li.leyenda-0::before { background: var(--porcion-0); }
+.leyenda li.leyenda-1::before { background: var(--porcion-1); }
+.leyenda li.leyenda-2::before { background: var(--porcion-2); }
+.leyenda li.leyenda-3::before { background: var(--porcion-3); }
+.leyenda li.leyenda-4::before { background: var(--porcion-4); }
+.leyenda li.leyenda-5::before { background: var(--porcion-5); }
+.leyenda li.leyenda-6::before { background: var(--porcion-6); }
+.leyenda li.leyenda-7::before { background: var(--porcion-7); }
+
+/* ---- The screen of a nodo --------------------------------------------- */
+
+.sin-ejecucion {
+  margin: var(--e-4) 0 var(--e-5);
+  padding: var(--e-3);
+  border: 1px solid var(--linea-fuerte);
+  border-radius: 0.75rem;
+  background: var(--superficie);
+  color: var(--tenue);
+}
+
+/* ---- The screen of an absent camino ----------------------------------- */
+
+.pantalla-ausente h1 { text-wrap: pretty; }
+
+.pantalla-ausente .origen {
+  color: var(--tenue);
+  margin: 0 0 var(--e-4);
+}
+
+.principal {
+  background: var(--tinta);
+  border-color: var(--tinta);
+  color: var(--fondo);
+}
+
+.secundario { margin-inline-start: var(--e-2); }
+
+.pantalla-ausente .principal, .pantalla-ausente .secundario {
+  margin-bottom: var(--e-5);
+}
+
+/* ---- The screen of the sources ---------------------------------------- */
+
+.pantalla-fuentes p { text-wrap: pretty; max-width: 34rem; }
+
+.fuentes {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--e-4) 0;
+  font-size: 0.875rem;
+}
+
+.fuentes td {
+  padding: var(--e-2) var(--e-2) var(--e-2) 0;
+  border-bottom: 1px solid var(--linea);
+  vertical-align: top;
+}
+
+/* The year and the verdict are short. Only the name of the file is long, so
+   only that cell may break a word. A year cut in two reads as two years. */
+.fuentes td:first-child, .fuentes td:last-child { white-space: nowrap; }
+
+.fuentes td:first-child { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.fuentes a { overflow-wrap: anywhere; }
+
+/* The two ways out of this screen sit on their own rows, so neither one
+   collides with the other on a telephone. */
+.pantalla-fuentes .principal { display: flex; width: fit-content; margin-top: var(--e-4); }
+
+.pantalla-fuentes > a:last-child {
+  display: inline-block;
+  margin-top: var(--e-3);
+  min-height: 2.75rem;
+  padding-block: var(--e-2);
+}
+
+/* ---- The foot of every screen ----------------------------------------- */
+
+/* INV-03: the source is at the foot of every screen, and it is always
+   visible. It is the reason a reader can believe the number above it. */
+.procedencia {
+  border-top: 1px solid var(--linea-fuerte);
+  padding-top: var(--e-3);
+  margin-top: var(--e-4);
+  color: var(--tenue);
+  font-size: 0.875rem;
+}
+
+.procedencia p { margin: 0 0 var(--e-2); overflow-wrap: break-word; }
+
+.procedencia .codigos {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+a {
+  color: var(--foco);
+  text-underline-position: from-font;
+  text-decoration-thickness: from-font;
+  text-underline-offset: 0.1em;
+}
+
+/* A link in the foot is a real target for a finger. */
+.procedencia a {
+  display: inline-block;
+  min-height: 2.75rem;
+  padding-block: var(--e-2);
+}
+
+/* ---- Loading and failure ---------------------------------------------- */
+
+.cargando { color: var(--tenue); padding: var(--e-3); }
+
+.error {
+  margin: var(--e-3) 0;
+  padding: var(--e-3);
+  border: 1px solid var(--aviso);
+  border-radius: 0.75rem;
+  background: var(--superficie);
+  color: var(--aviso);
+  text-wrap: pretty;
+}
