@@ -10,15 +10,30 @@ No login. No knowledge of budget terms.
 
 ## What this project is today
 
-The build works today. It downloads the open files. It adds up their rows.
-It checks the total against the official report. It writes the result as
-JSON files. It runs every day.
+The site is live at **https://elranu.github.io/enquelagastan/**.
 
-The screens do not exist yet. Their design lives in
+The build runs every day. It downloads the open files. It adds up their
+rows. It checks the total against the official report. It writes the result
+as JSON files.
+
+The screens read those files. The first screen shows the total of the
+exercise as a pie chart. One slice is one jurisdiccion. The reader taps a
+slice and goes one level down: entidad, programa, actividad, and the object
+of the spending. The reader taps a year and sees the same level in that
+year.
+
+The foot of every screen names the file and the date the number comes from.
+That line is always visible.
+
+The site needs no login and no knowledge of budget terms. It loads no font
+and no script from another server.
+
+The design of the screens lives in
 `docs/designpowers/2026-09-14-public-spending-navigator/02-wireframes.md`.
 
-The plan calls for a map of the whole spending on one screen. A tap will
-take the reader down, one level at a time, to the object of the spending.
+Two things are still absent. The screen of the fiscal result waits for the
+revenue, because the build reads only the spending. The button that removes
+the inflation waits for a later plan.
 
 ## The numbers are the numbers of the state
 
@@ -85,6 +100,17 @@ Python 3.11 or later. **No dependency.**
 python -m unittest discover -s tests -v
 python -m build --destino site/data
 ```
+
+The screens need no build. Run their tests with Node 20 or later, and then
+serve the folder:
+
+```bash
+node --test
+python3 -m http.server 8000 --directory site
+```
+
+The command `node --test` carries no path. Node 26 reads a bare directory as
+a module path, so `node --test test/` fails there.
 
 The build downloads the file of every exercise on every run. Three files of
 3.5 MB once a day cost nothing.
