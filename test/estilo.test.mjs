@@ -78,6 +78,9 @@ test("el script de index.html lee las mismas claves que tema.js", () => {
   assert.ok(pagina.includes(`"${CLAVE_OSCURO}"`));
   assert.ok(pagina.includes(`"${CLAVE_BILLETES}"`));
   assert.match(pagina, /prefers-color-scheme: dark/);
+  // A bare matchMedia(...) throws when the browser has none. The call must
+  // be guarded, or the script never reaches either setAttribute below it.
+  assert.match(pagina, /matchMedia\?\.\(/);
 });
 
 test("la pagina no carga nada de otro servidor", () => {

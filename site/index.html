@@ -16,7 +16,7 @@
         const raiz = document.documentElement;
         const oscuro = leer("enquelagastan-oscuro");
         const esOscuro = oscuro === null
-          ? matchMedia("(prefers-color-scheme: dark)").matches
+          ? Boolean(window.matchMedia?.("(prefers-color-scheme: dark)")?.matches)
           : oscuro === "true";
         raiz.setAttribute("data-tema", esOscuro ? "oscuro" : "claro");
         raiz.setAttribute("data-vista", leer("enquelagastan-billetes") === "true" ? "billetes" : "simple");
