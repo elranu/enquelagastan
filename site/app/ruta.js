@@ -61,3 +61,91 @@ export function ancestroQueExiste(indice, clave) {
   }
   return null;
 }
+
+// ---- The history of the browser (R12) ----------------------------------
+//
+// A ruta is { anio, clave, grupos, desde }, or { fuentes: true }.
+// grupos holds the claves of every open group "otros" over the nodo. W8: a
+// group is not in the URL, so it lives in history.state. desde is the
+// exercise of origin when a change of year lands on a clave that is absent:
+// { anio, nombre, monto }, or null.
+
+export const RUTA_DE_FUENTES = "#/fuentes";
+
+export function entradaDe(ruta) {
+  if (ruta.fuentes) {
+    return { hash: RUTA_DE_FUENTES, estado: { fuentes: true } };
+  }
+  return {
+    hash: escribirRuta(ruta.anio, ruta.clave),
+    estado: {
+      anio: ruta.anio, clave: ruta.clave, grupos: ruta.grupos ?? [], desde: ruta.desde ?? null,
+    },
+  };
+}
+
+export function rutaDeEntrada(hash, estado) {
+  if (hash === RUTA_DE_FUENTES) {
+    return { fuentes: true };
+  }
+  const { ejercicio, clave } = leerRuta(hash);
+  // A state that names another place is not this entry: a shared link, or a
+  // hash that the visitor typed. Its groups do not belong here.
+  const propio = Boolean(estado) && estado.anio === ejercicio && estado.clave === clave;
+  return {
+    anio: ejercicio,
+    clave,
+    grupos: propio && Array.isArray(estado.grupos) ? estado.grupos : [],
+    desde: propio ? estado.desde ?? null : null,
+  };
+}
+
+export function escrituraDe(modo, actual, final) {
+  // modo "paso": the visitor took a step, so the final place gets a new
+  // entry. W6: "Volver" is a step too.
+  // modo "carga": the page read an entry that exists already (the first
+  // load, Back, Forward, a link). A skip of a nodo with one child, a clave
+  // that is absent, or a group that the data no longer has changes the
+  // place. The entry then gets the place that is on screen, with no new
+  // entry: Back must never return to a place that jumps forward again.
+  const igual = actual.hash === final.hash
+    && JSON.stringify(actual.estado ?? null) === JSON.stringify(final.estado);
+  if (igual) {
+    return null;
+  }
+  return modo === "paso" ? "push" : "replace";
+}
+
+export function contiene(arriba, clave) {
+  // The root holds every clave. Past the root, a clave is a camino of codes,
+  // so "88-10" is not inside "88-1".
+  return arriba === "" || clave === arriba || clave.startsWith(`${arriba}-`);
+}
+
+export function direccionEntre(antes, despues) {
+  // The direction picks the motion: the rings go down or up, the screen
+  // slides for a year, and a jump with no relation fades.
+  if (!antes) {
+    return "inicio";
+  }
+  if (antes.fuentes || despues.fuentes) {
+    return antes.fuentes && despues.fuentes ? "igual" : "salto";
+  }
+  if (antes.anio !== despues.anio) {
+    return "anio";
+  }
+  if (antes.clave === despues.clave) {
+    const [uno, otro] = [antes.grupos.length, despues.grupos.length];
+    if (uno === otro) {
+      return JSON.stringify(antes.grupos) === JSON.stringify(despues.grupos) ? "igual" : "salto";
+    }
+    return otro > uno ? "abajo" : "arriba";
+  }
+  if (contiene(antes.clave, despues.clave)) {
+    return "abajo";
+  }
+  if (contiene(despues.clave, antes.clave)) {
+    return "arriba";
+  }
+  return "salto";
+}
