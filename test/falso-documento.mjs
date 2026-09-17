@@ -22,6 +22,11 @@ export function falsoDocumento() {
     atributos: {},
     hijos: [],
     textContent: "",
+    // <dialog>.showModal and .close, for the source dialog (R22). A fake
+    // element answers for itself, as closest() does above.
+    open: false,
+    showModal() { this.open = true; },
+    close() { this.open = false; },
     setAttribute(nombre, valor) { this.atributos[nombre] = valor; },
     removeAttribute(nombre) { delete this.atributos[nombre]; },
     getAttribute(nombre) { return this.atributos[nombre] ?? null; },

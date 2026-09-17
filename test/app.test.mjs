@@ -439,6 +439,25 @@ test("Escape sube un nivel y las flechas del teclado cambian el anio", async () 
   assert.equal(sitio.historia.entradas.length, 3, "Escape at the root does nothing");
 });
 
+test("un toque en la fuente abre el dialogo, y Escape no sube de nivel con el dialogo abierto", async () => {
+  const sitio = montar("#/2025/88");
+  await sitio.navegador.listo();
+  const control = sitio.parte("fuente-control");
+  control.setAttribute("data-abrir-fuente", "");
+  await sitio.pulsar(control);
+  const dialogo = sitio.parte("fuente-dialogo");
+  assert.equal(dialogo.open, true, "R22: a tap opens the dialog");
+  const hashAntes = sitio.ventana.location.hash;
+  await sitio.tecla("Escape");
+  assert.equal(sitio.ventana.location.hash, hashAntes,
+    "the navigator must not go up a level when the dialog answers Escape");
+
+  const cerrar = sitio.parte("fuente-dialogo-cerrar");
+  cerrar.setAttribute("data-cerrar-fuente", "");
+  await sitio.pulsar(cerrar);
+  assert.equal(dialogo.open, false, "Cerrar closes the dialog");
+});
+
 test("el nombre del sitio vuelve a la raiz del anio en pantalla", async () => {
   const sitio = montar("#/2026/88");
   await sitio.navegador.listo();
@@ -469,14 +488,16 @@ test("un interruptor cambia el aspecto y no escribe en el historial", async () =
   });
   await sitio.navegador.listo();
   const html = sitio.documento.documentElement;
-  assert.equal(html.atributos["data-tema"], "claro");
-  const oscuro = sitio.parte("oscuro");
-  oscuro.setAttribute("data-interruptor", "oscuro");
+  assert.equal(html.atributos["data-tema"], "sistema");
+  const tema = sitio.parte("tema");
+  tema.setAttribute("data-interruptor", "tema");
   const antes = sitio.historia.escrituras.length;
-  await sitio.pulsar(oscuro);
+  await sitio.pulsar(tema);
+  assert.equal(html.atributos["data-tema"], "claro");
+  assert.equal(guardado[CLAVE_OSCURO], "claro");
+  await sitio.pulsar(tema);
   assert.equal(html.atributos["data-tema"], "oscuro");
-  assert.equal(oscuro.atributos["aria-checked"], "true");
-  assert.equal(guardado[CLAVE_OSCURO], "true");
+  assert.equal(guardado[CLAVE_OSCURO], "oscuro");
   assert.equal(sitio.historia.escrituras.length, antes, "W9: no entry");
 });
 

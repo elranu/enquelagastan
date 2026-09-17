@@ -407,8 +407,6 @@ export function vistaDeNavegador(estado, pila) {
 // pane. A painter writes the parts of the frame for one place, and it holds
 // no decision. Every part is found by its id.
 
-const FUENTE_SIN_DATOS = "Fuente: Presupuesto Abierto";
-
 const METODO = [
   "Los datos son de Presupuesto Abierto, del Ministerio de Economía de la "
   + "Nación, bajo licencia CC BY 4.0. Este proyecto lee los mismos archivos "
@@ -596,9 +594,9 @@ function pintarRenglones(documento, porciones, { hoja = false, mensajeVacio = nu
 }
 
 function textoDeFuente(procedencia) {
+  // R22: the foot names the source on its own; the dialog holds this detail.
   const archivo = procedencia.archivo.split("/").pop();
-  return "Fuente: Presupuesto Abierto, Ministerio de Economía. Crédito devengado, "
-    + `publicado el ${fechaCorta(procedencia.fecha)} en ${archivo}.`;
+  return `Crédito devengado, publicado el ${fechaCorta(procedencia.fecha)} en ${archivo}.`;
 }
 
 function textoDeCodigos(procedencia) {
@@ -612,13 +610,16 @@ function pintarCifras(documento, pesos, cifras) {
   parte(documento, "total").innerHTML = htmlDelOdometro(ruedasDelOdometro(pesos, cifras));
 }
 
-function pintarPie(documento, { cuenta = null, fuente, codigos = "", archivo = null }) {
-  // INV-03: the source is always visible at the foot of the tape. W3: the
-  // link to P4 and the codes of the last level stay.
+function pintarPie(documento, {
+  cuenta = null, medida = "", codigos = "", archivo = null, conFuentesEnlace = true,
+}) {
+  // INV-03: the source is always visible at the foot of the tape, with no
+  // action; R22 moved the measure, the file, the download and the codes (C16)
+  // into a dialog that a tap on the foot opens.
   parte(documento, "pie").hidden = false;
   // D7: the failure screen keeps this link once, in the chart pane, and
   // hides this one; every other screen shows it.
-  parte(documento, "fuentes-enlace").hidden = false;
+  parte(documento, "fuentes-enlace").hidden = !conFuentesEnlace;
   // A screen with no rows to sum must not keep the sum of the screen before
   // it.
   parte(documento, "rotulo").textContent = "";
@@ -631,7 +632,7 @@ function pintarPie(documento, { cuenta = null, fuente, codigos = "", archivo = n
     pintarCifras(documento, pesos, cifrasDe(pesos));
     parte(documento, "total-texto").textContent = `${montoLargo(cuenta.total)} pesos`;
   }
-  escribir(documento, "fuente", fuente);
+  escribir(documento, "fuente-dialogo-medida", medida);
   escribir(documento, "codigos", codigos);
   const descargar = parte(documento, "descargar");
   // Same rule: a screen with no file to offer must not keep the link of the
@@ -659,7 +660,7 @@ export function pintarNavegador(documento, vista) {
   pintarRenglones(documento, vista.porciones, vista);
   pintarPie(documento, {
     cuenta: { rotulo: vista.rotulo, total: vista.total },
-    fuente: textoDeFuente(vista.procedencia),
+    medida: textoDeFuente(vista.procedencia),
     codigos: textoDeCodigos(vista.procedencia),
     archivo: vista.procedencia.archivo,
   });
@@ -683,7 +684,7 @@ export function pintarAusente(documento, vista) {
   }
   pintarGrafico(documento, { titulo: vista.nombre, notas: vista.lineas, acciones, anillos: [] });
   pintarRenglones(documento, []);
-  pintarPie(documento, { fuente: textoDeFuente(vista.procedencia), archivo: vista.procedencia.archivo });
+  pintarPie(documento, { medida: textoDeFuente(vista.procedencia), archivo: vista.procedencia.archivo });
 }
 
 export function pintarFuentes(documento, vista) {
@@ -734,11 +735,10 @@ export function pintarError(documento, vista) {
     acciones: [inicio, fuentes],
   });
   pintarRenglones(documento, []);
-  // This screen read no manifest, so it names the source and nothing more.
-  pintarPie(documento, { fuente: FUENTE_SIN_DATOS });
-  // D7: the chart pane above already offers this exit. The foot's own copy
-  // would say the same thing twice.
-  parte(documento, "fuentes-enlace").hidden = true;
+  // This screen read no manifest, so the dialog offers no detail beyond the
+  // static sentence of the foot. D7: the chart pane above already offers
+  // this exit, and the dialog's own copy would say the same thing twice.
+  pintarPie(documento, { conFuentesEnlace: false });
 }
 
 // ---- The motion of the frame ----------------------------------------------

@@ -409,8 +409,10 @@ test("el navegador escribe el titulo, la linea y el total en el marco", () => {
   assert.equal(enMarco(documento, "disco-unidad").textContent, "millones");
   assert.equal(enMarco(documento, "frase").hidden, false);
   assert.match(enMarco(documento, "anillos").innerHTML, /data-abrir="2"/);
-  assert.match(textoDe(enMarco(documento, "fuente")), /credito-anual-2025\.zip/,
-    "UC-06: the foot names its source");
+  // R22: the foot itself is static markup in index.html (a test there
+  // reads its exact sentence); the painter fills the dialog behind it.
+  assert.match(textoDe(enMarco(documento, "fuente-dialogo-medida")), /credito-anual-2025\.zip/,
+    "UC-06: the dialog holds the file");
 });
 
 test("cada fila de la cinta es un boton que abre su parte", () => {
@@ -548,7 +550,8 @@ test("la pantalla de un fallo tiene sus salidas en el marco", () => {
     "a button, and never a link to the route already on screen");
   assert.deepEqual(controles(acciones, "href"),
     [{ texto: "De dónde salen estos números", valor: "#/fuentes" }]);
-  assert.equal(enMarco(documento, "fuente").textContent, "Fuente: Presupuesto Abierto");
+  assert.equal(enMarco(documento, "fuente-dialogo-medida").textContent, "",
+    "no manifest read, so the dialog offers no measure");
   assert.equal(enMarco(documento, "descargar").hidden, true);
   // D7: the link to P4 lives once, in the chart pane. The foot keeps its own
   // copy for every other screen, so it must hide here and nowhere else.

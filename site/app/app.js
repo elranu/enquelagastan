@@ -37,7 +37,7 @@ export function iniciar({ documento, ventana, historia }) {
   const aviso = documento.getElementById("aviso");
   const almacen = almacenDe(ventana);
   const prefiere = (consulta) => Boolean(ventana.matchMedia?.(consulta).matches);
-  let tema = leerTema(almacen, prefiere);
+  let tema = leerTema(almacen);
   aplicarTema(documento, tema);
   const reducido = () => prefiere("(prefers-reduced-motion: reduce)");
   // With no requestAnimationFrame (a test), a motion draws its end at once.
@@ -316,6 +316,15 @@ export function iniciar({ documento, ventana, historia }) {
       conmutar(valor("data-interruptor"));
       return enCurso;
     }
+    if (control("data-abrir-fuente")) {
+      // R23: the foot names the source; a tap opens the rest in a dialog.
+      documento.getElementById("fuente-dialogo")?.showModal();
+      return enCurso;
+    }
+    if (control("data-cerrar-fuente")) {
+      documento.getElementById("fuente-dialogo")?.close();
+      return enCurso;
+    }
     if (control("data-abrir")) {
       return abrir(Number(valor("data-abrir")));
     }
@@ -338,6 +347,11 @@ export function iniciar({ documento, ventana, historia }) {
 
   function manejarTecla(evento) {
     if (evento.altKey || evento.ctrlKey || evento.metaKey || evento.shiftKey) {
+      return enCurso;
+    }
+    // R23: the dialog answers its own Escape and closes itself. The
+    // navigator must not also go up a level for the same key press.
+    if (documento.getElementById("fuente-dialogo")?.open) {
       return enCurso;
     }
     if (evento.key === "Escape") {
@@ -426,7 +440,7 @@ export function iniciar({ documento, ventana, historia }) {
   }
   // R7: a web font can finish loading after the disc's first measure, with a
   // width that the fallback font never had.
-  documento.fonts?.ready?.then(() => ajustarDisco(documento));
+  documento.fonts?.ready?.then(() => ajustarDisco(documento)).catch(() => {});
 
   alCambiarLaEntrada();
   return { ir, informar, listo: () => enCurso };

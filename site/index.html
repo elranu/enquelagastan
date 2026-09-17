@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es" data-tema="claro" data-vista="simple">
+<html lang="es" data-tema="sistema" data-vista="simple">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,16 +9,17 @@
     <script>
       // Apply the stored look before the first paint, so a look never
       // flashes. site/app/tema.js holds the same keys, and a test checks it.
+      // R22: "sistema" is the default and one of three stored values, so
+      // estilo.css alone follows prefers-color-scheme; this script never
+      // needs matchMedia.
       (() => {
         const leer = (clave) => {
           try { return localStorage.getItem(clave); } catch { return null; }
         };
         const raiz = document.documentElement;
-        const oscuro = leer("enquelagastan-oscuro");
-        const esOscuro = oscuro === null
-          ? Boolean(window.matchMedia?.("(prefers-color-scheme: dark)")?.matches)
-          : oscuro === "true";
-        raiz.setAttribute("data-tema", esOscuro ? "oscuro" : "claro");
+        const aspecto = leer("enquelagastan-oscuro");
+        raiz.setAttribute("data-tema",
+          ["sistema", "claro", "oscuro"].includes(aspecto) ? aspecto : "sistema");
         raiz.setAttribute("data-vista", leer("enquelagastan-billetes") === "true" ? "billetes" : "simple");
       })();
     </script>
@@ -41,10 +42,19 @@
                   aria-label="Año siguiente" disabled>›</button>
         </div>
         <div class="interruptores">
-          <button type="button" class="interruptor" id="oscuro" role="switch"
-                  aria-checked="false" data-interruptor="oscuro"><span class="pista" aria-hidden="true"></span>Oscuro</button>
+          <!-- R22: three states (sistema, claro, oscuro), an icon and no
+               word. tema.js sets the icon and the label that matches the
+               stored state; this markup shows "sistema" until it runs. -->
+          <button type="button" class="interruptor" id="tema" data-interruptor="tema"
+                  aria-label="Tema: sistema. Tocar para el tema claro.">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="3" width="16" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7 17h6M10 14v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </button>
+          <!-- R23: two states, so it keeps role="switch" and its track. -->
           <button type="button" class="interruptor" id="billetes" role="switch"
-                  aria-checked="false" data-interruptor="billetes"><span class="pista" aria-hidden="true"></span>Billetes</button>
+                  aria-checked="false" data-interruptor="billetes" aria-label="Billetes">
+            <span class="pista" aria-hidden="true"></span>
+            <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="1.5" y="6" width="17" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="10" cy="10" r="2.2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+          </button>
         </div>
       </header>
 
@@ -84,16 +94,27 @@
               <p class="rotulo" id="rotulo"></p>
               <p class="total"><span class="cifras" id="total" aria-hidden="true"></span><span class="unidad" aria-hidden="true">pesos</span><span class="solo-lectores" id="total-texto"></span></p>
             </div>
-            <p class="fuente" id="fuente"></p>
-            <p class="codigos" id="codigos" hidden></p>
-            <p class="enlaces">
-              <a id="descargar" href="" hidden>Descargar el archivo oficial</a>
-              <a id="fuentes-enlace" href="#/fuentes" data-fuentes="">De dónde salen estos números</a>
-            </p>
+            <!-- R22: one line, always visible with no action (INV-03). A tap
+                 opens the dialog with the rest of the source. -->
+            <button type="button" class="fuente-control" id="fuente-control" data-abrir-fuente=""
+                    aria-haspopup="dialog">
+              Fuente: Presupuesto Abierto, Ministerio de Economía.
+            </button>
           </footer>
         </section>
       </main>
     </div>
+    <!-- R22: the frame holds the dialog once; pintarPie fills its parts. -->
+    <dialog class="fuente-dialogo" id="fuente-dialogo" aria-labelledby="fuente-dialogo-titulo">
+      <h2 id="fuente-dialogo-titulo">Fuente: Presupuesto Abierto, Ministerio de Economía</h2>
+      <p id="fuente-dialogo-medida"></p>
+      <p class="codigos" id="codigos" hidden></p>
+      <p class="enlaces">
+        <a id="descargar" href="" hidden>Descargar el archivo oficial</a>
+        <a id="fuentes-enlace" href="#/fuentes" data-fuentes="">De dónde salen estos números</a>
+      </p>
+      <button type="button" class="secundario" id="fuente-dialogo-cerrar" data-cerrar-fuente="">Cerrar</button>
+    </dialog>
     <p id="aviso" role="status" class="solo-lectores"></p>
     <script type="module" src="app/app.js"></script>
   </body>
