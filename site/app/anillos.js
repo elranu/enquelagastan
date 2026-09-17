@@ -63,7 +63,7 @@ export function caminoDeAnillo({ r0, r1, a0, a1 }) {
     return "";
   }
   const [interior, exterior] = [numero(r0), numero(r1)];
-  if (abertura >= VUELTA - 1e-9) {
+  if (abertura >= VUELTA - 1e-4) {
     // An SVG arc from a point to the same point draws nothing. A full ring
     // is two half turns outside, clockwise, and two half turns inside,
     // counterclockwise. The opposite directions leave the hole empty.

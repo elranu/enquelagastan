@@ -55,6 +55,15 @@ test("una sola parte dibuja un anillo entero", () => {
     + "M0 -0.44A0.44 0.44 0 1 0 0 0.44A0.44 0.44 0 1 0 0 -0.44Z");
 });
 
+test("un arco a menos de una decima de milirradian de la vuelta tambien es un anillo entero", () => {
+  // Five decimals of rounding can turn an arc within 5e-6 rad of a full turn
+  // into two equal points, so the ring blinks out for the last frames of a
+  // step. An arc this close to VUELTA must draw the same full-ring path.
+  assert.equal(caminoDeAnillo({ r0: 0.44, r1: 0.8, a0: 0, a1: VUELTA - 1e-5 }),
+    "M0 -0.8A0.8 0.8 0 1 1 0 0.8A0.8 0.8 0 1 1 0 -0.8Z"
+    + "M0 -0.44A0.44 0.44 0 1 0 0 0.44A0.44 0.44 0 1 0 0 -0.44Z");
+});
+
 test("un arco sin abertura o sin grosor no dibuja nada", () => {
   assert.equal(caminoDeAnillo({ r0: 0.5, r1: 1, a0: 1, a1: 1 }), "");
   assert.equal(caminoDeAnillo({ r0: 0.8, r1: 0.8, a0: 0, a1: 1 }), "");
