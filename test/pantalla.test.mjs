@@ -2,11 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  aniosVecinos, pilaDe, rutaDePila, vistaDeNavegador,
+  aniosVecinos, pilaDe, pintarAusente, pintarBarra, pintarError, pintarFuentes,
+  pintarNavegador, rutaDePila, vistaDeError, vistaDeNavegador,
   dibujarAusente, dibujarFuentes, dibujarMiga, dibujarNodo, dibujarRaiz,
   esAusencia, estadoDeLaFila, indiceParaClave, resolverPantalla,
   vistaDeAusente, vistaDeFuentes, vistaDeNodo, vistaDeRaiz,
 } from "../site/app/pantalla.js";
+import { migaCorta } from "../site/app/arbol.js";
 import { SOBRE_LO_APROBADO } from "../site/app/desviacion.js";
 import { controles, falsoDocumento, textoDe } from "./falso-documento.mjs";
 
@@ -514,4 +516,150 @@ test("los anios vecinos se detienen en las puntas", () => {
   assert.deepEqual(aniosVecinos([2024, 2025, 2026], 2024), { anterior: null, siguiente: 2025 });
   assert.deepEqual(aniosVecinos([2024, 2025, 2026], 2025), { anterior: 2024, siguiente: 2026 });
   assert.deepEqual(aniosVecinos([2024, 2025, 2026], 2026), { anterior: 2025, siguiente: null });
+});
+
+// ---- The painters of the frame --------------------------------------------
+
+const enMarco = (documento, id) => documento.getElementById(id);
+
+test("el navegador escribe el titulo, la linea y el total en el marco", () => {
+  const documento = falsoDocumento();
+  pintarNavegador(documento, vistaDeNavegador(ESTADO, pilaDe(ESTADO.indice, "")));
+  assert.equal(enMarco(documento, "titulo").textContent, "En qué la gastó el Estado nacional");
+  assert.equal(enMarco(documento, "volver").hidden, true, "the root has no Volver");
+  assert.equal(enMarco(documento, "detalle").textContent,
+    "96,2% de lo autorizado · +22% sobre lo aprobado");
+  assert.equal(enMarco(documento, "total-texto").textContent, "105.250.000 pesos",
+    "the verified total, never the sum");
+  // R7: 105.250.000 pesos is "105,3 millones", on two lines.
+  assert.equal(enMarco(documento, "disco-numero").textContent, "105,3");
+  assert.equal(enMarco(documento, "disco-unidad").textContent, "millones");
+  assert.equal(enMarco(documento, "frase").hidden, false);
+  assert.match(enMarco(documento, "anillos").innerHTML, /data-abrir="2"/);
+  assert.match(textoDe(enMarco(documento, "fuente")), /credito-anual-2025\.zip/,
+    "UC-06: the foot names its source");
+});
+
+test("cada fila de la cinta es un boton que abre su parte", () => {
+  const documento = falsoDocumento();
+  pintarNavegador(documento, vistaDeNavegador(ESTADO, pilaDe(ESTADO.indice, "")));
+  const filas = enMarco(documento, "renglones").hijos[0].hijos;
+  assert.equal(filas.length, 3);
+  const segunda = filas[1];
+  assert.equal(segunda.etiqueta, "li");
+  assert.equal(segunda.atributos.style, "animation-delay:30ms", "R5: 30ms apart");
+  const control = segunda.hijos[0];
+  assert.equal(control.etiqueta, "button", "a native control answers Enter and Space");
+  assert.equal(control.atributos["data-abrir"], "1");
+  assert.equal(control.atributos["aria-label"], "Deuda, 30,0%, 30,0 millones");
+});
+
+test("la fila de otros dice cuantas partes junta y lleva el color neutro", () => {
+  const documento = falsoDocumento();
+  pintarNavegador(documento, vistaDeNavegador(CON_OTROS, pilaDe(CON_OTROS.indice, "")));
+  const otros = enMarco(documento, "renglones").hijos[0].hijos[1].hijos[0];
+  assert.equal(otros.hijos[1].textContent, "Otros (2)");
+  assert.equal(otros.hijos[0].atributos.style, "background:var(--otros)");
+});
+
+test("la ultima hoja muestra una fila que no abre y los codigos al pie", () => {
+  const documento = falsoDocumento();
+  pintarNavegador(documento, vistaDeNavegador(ESTADO, pilaDe(ESTADO.indice, "88-1")));
+  const fila = enMarco(documento, "renglones").hijos[0].hijos[0].hijos[0];
+  assert.equal(fila.etiqueta, "div", "a row that opens nothing is not a control");
+  assert.equal(fila.atributos["data-abrir"], undefined);
+  assert.equal(enMarco(documento, "codigos").textContent, "jurisdiccion_id=88 · subjurisdiccion_id=1");
+  assert.equal(enMarco(documento, "volver").hidden, false);
+  assert.equal(enMarco(documento, "volver").atributos["data-subir"], "0");
+});
+
+test("un nivel sin gasto lo dice en la cinta", () => {
+  const cero = { ...ESTADO, indice: {
+    "9": { n: "Sin gasto", d: 0, p: 0, v: 0, g: 0, k: [] },
+    "8": { n: "Con gasto", d: 5, p: 5, v: 5, g: 5, k: [] },
+  } };
+  const documento = falsoDocumento();
+  pintarNavegador(documento, vistaDeNavegador(cero, pilaDe(cero.indice, "9")));
+  assert.equal(textoDe(enMarco(documento, "renglones")).trim(), "Este nivel no gastó nada en 2025.");
+  assert.match(enMarco(documento, "anillos").innerHTML, /^<path class="contorno"/);
+});
+
+test("la miga pone los niveles del medio detras de los puntos", () => {
+  const documento = falsoDocumento();
+  pintarBarra(documento, {
+    ejercicio: 2025, anterior: 2024, siguiente: null,
+    miga: migaCorta(["", "Uno", "Dos", "Tres", "Cuatro", "Cinco"]),
+  });
+  const items = enMarco(documento, "miga").hijos[0].hijos;
+  assert.deepEqual(items.map((item) => textoDe(item).trim()),
+    ["Inicio", "Uno", "…", "Dos", "Tres", "Cuatro"]);
+  assert.deepEqual(items.map((item) => Boolean(item.hidden)),
+    [false, false, false, true, true, false]);
+  assert.equal(items[2].hijos[0].atributos["aria-label"], "Mostrar 2 niveles intermedios");
+  assert.deepEqual(items.map((item) => item.hijos[0].atributos["data-subir"]),
+    ["0", "1", undefined, "2", "3", "4"]);
+});
+
+test("las flechas del anio se apagan en las puntas", () => {
+  const documento = falsoDocumento();
+  pintarBarra(documento, { ejercicio: 2025, anterior: 2024, siguiente: null, miga: [] });
+  assert.equal(enMarco(documento, "anio").textContent, "2025");
+  assert.equal(enMarco(documento, "anio-anterior").disabled, false);
+  assert.equal(enMarco(documento, "anio-anterior").atributos["data-anio"], "2024");
+  assert.equal(enMarco(documento, "anio-siguiente").disabled, true);
+  assert.equal(enMarco(documento, "miga").hidden, true, "the root has no breadcrumb");
+});
+
+test("la pantalla del ausente no tiene Volver y ofrece dos salidas", () => {
+  const documento = falsoDocumento();
+  pintarAusente(documento, {
+    ejercicio: 2025, anterior: 2024, siguiente: null,
+    miga: [{ nivel: 0, nombre: "Inicio" }, { nivel: 1, nombre: "Capital Humano" }],
+    nombre: "Becas",
+    origen: { ejercicio: 2024, monto: 12 },
+    ancestro: "88",
+    lineas: ["Este nivel no existe en 2025.", "En 2024 gastó 12,0 millones."],
+    procedencia: { archivo: ESTADO.entrada.archivo, fecha: ESTADO.entrada.publicado, codigos: null },
+  });
+  assert.equal(enMarco(documento, "volver").hidden, true, "W12");
+  assert.equal(enMarco(documento, "titulo").textContent, "Becas");
+  const acciones = enMarco(documento, "acciones");
+  assert.deepEqual(controles(acciones, "data-clave"),
+    [{ texto: "Subir al nivel que sí existe", valor: "88" }]);
+  assert.deepEqual(controles(acciones, "data-anio"), [{ texto: "Volver a 2024", valor: "2024" }]);
+  assert.match(textoDe(enMarco(documento, "nota")), /En 2024 gastó 12,0 millones\./);
+  assert.match(enMarco(documento, "anillos").innerHTML, /^<path class="contorno"/);
+  assert.equal(enMarco(documento, "cuenta").hidden, true, "no rows, so no sum");
+  assert.equal(enMarco(documento, "pie").hidden, false, "the foot of the year on screen");
+});
+
+test("las fuentes ponen el metodo en el grafico y la tabla en la cinta", () => {
+  const documento = falsoDocumento();
+  pintarFuentes(documento, vistaDeFuentes(MANIFIESTO));
+  assert.match(textoDe(enMarco(documento, "nota")), /CC BY 4\.0/);
+  assert.match(textoDe(enMarco(documento, "nota")), /Ministerio de Economía/);
+  assert.equal(enMarco(documento, "caja").hidden, true, "W13: no chart on P4");
+  const tabla = enMarco(documento, "renglones").hijos[0];
+  assert.equal(tabla.etiqueta, "table");
+  assert.equal(tabla.hijos.length, 2);
+  assert.match(textoDe(tabla), /credito-anual-2025\.zip/);
+  assert.deepEqual(controles(enMarco(documento, "acciones"), "data-clave"),
+    [{ texto: "Volver al inicio", valor: "" }]);
+  assert.ok(controles(enMarco(documento, "acciones"), "href")
+    .some((control) => control.texto === "El código de este proyecto"));
+});
+
+test("la pantalla de un fallo tiene sus salidas en el marco", () => {
+  const documento = falsoDocumento();
+  pintarError(documento, vistaDeError(new Error("Unexpected end of JSON input")));
+  assert.match(enMarco(documento, "titulo").textContent, /No pudimos mostrar esta pantalla/);
+  assert.match(textoDe(enMarco(documento, "nota")), /Unexpected end of JSON input/,
+    "the detail helps a report");
+  const acciones = enMarco(documento, "acciones");
+  assert.deepEqual(controles(acciones, "data-clave"), [{ texto: "Volver al inicio", valor: "" }],
+    "a button, and never a link to the route already on screen");
+  assert.deepEqual(controles(acciones, "href"),
+    [{ texto: "De dónde salen estos números", valor: "#/fuentes" }]);
+  assert.equal(enMarco(documento, "fuente").textContent, "Fuente: Presupuesto Abierto");
+  assert.equal(enMarco(documento, "descargar").hidden, true);
 });
