@@ -188,6 +188,12 @@ export function iniciar({ documento, ventana, historia }) {
   }
 
   function ir(pedido, modo) {
+    // Review, fix round 1, item 2: every step, from a click or from
+    // alCambiarLaEntrada (popstate, hashchange, the first load), goes
+    // through here. The dialog must never sit over a place it did not open
+    // on, so a step that starts closes it first, and not only on the one
+    // click that opens "De dónde salen estos números".
+    documento.getElementById("fuente-dialogo")?.close();
     // A new step ends the running motion at once (R4).
     motor.terminar();
     generacion += 1;
@@ -317,7 +323,7 @@ export function iniciar({ documento, ventana, historia }) {
       return enCurso;
     }
     if (control("data-abrir-fuente")) {
-      // R23: the foot names the source; a tap opens the rest in a dialog.
+      // R22: the foot names the source; a tap opens the rest in a dialog.
       documento.getElementById("fuente-dialogo")?.showModal();
       return enCurso;
     }
@@ -349,7 +355,7 @@ export function iniciar({ documento, ventana, historia }) {
     if (evento.altKey || evento.ctrlKey || evento.metaKey || evento.shiftKey) {
       return enCurso;
     }
-    // R23: the dialog answers its own Escape and closes itself. The
+    // R22: the dialog answers its own Escape and closes itself. The
     // navigator must not also go up a level for the same key press.
     if (documento.getElementById("fuente-dialogo")?.open) {
       return enCurso;

@@ -458,6 +458,23 @@ test("un toque en la fuente abre el dialogo, y Escape no sube de nivel con el di
   assert.equal(dialogo.open, false, "Cerrar closes the dialog");
 });
 
+test("un enlace dentro del dialogo abierto cierra el dialogo al navegar", async () => {
+  // Review, fix round 1, item 2: the link to P4 inside the dialog must not
+  // leave the modal sitting over the new place.
+  const sitio = montar("#/2025/88");
+  await sitio.navegador.listo();
+  const control = sitio.parte("fuente-control");
+  control.setAttribute("data-abrir-fuente", "");
+  await sitio.pulsar(control);
+  const dialogo = sitio.parte("fuente-dialogo");
+  assert.equal(dialogo.open, true);
+
+  const enlace = sitio.parte("fuentes-enlace");
+  enlace.setAttribute("data-fuentes", "");
+  await sitio.pulsar(enlace);
+  assert.equal(dialogo.open, false, "P4 must not sit under an open dialog");
+});
+
 test("el nombre del sitio vuelve a la raiz del anio en pantalla", async () => {
   const sitio = montar("#/2026/88");
   await sitio.navegador.listo();
