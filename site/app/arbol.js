@@ -26,8 +26,13 @@ export function saltarHijoUnico(indice, clave) {
   // 79% of the nodos of a real exercise hold one child. Such a nodo shows a
   // ring of one colour, and it repeats the screen before it. The source at
   // the foot names every code of the camino, so no code is lost.
+  //
+  // The child must be in the index before the walk moves there. A missing
+  // child sends the walk to a clave with no nodo. The next pass calls that
+  // clave absent. It then loops back to this nodo for ever.
   let actual = clave;
-  while (indice[actual] && indice[actual].k.length === 1) {
+  while (indice[actual] && indice[actual].k.length === 1
+    && indice[`${actual}-${indice[actual].k[0]}`]) {
     actual = `${actual}-${indice[actual].k[0]}`;
   }
   return actual;

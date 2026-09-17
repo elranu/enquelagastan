@@ -40,6 +40,15 @@ test("no salta cuando el nodo ya divide", () => {
   assert.equal(saltarHijoUnico(INDICE, "88"), "88");
 });
 
+test("se detiene en el nodo cuyo unico hijo falta en el indice", () => {
+  // "9" declares one child in k, but "9-1" holds no entry. The walk must
+  // stay on "9", or it hands back a clave with no nodo behind it.
+  const conHijoAusente = {
+    "9": { n: "Solitario", d: 5, p: 5, v: 5, g: 0, k: ["1"] },
+  };
+  assert.equal(saltarHijoUnico(conHijoAusente, "9"), "9");
+});
+
 test("el total suma la medida que se pide", () => {
   assert.equal(totalDe(INDICE, raices(INDICE), "d"), 97);
   assert.equal(totalDe(INDICE, raices(INDICE), "p"), 80);

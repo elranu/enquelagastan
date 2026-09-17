@@ -265,6 +265,38 @@ test("un enlace a un nodo de un solo hijo reemplaza la entrada", async () => {
   assert.equal(sitio.titulo(), "Rutas");
 });
 
+test("un nodo cuyo unico hijo falta en el indice termina y se pinta a si mismo", async () => {
+  // "88" declares one child in k ("88-1"), but the index holds no entry for
+  // it. saltarHijoUnico must stop on "88", and never send the navigator to
+  // a clave with no nodo behind it. That kind of clave calls itself absent,
+  // and with no exercise of origin the loop returns here for ever.
+  olvidar();
+  const indice = { "88": { n: "Capital Humano", d: 60, p: 60, v: 60, g: 0, k: ["1"] } };
+  const cuerpos = {
+    "data/manifest.json": {
+      ejercicios: [{
+        ejercicio: 2025, archivo: "https://ejemplo/credito-anual-2025.zip",
+        publicado: "Wed, 08 Jul 2026 10:39:43 GMT", total_devengado: 60_000_000,
+        verificado: true, en_este_artefacto: true,
+      }],
+    },
+    "data/2025/institucional.json": indice,
+  };
+  globalThis.fetch = async (ruta) => ({
+    ok: cuerpos[ruta] !== undefined,
+    status: cuerpos[ruta] === undefined ? 404 : 200,
+    json: async () => cuerpos[ruta],
+  });
+  const documento = falsoDocumento();
+  const ventana = falsaVentana("#/2025/88");
+  const historia = falsaHistoria(ventana);
+  const navegador = iniciar({ documento, ventana, historia });
+  await navegador.listo();
+  assert.equal(documento.getElementById("titulo").textContent, "Capital Humano",
+    "the nodo paints itself, and never P2b");
+  assert.deepEqual(historia.escrituras, [["replace", "#/2025/88"]]);
+});
+
 test("una hoja del objeto nombra cada codigo de su camino", async () => {
   const sitio = montar(`#/2025/${CADENA}-1`);
   await sitio.navegador.listo();
