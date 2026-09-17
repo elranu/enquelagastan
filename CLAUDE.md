@@ -6,9 +6,9 @@ En qué la gastan makes the public spending of the Argentine national state easy
 to read. The data is open already. It comes from an API as thousands of rows
 with codes for the jurisdiction, the program and the object of the spending.
 This project shows that data as one map. The user sees the total spending as a
-pie chart, with the fiscal result beside it. The user taps one slice and goes
-one level down: jurisdiction, entity, program, activity, object of the
-spending.
+chart of concentric rings, with the fiscal result beside it. The user taps one
+part and goes one level down: jurisdiction, entity, program, activity, object
+of the spending.
 
 The users are the citizens, the journalists and the researchers of Argentina.
 The product asks for no login, and for no knowledge of budget terms.

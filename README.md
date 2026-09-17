@@ -17,19 +17,28 @@ rows. It checks the total against the official report. It writes the result
 as JSON files.
 
 The screens read those files. The first screen shows the total of the
-exercise as a pie chart. One slice is one jurisdiccion. The reader taps a
-slice and goes one level down: entidad, programa, actividad, and the object
-of the spending. The reader taps a year and sees the same level in that
-year.
+exercise as a chart of rings, with a tape of rows beside it. One part of the
+main ring is one jurisdiccion. The reader taps a part, or its row, and the
+part grows into the whole: entidad, programa, actividad, and the object of
+the spending. The outer rings keep the path in sight.
 
-The foot of every screen names the file and the date the number comes from.
-That line is always visible.
+"Volver", the key Escape, the breadcrumb and the Back button of the browser
+go up. The arrows of the top bar change the year, and the path stays. Every
+step is an entry of the history, so a link opens the same nodo.
+
+Two switches change the look. "Oscuro" gives a dark look. "Billetes" gives
+the colours of the peso bills, and one sentence: how many pesos of every 100
+went to the largest part.
+
+The foot of the tape names the file and the date the number comes from.
+That foot is always visible.
 
 The site needs no login and no knowledge of budget terms. It loads no font
-and no script from another server.
+and no script from another server. The typefaces live under `site/fuentes/`.
 
 The design of the screens lives in
-`docs/designpowers/2026-09-14-public-spending-navigator/02-wireframes.md`.
+`docs/superpowers/specs/2026-09-17-navigator-redesign-design.md` and
+`docs/designpowers/2026-09-17-navigator-redesign/02-wireframes.md`.
 
 Two things are still absent. The screen of the fiscal result waits for the
 revenue, because the build reads only the spending. The button that removes
