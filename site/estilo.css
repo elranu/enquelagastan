@@ -310,6 +310,11 @@ h1:focus { outline: none; }
   transition: transform 200ms var(--curva);
 }
 
+/* WCAG 1.4.11: --regla alone holds 1.32:1 in light and 1.54:1 in dark
+   against --fondo. --tenue already holds 4.5:1 there (checked above), so an
+   inset ring of it gives the off track the 3:1 that a background cannot. */
+.interruptor[aria-checked="false"] .pista { box-shadow: inset 0 0 0 1px var(--tenue); }
+
 .interruptor[aria-checked="true"] .pista { background: var(--acento); }
 
 .interruptor[aria-checked="true"] .pista::after { transform: translateX(14px); }
@@ -484,6 +489,11 @@ h1 {
   padding: 10px 28px;
   text-align: left;
 }
+
+/* R21: .renglones scrolls in y, and so it clips in x. An outline of the
+   usual offset falls outside the row and is clipped at its left and right
+   sides. Pull the ring inside the row, and keep its width and colour. */
+.fila:focus-visible { outline-offset: -3px; }
 
 .muestra { width: 14px; height: 14px; margin-top: 4px; border-radius: 3px; grid-row: span 2; }
 

@@ -71,6 +71,25 @@ test("las cuatro paletas cumplen el contraste de cada par", () => {
   assert.equal(Object.keys(paletas["billetes oscuro"]).length, 16, "every palette has 16 tokens");
 });
 
+test("la pista del interruptor apagado tiene 3:1 contra el fondo de la barra", () => {
+  // WCAG 1.4.11: --regla alone gives 1.32:1 in light and 1.54:1 in dark. The
+  // off track needs a border or shadow from a token that holds 3:1. The
+  // header sets no background of its own, so the ground is --fondo.
+  const css = leer("../site/estilo.css");
+  const apagada = /\.interruptor\[aria-checked="false"\]\s*\.pista\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+  const token = /var\(--([\w-]+)\)/.exec(apagada)?.[1];
+  assert.ok(token, "the off track needs a border or shadow from a palette token");
+  const bloquesCss = bloques(css);
+  const paletas = {
+    claro: bloquesCss[":root"],
+    oscuro: { ...bloquesCss[":root"], ...bloquesCss[TEMA] },
+  };
+  for (const [nombre, paleta] of Object.entries(paletas)) {
+    const razon = contraste(paleta[token], paleta.fondo);
+    assert.ok(razon >= 3, `${nombre}: --${token} on --fondo is ${razon.toFixed(2)}`);
+  }
+});
+
 test("el script de index.html lee las mismas claves que tema.js", () => {
   // The inline script applies the look before the first paint. A key that
   // differs from tema.js would flash the default look on every visit.
@@ -81,6 +100,39 @@ test("el script de index.html lee las mismas claves que tema.js", () => {
   // A bare matchMedia(...) throws when the browser has none. The call must
   // be guarded, or the script never reaches either setAttribute below it.
   assert.match(pagina, /matchMedia\?\.\(/);
+});
+
+test("index.html trae cada id que los pintores y app.js leen, y sus atributos", () => {
+  // The fake document of the other suites creates any id on demand, and the
+  // app tests add missing attributes by hand. Neither one would notice a real
+  // index.html that fell out of step with the code. Read the ids straight
+  // from the source, so this test breaks the day a painter reads an id that
+  // the page does not carry.
+  const pagina = leer("../site/index.html");
+  const codigo = leer("../site/app/pantalla.js") + leer("../site/app/app.js");
+  const ids = new Set();
+  for (const [, id] of codigo.matchAll(/(?:parte\(documento,\s*|getElementById\()"([\w-]+)"/g)) {
+    ids.add(id);
+  }
+  // pintarBarra reads these two from an array of pairs, not a literal call.
+  ids.add("anio-anterior");
+  ids.add("anio-siguiente");
+  assert.ok(ids.size > 20, "the collection itself must find something");
+  for (const id of ids) {
+    assert.match(pagina, new RegExp(`id="${id}"`), `index.html needs id="${id}"`);
+  }
+
+  assert.match(pagina, /id="sitio"[^>]*data-clave="/, "the site name is a data-clave control");
+  assert.match(pagina, /id="fuentes-enlace"[^>]*data-fuentes="/, "app.js reads data-fuentes");
+  for (const interruptor of ["oscuro", "billetes"]) {
+    assert.match(pagina,
+      new RegExp(`id="${interruptor}"[^>]*role="switch"[^>]*data-interruptor="${interruptor}"`),
+      `${interruptor} must be a switch that names itself`);
+  }
+  assert.match(pagina, /id="grafico"[^>]*aria-hidden="true"/, "the chart is decorative");
+  assert.match(pagina, /id="total"[^>]*aria-hidden="true"/,
+    "the odometer is decorative; total-texto reads for it");
+  assert.match(pagina, /id="aviso"[^>]*role="status"/, "the live region announces politely");
 });
 
 test("la pagina no carga nada de otro servidor", () => {
