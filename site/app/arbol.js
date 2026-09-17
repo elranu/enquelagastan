@@ -58,3 +58,31 @@ export function migaDePan(indice, clave) {
 export function totalDe(indice, claves, medida) {
   return claves.reduce((suma, clave) => suma + indice[clave][medida], 0);
 }
+
+export function llano(nombre) {
+  // DGSIAF writes one name with and without accents, and in two cases:
+  // "Educacion" and "Educación". A reader sees one name.
+  return nombre.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+}
+
+export function migaCorta(nombres) {
+  // R9: Inicio › <level 1> › … › <previous>. nombres holds one name per
+  // screen, from the root to the screen on view. The title names the screen
+  // on view, so the breadcrumb never does.
+  const actual = nombres.length - 1;
+  const niveles = [];
+  for (let nivel = 0; nivel < actual; nivel += 1) {
+    // Two neighbours with one name are one crumb. The deeper one stays,
+    // because it is nearer to the screen on view. The previous level stays.
+    const repetido = nivel > 0 && nivel + 1 < actual
+      && llano(nombres[nivel]) === llano(nombres[nivel + 1]);
+    if (!repetido) {
+      niveles.push({ nivel, nombre: nivel === 0 ? "Inicio" : nombres[nivel] });
+    }
+  }
+  if (niveles.length < 4) {
+    return niveles;
+  }
+  // "…" holds every level between level 1 and the previous level.
+  return [niveles[0], niveles[1], { ocultos: niveles.slice(2, -1) }, niveles.at(-1)];
+}

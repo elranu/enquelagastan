@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  hijosDe, migaDePan, nivelDe, raices, saltarHijoUnico, totalDe,
+  hijosDe, llano, migaCorta, migaDePan, nivelDe, raices, saltarHijoUnico, totalDe,
 } from "../site/app/arbol.js";
 
 // Two jurisdicciones. The 45 is a chain of one child, three levels deep.
@@ -62,4 +62,57 @@ test("la miga conserva un nombre repetido que no es adyacente", () => {
 test("el total suma la medida que se pide", () => {
   assert.equal(totalDe(INDICE, raices(INDICE), "d"), 97);
   assert.equal(totalDe(INDICE, raices(INDICE), "p"), 80);
+});
+
+const CAMINO = [
+  "", "Ministerio de Capital Humano", "Secretaría de Educación",
+  "Desarrollo de la Educación Superior", "Becas", "Becas Progresar", "Norte",
+];
+
+const miga = (profundidad) => migaCorta(CAMINO.slice(0, profundidad + 1));
+
+test("la raiz no tiene miga y el nivel 1 solo tiene Inicio", () => {
+  assert.deepEqual(miga(0), []);
+  assert.deepEqual(miga(1), [{ nivel: 0, nombre: "Inicio" }]);
+});
+
+test("la miga nombra el nivel 1 y el previo, y nunca el actual", () => {
+  assert.deepEqual(miga(2), [
+    { nivel: 0, nombre: "Inicio" },
+    { nivel: 1, nombre: "Ministerio de Capital Humano" },
+  ]);
+  assert.deepEqual(miga(3), [
+    { nivel: 0, nombre: "Inicio" },
+    { nivel: 1, nombre: "Ministerio de Capital Humano" },
+    { nivel: 2, nombre: "Secretaría de Educación" },
+  ]);
+});
+
+test("los niveles del medio van detras de los puntos suspensivos", () => {
+  assert.deepEqual(miga(4), [
+    { nivel: 0, nombre: "Inicio" },
+    { nivel: 1, nombre: "Ministerio de Capital Humano" },
+    { ocultos: [{ nivel: 2, nombre: "Secretaría de Educación" }] },
+    { nivel: 3, nombre: "Desarrollo de la Educación Superior" },
+  ]);
+  assert.deepEqual(miga(6).map((tramo) => tramo.nombre ?? tramo.ocultos.length),
+    ["Inicio", "Ministerio de Capital Humano", 3, "Becas Progresar"]);
+  assert.deepEqual(miga(5)[2].ocultos.map((tramo) => tramo.nivel), [2, 3]);
+});
+
+test("dos nombres que difieren en acentos o mayusculas son un tramo", () => {
+  const nombres = ["", "SALUD", "Salud", "Educacion", "Educación", "Becas"];
+  // "SALUD" joins "Salud", and "Educacion" joins "Educación". The deeper
+  // crumb stays, because it points nearer to the screen on view.
+  assert.deepEqual(migaCorta(nombres), [
+    { nivel: 0, nombre: "Inicio" },
+    { nivel: 2, nombre: "Salud" },
+    { nivel: 4, nombre: "Educación" },
+  ]);
+  assert.equal(llano("Educación"), llano("EDUCACION"));
+});
+
+test("el nivel previo queda aunque se llame como la pantalla", () => {
+  assert.deepEqual(migaCorta(["", "Defensa", "Defensa"]).map((tramo) => tramo.nivel),
+    [0, 1]);
 });
