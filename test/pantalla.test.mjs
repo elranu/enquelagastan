@@ -475,6 +475,20 @@ test("la vista de la ultima hoja compara el nodo con el total nacional", () => {
   assert.ok(vista.procedencia.codigos, "C16: the codes of the source at the last level");
 });
 
+test("un hijo que el k declara pero el indice no tiene no rompe la vista", () => {
+  // "88-1" is a child of "88" by its k, but its file is absent from the
+  // index (the same case migaDePan and nivelDePila already guard). The nodo
+  // must still show as its own hoja, with no exception.
+  const sinHijo = { ...ESTADO, indice: {
+    "88": { n: "Capital Humano", d: 60, p: 60, v: 60, g: 0, k: ["1"] },
+  } };
+  const vista = vistaDeNavegador(sinHijo, pilaDe(sinHijo.indice, "88"));
+  assert.equal(vista.hoja, true);
+  assert.deepEqual(vista.porciones, [
+    { nombre: "Capital Humano", monto: 60, parte: 1, esOtros: false, destino: ["88"] },
+  ]);
+});
+
 test("la vista de un grupo otros solo dice su parte del total", () => {
   const vista = vistaDeNavegador(CON_OTROS, pilaDe(CON_OTROS.indice, "", [["2", "3"]]));
   assert.equal(vista.titulo, "Otros");

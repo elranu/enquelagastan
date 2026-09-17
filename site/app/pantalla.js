@@ -97,7 +97,9 @@ export async function indiceParaClave(ejercicio, indice, clave, traer) {
 export function vistaDeNodo(estado, clave, grupo = null) {
   const { indice, entrada, ejercicio, disponibles } = estado;
   const nodo = indice[clave];
-  const hijos = hijosDe(indice, clave);
+  // A nodo of level 9 lists object codes whose file may be absent. A child
+  // that is not in the index is not a part (the same rule as nivelDePila).
+  const hijos = hijosDe(indice, clave).filter((hijo) => indice[hijo]);
   const { total, porciones } = hijos.length > 0
     ? porcionesDe(indice, hijos, "d")
     : { total: nodo.d, porciones: [] };
