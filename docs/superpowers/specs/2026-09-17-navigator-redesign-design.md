@@ -146,7 +146,7 @@ Blocking: none.
 
 | # | Question | Status (deferred) | Owner | Due |
 |---|---|---|---|---|
-| RQ3 | How many kilobytes do the font files cost? Target: under 300 KB for the three families | closed: 176.79 KB for the three families, measured on 2026-09-17 by Task 13 of the plan | the agent | done |
+| RQ3 | How many kilobytes do the font files cost? Target: under 300 KB for the three families | closed: 181,032 bytes (181.0 KB) for the three families, under the target of 300 KB, measured by test/estilo.test.mjs on 2026-09-17 | the agent | done |
 
 Closed: RQ1 by W14, RQ2 by W11, RQ4 by W15. Q7 of the base spec by R9. The other open questions of the base spec do not change.
 
