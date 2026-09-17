@@ -17,7 +17,7 @@
   --hover: #E4E6E0;
   /* R25: the line of the execution and the deviation carries no judgement,
      so it gets its own token, never --tenue, and one colour in every case. */
-  --dato: #4B3A8C;
+  --dato: #2C3E63;
   --c0: #1F4E79;
   --c1: #B23A48;
   --c2: #2E7D5B;
@@ -28,7 +28,7 @@
   --otros: #7A7F85;
 }
 
-/* R22: the values of the dark palette live here once, under their own
+/* R24: the values of the dark palette live here once, under their own
    names. This selector is "html", not ":root", on purpose: the two
    selectors below only point at these tokens with var(), so a value never
    repeats, and test/estilo.test.mjs never mistakes this block for a palette
@@ -42,7 +42,7 @@ html {
   --acento-oscuro: #B29CEE;
   --foco-oscuro: #FFFFFF;
   --hover-oscuro: #213049;
-  --dato-oscuro: #B29CEE;
+  --dato-oscuro: #A8C0E8;
   --c0-oscuro: #6DB3EC;
   --c1-oscuro: #F0A35E;
   --c2-oscuro: #79CF8A;
@@ -51,9 +51,20 @@ html {
   --c5-oscuro: #5CCBC2;
   --c6-oscuro: #E3CD68;
   --otros-oscuro: #7D8898;
+  /* R16 (review, fix round 1): the dark bill colours, once, for the same
+     reason: [data-tema="oscuro"][data-vista="billetes"] and
+     [data-tema="sistema"][data-vista="billetes"] under a dark system must
+     never drift apart. */
+  --c0-billete-oscuro: #F08A4E;
+  --c1-billete-oscuro: #6FBF7F;
+  --c2-billete-oscuro: #7FA6E8;
+  --c3-billete-oscuro: #B79AE6;
+  --c4-billete-oscuro: #E48AAA;
+  --c5-billete-oscuro: #5CC3E6;
+  --c6-billete-oscuro: #D9B55A;
 }
 
-/* R22: the forced dark look. It only reads the values above. */
+/* R24: the forced dark look. It only reads the values above. */
 :root[data-tema="oscuro"] {
   --fondo: var(--fondo-oscuro);
   --panel: var(--panel-oscuro);
@@ -74,7 +85,7 @@ html {
   --otros: var(--otros-oscuro);
 }
 
-/* R22: "sistema" follows the system. It stays the light default of :root
+/* R24: "sistema" follows the system. It stays the light default of :root
    until the system itself prefers dark, and then it gives the exact same
    tokens as the forced dark look, from the same source. */
 @media (prefers-color-scheme: dark) {
@@ -110,15 +121,33 @@ html {
   --c6: #9A7A2A;
 }
 
-/* The bills made lighter for the dark ground. */
+/* The bills made lighter for the dark ground. Both this selector and
+   [data-tema="sistema"][data-vista="billetes"] below carry two attributes,
+   so either one outranks the plain :root[data-vista="billetes"] above,
+   whichever order the browser reads them in (R16, review, fix round 1). */
 :root[data-vista="billetes"][data-tema="oscuro"] {
-  --c0: #F08A4E;
-  --c1: #6FBF7F;
-  --c2: #7FA6E8;
-  --c3: #B79AE6;
-  --c4: #E48AAA;
-  --c5: #5CC3E6;
-  --c6: #D9B55A;
+  --c0: var(--c0-billete-oscuro);
+  --c1: var(--c1-billete-oscuro);
+  --c2: var(--c2-billete-oscuro);
+  --c3: var(--c3-billete-oscuro);
+  --c4: var(--c4-billete-oscuro);
+  --c5: var(--c5-billete-oscuro);
+  --c6: var(--c6-billete-oscuro);
+}
+
+/* R16 (review, fix round 1): "sistema" on a dark system, with "Billetes" on,
+   must give these same dark bill colours, and never the light ones that
+   :root[data-vista="billetes"] alone would otherwise still win with. */
+@media (prefers-color-scheme: dark) {
+  :root[data-tema="sistema"][data-vista="billetes"] {
+    --c0: var(--c0-billete-oscuro);
+    --c1: var(--c1-billete-oscuro);
+    --c2: var(--c2-billete-oscuro);
+    --c3: var(--c3-billete-oscuro);
+    --c4: var(--c4-billete-oscuro);
+    --c5: var(--c5-billete-oscuro);
+    --c6: var(--c6-billete-oscuro);
+  }
 }
 
 /* ---- The typefaces (R17) --------------------------------------------------
@@ -335,7 +364,7 @@ h1:focus { outline: none; }
 
 .interruptores { display: flex; gap: 16px; flex: none; }
 
-/* R22, R23: an icon control with a hit area of 44x44px or more. */
+/* R23: an icon control with a hit area of 44x44px or more. */
 .interruptor {
   display: flex;
   align-items: center;
@@ -630,7 +659,9 @@ h1 {
   text-align: left;
   color: var(--tenue);
   text-decoration: underline;
-  text-decoration-color: var(--regla);
+  /* Review, fix round 1, item 4: --regla alone fails 3:1 against every
+     ground. currentColor is --tenue here, already checked at 4.5:1. */
+  text-decoration-color: currentColor;
   text-underline-offset: 3px;
 }
 

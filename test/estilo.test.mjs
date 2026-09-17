@@ -21,7 +21,7 @@ function bloques(css) {
   return salida;
 }
 
-// R22: the dark palette lives once, under html { --nombre-oscuro: #hex; },
+// R24: the dark palette lives once, under html { --nombre-oscuro: #hex; },
 // on purpose outside the selectors that bloques() reads (see estilo.css).
 // This reads every custom property of the file, by name, with no regard for
 // its selector, so a var(--x-oscuro) reference can resolve to its value.
@@ -56,6 +56,9 @@ function construirPaletas(css) {
     oscuro: paleta(":root", TEMA),
     "billetes claro": paleta(":root", VISTA),
     "billetes oscuro": paleta(":root", TEMA, VISTA, AMBOS),
+    // The order matters: SISTEMA_BILLETES must resolve last, exactly as its
+    // higher CSS specificity makes it win over the plain VISTA block.
+    "billetes sistema oscuro": paleta(":root", SISTEMA_OSCURO, VISTA, SISTEMA_BILLETES),
   };
 }
 
@@ -77,6 +80,11 @@ const TEMA = ':root[data-tema="oscuro"]';
 const SISTEMA_OSCURO = ':root[data-tema="sistema"]';
 const VISTA = ':root[data-vista="billetes"]';
 const AMBOS = ':root[data-vista="billetes"][data-tema="oscuro"]';
+// R16 (review, fix round 1): a fifth palette. "sistema" on a dark system,
+// with "Billetes" on, must give the same dark bill colours as the forced
+// dark look, and never the light ones. Its selector needs the specificity
+// of two attributes, like AMBOS, or a later light-only block wins instead.
+const SISTEMA_BILLETES = ':root[data-tema="sistema"][data-vista="billetes"]';
 
 test("las cuatro paletas cumplen el contraste de cada par", () => {
   const css = leer("../site/estilo.css");
@@ -107,7 +115,7 @@ test("las cuatro paletas cumplen el contraste de cada par", () => {
   assert.deepEqual(fallas, []);
   assert.equal(Object.keys(paletas["billetes oscuro"]).length, 17, "every palette has 17 tokens");
 
-  // R22: the system dark path gives the same tokens as the forced dark path,
+  // R24: the system dark path gives the same tokens as the forced dark path,
   // because both only read the dark palette that html {} holds once.
   const bloquesCss = bloques(css);
   const variables = variablesGlobales(css);
@@ -132,9 +140,19 @@ test("la pista del interruptor apagado tiene 3:1 contra el fondo de la barra", (
   }
 });
 
+test("el subrayado de la fuente usa el color del texto, no --regla", () => {
+  // Review, fix round 1, item 4: --regla alone holds well under 3:1 against
+  // both grounds (1.42:1 on --panel light, 1.32:1 on --fondo, 1.37:1 on
+  // --panel dark), so the underline of the one control the foot now has
+  // must take its colour from the text itself, already verified at 4.5:1.
+  const css = leer("../site/estilo.css");
+  const cuerpo = /\.fuente-control\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+  assert.match(cuerpo, /text-decoration-color:\s*currentColor\s*;/);
+});
+
 test("el script de index.html lee las mismas claves que tema.js", () => {
   // The inline script applies the look before the first paint. A key that
-  // differs from tema.js would flash the default look on every visit. R22:
+  // differs from tema.js would flash the default look on every visit. R13:
   // "sistema" is a value like the others, and estilo.css alone answers
   // prefers-color-scheme, so the script needs no matchMedia at all.
   const pagina = leer("../site/index.html");
@@ -168,7 +186,7 @@ test("index.html trae cada id que los pintores y app.js leen, y sus atributos", 
 
   assert.match(pagina, /id="sitio"[^>]*data-clave="/, "the site name is a data-clave control");
   assert.match(pagina, /id="fuentes-enlace"[^>]*data-fuentes="/, "app.js reads data-fuentes");
-  // R22: "tema" cycles three states, so it is a plain button, not a switch.
+  // R13: "tema" cycles three states, so it is a plain button, not a switch.
   assert.match(pagina, /id="tema"[^>]*data-interruptor="tema"/, "tema names itself");
   assert.doesNotMatch(pagina, /id="tema"[^>]*role="switch"/, "a switch has two states, tema has three");
   // R23: "billetes" keeps its two states and its role.
@@ -186,6 +204,15 @@ test("index.html trae cada id que los pintores y app.js leen, y sus atributos", 
     /id="fuente-control"[^>]*data-abrir-fuente=""[^>]*>\s*Fuente: Presupuesto Abierto, Ministerio de Economía\.\s*</,
     "the foot names the source in one line, with no action needed to see it");
   assert.match(pagina, /<dialog[^>]*id="fuente-dialogo"/, "R22: a native dialog, no library");
+  // Review, fix round 1, item 6: these three were required and asserted
+  // nowhere, so deleting any of them kept the suite green.
+  assert.match(pagina, /id="billetes"[^>]*aria-label="Billetes"/,
+    "R23: billetes loses its word for an accessible name");
+  const billetes = /<button[^>]*id="billetes"[\s\S]*?<\/button>/.exec(pagina)?.[0] ?? "";
+  assert.match(billetes, /<svg[^>]*>/, "R23: billetes shows an inline icon");
+  assert.match(pagina,
+    /<button[^>]*id="fuente-dialogo-cerrar"[^>]*data-cerrar-fuente=""[^>]*>Cerrar<\/button>/,
+    "R22: the dialog closes with a Cerrar button");
 });
 
 test("la pagina no carga nada de otro servidor", () => {
