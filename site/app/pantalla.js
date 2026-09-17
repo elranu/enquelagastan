@@ -4,18 +4,20 @@
 // Every decision lives in the functions that give a view. The functions that
 // draw hold no decision, so a test reads a view without a browser.
 
+import { escenaDe } from "./anillos.js";
 import {
-  hijosDe, migaDePan, nivelDe, NIVELES_INSTITUCIONALES, raices, saltarHijoUnico,
-  totalDe,
+  hijosDe, migaCorta, migaDePan, nivelDe, NIVELES_INSTITUCIONALES, raices,
+  saltarHijoUnico, totalDe,
 } from "./arbol.js";
 import { cargarObjeto } from "./datos.js";
 import { desviacionDe, ejecucionDe, REASIGNACION_INTERNA, SOBRE_LO_APROBADO }
   from "./desviacion.js";
+import { fraseDe } from "./frase.js";
 import { conSigno, fechaCorta, montoCorto, montoLargo, porcentaje }
   from "./formato.js";
 import { NOMBRE_OTROS, porcionesDe } from "./porciones.js";
 import { procedenciaDe } from "./procedencia.js";
-import { ancestroQueExiste } from "./ruta.js";
+import { ancestroQueExiste, contiene } from "./ruta.js";
 import { dibujarTorta } from "./torta.js";
 
 function totalesDeLaRaiz(indice) {
@@ -508,4 +510,174 @@ export function dibujarAusente(vista, documento = document) {
 
   seccion.appendChild(dibujarProcedencia(vista.procedencia, documento));
   return seccion;
+}
+
+// ---- The views of the frame ---------------------------------------------
+//
+// The pila holds one level per screen, from the root to the screen on view:
+// { clave, grupo, nombre, hoja, porciones, elegida }. A group "otros" is a
+// level of its own, on the clave of its nodo. The rings, the breadcrumb and
+// "Volver" all read the pila.
+
+const NOMBRE_DE_LA_RAIZ = "Inicio";
+
+function mismoGrupo(uno, otro) {
+  return uno.length === otro.length && uno.every((clave, orden) => clave === otro[orden]);
+}
+
+function nivelDePila(indice, clave, grupo) {
+  if (grupo) {
+    return {
+      clave, grupo, nombre: TITULO_DE_UN_GRUPO, hoja: false, elegida: null,
+      porciones: porcionesDe(indice, grupo, "d").porciones,
+    };
+  }
+  if (clave === "") {
+    return {
+      clave, grupo: null, nombre: NOMBRE_DE_LA_RAIZ, hoja: false, elegida: null,
+      porciones: porcionesDe(indice, raices(indice), "d").porciones,
+    };
+  }
+  const nodo = indice[clave];
+  // A nodo of level 9 lists object codes whose file may be absent. A child
+  // that is not in the index is not a part.
+  const hijos = hijosDe(indice, clave).filter((hijo) => indice[hijo]);
+  if (hijos.length === 0) {
+    // The last level: one full ring and one row, the nodo itself (UC-02).
+    return {
+      clave, grupo: null, nombre: nodo.n, hoja: true, elegida: null,
+      porciones: nodo.d > 0
+        ? [{ nombre: nodo.n, monto: nodo.d, parte: 1, esOtros: false, destino: [clave] }]
+        : [],
+    };
+  }
+  return {
+    clave, grupo: null, nombre: nodo.n, hoja: false, elegida: null,
+    porciones: porcionesDe(indice, hijos, "d").porciones,
+  };
+}
+
+export function pilaDe(indice, clave, grupos = []) {
+  // Walk down from the root through the parts, as a visitor taps them. A
+  // clave inside a group "otros" passes through that group.
+  const pila = [nivelDePila(indice, "", null)];
+  for (;;) {
+    const arriba = pila.at(-1);
+    if (arriba.clave === clave && !arriba.grupo) {
+      break;
+    }
+    const orden = arriba.porciones
+      .findIndex((porcion) => porcion.destino.some((destino) => contiene(destino, clave)));
+    const porcion = arriba.porciones[orden];
+    const siguiente = porcion && !porcion.esOtros
+      ? saltarHijoUnico(indice, porcion.destino[0])
+      : arriba.clave;
+    if (!porcion || !contiene(siguiente, clave)) {
+      // No part leads there: a group with no spending, or a clave that the
+      // walk cannot reach. Show the clave itself, with no lit arc above it.
+      pila.push(nivelDePila(indice, clave, null));
+      break;
+    }
+    arriba.elegida = orden;
+    pila.push(nivelDePila(indice, siguiente, porcion.esOtros ? porcion.destino : null));
+  }
+  // The groups that the visitor opened over the nodo, in order. A group that
+  // the data no longer has ends the walk, and rutaDePila then drops it.
+  for (const grupo of grupos) {
+    const arriba = pila.at(-1);
+    const orden = arriba.porciones
+      .findIndex((porcion) => porcion.esOtros && mismoGrupo(porcion.destino, grupo));
+    if (orden === -1) {
+      break;
+    }
+    arriba.elegida = orden;
+    pila.push(nivelDePila(indice, arriba.clave, arriba.porciones[orden].destino));
+  }
+  return pila;
+}
+
+export function rutaDePila(pila) {
+  // The inverse of pilaDe: the last level that is not a group gives the
+  // clave, and the groups above it give grupos.
+  let ultimo = pila.length - 1;
+  while (pila[ultimo].grupo) {
+    ultimo -= 1;
+  }
+  return { clave: pila[ultimo].clave, grupos: pila.slice(ultimo + 1).map((nivel) => nivel.grupo) };
+}
+
+export function aniosVecinos(disponibles, ejercicio) {
+  // R11: the arrow at an end has no year, and the screen disables it.
+  const orden = disponibles.indexOf(ejercicio);
+  return {
+    anterior: orden > 0 ? disponibles[orden - 1] : null,
+    siguiente: orden !== -1 && orden < disponibles.length - 1 ? disponibles[orden + 1] : null,
+  };
+}
+
+export function lineaDeDetalle(vista) {
+  // R18: the part of the total, the execution and the deviation. A group
+  // "otros" has only the part of the total.
+  const partes = [];
+  if (vista.parteDelTotal !== null) {
+    partes.push(`${porcentaje(vista.parteDelTotal)} del gasto total`);
+  }
+  if (vista.ejecucion !== null) {
+    partes.push(`${porcentaje(vista.ejecucion)} de lo autorizado`);
+  }
+  if (vista.desviacion) {
+    const palabra = PALABRA_DE_LA_DESVIACION[vista.desviacion.tipo];
+    partes.push(`${conSigno(vista.desviacion.valor)} ${palabra}`);
+  }
+  return partes.join(" · ");
+}
+
+export function vistaDeNavegador(estado, pila) {
+  const { indice, ejercicio, disponibles } = estado;
+  const arriba = pila.at(-1);
+  const enLaRaiz = arriba.clave === "";
+  const base = enLaRaiz
+    ? vistaDeRaiz(estado, arriba.grupo)
+    : vistaDeNodo(estado, arriba.clave, arriba.grupo);
+  const deQuien = enLaRaiz ? "del Estado nacional" : `de ${indice[arriba.clave].n}`;
+  let nodo = enLaRaiz ? null : indice[arriba.clave].n;
+  if (arriba.grupo) {
+    nodo = `el grupo otros ${deQuien}`;
+  }
+  let subtitulo = "";
+  if (arriba.grupo) {
+    subtitulo = `Parte ${base.parteDe}.`;
+  } else if (enLaRaiz) {
+    // R8: the measure is named here and in the foot of the tape only.
+    subtitulo = `Crédito devengado del ejercicio ${ejercicio}, por jurisdicción`;
+  }
+  let mensajeVacio = null;
+  if (arriba.porciones.length === 0) {
+    mensajeVacio = arriba.grupo
+      ? `Estas partidas no gastaron nada en ${ejercicio}.`
+      : `Este nivel no gastó nada en ${ejercicio}.`;
+  }
+  return {
+    ...base,
+    porciones: arriba.porciones,
+    hoja: arriba.hoja,
+    nivel: pila.length - 1,
+    pila,
+    miga: migaCorta(pila.map((nivel) => nivel.nombre)),
+    ...aniosVecinos(disponibles, ejercicio),
+    subtitulo,
+    detalle: lineaDeDetalle(base),
+    rotulo: enLaRaiz && !arriba.grupo ? `Total devengado ${ejercicio}` : "Suma de estas partidas",
+    mensajeVacio,
+    frase: fraseDe({
+      anio: ejercicio,
+      nodo,
+      // The last level shows the nodo itself as its one part. The sentence
+      // compares that nodo with the national total instead.
+      porciones: arriba.hoja ? [] : arriba.porciones,
+      total: base.total,
+      totalNacional: totalDe(indice, raices(indice), "d"),
+    }),
+    escena: escenaDe(pila),
+  };
 }

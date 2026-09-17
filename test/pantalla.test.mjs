@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  aniosVecinos, pilaDe, rutaDePila, vistaDeNavegador,
   dibujarAusente, dibujarFuentes, dibujarMiga, dibujarNodo, dibujarRaiz,
   esAusencia, estadoDeLaFila, indiceParaClave, resolverPantalla,
   vistaDeAusente, vistaDeFuentes, vistaDeNodo, vistaDeRaiz,
@@ -403,4 +404,100 @@ test("el tramo que junta nombres repetidos sigue siendo el de esta pantalla", ()
   const vista = vistaDeNodo(CON_CADENA, "45-1-0");
   assert.equal(vista.miga.at(-1).clave, "45-1-0");
   assert.equal(vista.migaActual, true);
+});
+
+// ---- The views of the frame ----------------------------------------------
+
+// A root with one large part and a group "otros". "Chica" is 3 of 95, about
+// 3,2%, and "Menor" is 2 of 95, about 2,1%. "Chica" divides in two.
+const CON_OTROS = {
+  ...ESTADO,
+  indice: {
+    "1": { n: "Grande", d: 90, p: 90, v: 90, g: 90, k: [] },
+    "2": { n: "Chica", d: 3, p: 3, v: 3, g: 3, k: ["1", "2"] },
+    "2-1": { n: "Chica uno", d: 2, p: 2, v: 2, g: 2, k: [] },
+    "2-2": { n: "Chica dos", d: 1, p: 1, v: 1, g: 1, k: [] },
+    "3": { n: "Menor", d: 2, p: 2, v: 2, g: 2, k: [] },
+  },
+};
+
+test("la pila baja por las partes y salta el nodo de un solo hijo", () => {
+  const pila = pilaDe(ESTADO.indice, "88-1");
+  assert.deepEqual(pila.map((nivel) => nivel.nombre), ["Inicio", "ANSES"]);
+  assert.equal(pila[0].elegida, 0, "the part of Capital Humano leads to ANSES");
+  assert.equal(pila[1].hoja, true);
+  assert.deepEqual(pila[1].porciones, [
+    { nombre: "ANSES", monto: 60, parte: 1, esOtros: false, destino: ["88-1"] },
+  ], "the last level shows the nodo itself as one full ring");
+});
+
+test("una clave dentro de otros pasa por el grupo", () => {
+  const pila = pilaDe(CON_OTROS.indice, "2");
+  assert.deepEqual(pila.map((nivel) => nivel.nombre), ["Inicio", "Otros", "Chica"]);
+  assert.deepEqual(pila[1].grupo, ["2", "3"]);
+  assert.deepEqual([pila[0].elegida, pila[1].elegida, pila[2].elegida], [1, 0, null]);
+  assert.deepEqual(rutaDePila(pila), { clave: "2", grupos: [] });
+  assert.deepEqual(rutaDePila(pila.slice(0, 2)), { clave: "", grupos: [["2", "3"]] },
+    "Volver from Chica goes to the group");
+});
+
+test("un grupo que los datos ya no tienen deja la pila en el nodo", () => {
+  assert.equal(pilaDe(CON_OTROS.indice, "", [["2", "3"]]).length, 2);
+  const perdido = pilaDe(CON_OTROS.indice, "", [["9"]]);
+  assert.equal(perdido.length, 1);
+  assert.deepEqual(rutaDePila(perdido), { clave: "", grupos: [] },
+    "the route of the place on screen has no group, so the entry is replaced");
+});
+
+test("la vista de la raiz lleva la medida, la linea y la frase", () => {
+  const vista = vistaDeNavegador(ESTADO, pilaDe(ESTADO.indice, ""));
+  assert.deepEqual(vista.miga, []);
+  assert.deepEqual([vista.anterior, vista.siguiente], [2024, null],
+    "R11: 2025 is the last year of this manifest");
+  assert.equal(vista.subtitulo, "Crédito devengado del ejercicio 2025, por jurisdicción");
+  // Execution: 100 of 104 is 96,15%. Deviation: 100 over 82 is +21,95%.
+  assert.equal(vista.detalle, "96,2% de lo autorizado · +22% sobre lo aprobado");
+  assert.equal(vista.rotulo, "Total devengado 2025");
+  assert.equal(`${vista.frase.antes}${vista.frase.cifra}${vista.frase.despues}`,
+    "De cada $100 que gastó el Estado nacional en 2025, $60 fueron a Capital Humano.");
+  assert.deepEqual(vista.escena.map((arco) => arco.abrir), [0, 1, 2]);
+});
+
+test("la vista de la ultima hoja compara el nodo con el total nacional", () => {
+  const vista = vistaDeNavegador(ESTADO, pilaDe(ESTADO.indice, "88-1"));
+  assert.equal(vista.hoja, true);
+  assert.deepEqual(vista.miga, [{ nivel: 0, nombre: "Inicio" }]);
+  // 60 of 100 is 60%. Execution 60 of 62 is 96,77%. Deviation 60 over 40.
+  assert.equal(vista.detalle, "60,0% del gasto total · 96,8% de lo autorizado · +50% sobre lo aprobado");
+  assert.equal(vista.frase.despues, " fueron a ANSES.");
+  assert.equal(vista.frase.cifra, "$60");
+  assert.equal(vista.subtitulo, "");
+  assert.ok(vista.procedencia.codigos, "C16: the codes of the source at the last level");
+});
+
+test("la vista de un grupo otros solo dice su parte del total", () => {
+  const vista = vistaDeNavegador(CON_OTROS, pilaDe(CON_OTROS.indice, "", [["2", "3"]]));
+  assert.equal(vista.titulo, "Otros");
+  // 5 of 95 is 5,26%.
+  assert.equal(vista.detalle, "5,3% del gasto total");
+  assert.equal(vista.subtitulo, "Parte del gasto del Estado nacional.");
+  assert.equal(vista.rotulo, "Suma de estas partidas");
+  assert.equal(vista.frase.antes, "De cada $100 que gastó el grupo otros del Estado nacional en 2025, ");
+  assert.deepEqual(vista.miga, [{ nivel: 0, nombre: "Inicio" }]);
+});
+
+test("un nivel sin gasto dice que no gasto nada y dibuja un anillo vacio", () => {
+  const cero = { ...ESTADO, indice: {
+    "9": { n: "Sin gasto", d: 0, p: 0, v: 0, g: 0, k: [] },
+    "8": { n: "Con gasto", d: 5, p: 5, v: 5, g: 5, k: [] },
+  } };
+  const vista = vistaDeNavegador(cero, pilaDe(cero.indice, "9"));
+  assert.equal(vista.mensajeVacio, "Este nivel no gastó nada en 2025.");
+  assert.equal(vista.escena.filter((arco) => arco.rol === "principal").length, 0);
+});
+
+test("los anios vecinos se detienen en las puntas", () => {
+  assert.deepEqual(aniosVecinos([2024, 2025, 2026], 2024), { anterior: null, siguiente: 2025 });
+  assert.deepEqual(aniosVecinos([2024, 2025, 2026], 2025), { anterior: 2024, siguiente: 2026 });
+  assert.deepEqual(aniosVecinos([2024, 2025, 2026], 2026), { anterior: 2025, siguiente: null });
 });
