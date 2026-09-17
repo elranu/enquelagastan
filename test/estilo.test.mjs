@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 
 import { CLAVE_BILLETES, CLAVE_OSCURO } from "../site/app/tema.js";
 
@@ -90,4 +90,28 @@ test("la pagina no carga nada de otro servidor", () => {
   assert.doesNotMatch(pagina, /<(script|link)[^>]+(src|href)="(https?:)?\/\//);
   assert.doesNotMatch(estilo, /url\(\s*["']?(https?:)?\/\//);
   assert.doesNotMatch(estilo, /@import/);
+});
+
+test("las tipografias viven en el sitio, cambian con swap y pesan menos de 300 KB", () => {
+  // R17 and RQ3. A font file that does not load shows a system font.
+  const caras = [...leer("../site/estilo.css").matchAll(/@font-face\s*\{([^}]*)\}/g)]
+    .map(([, cuerpo]) => cuerpo);
+  const familias = new Set(caras.map((cara) => /font-family: "([^"]+)";/.exec(cara)?.[1]));
+  assert.deepEqual([...familias].sort(), ["Archivo", "IBM Plex Mono", "IBM Plex Sans"]);
+  let bytes = 0;
+  const leidos = new Set();
+  for (const cara of caras) {
+    assert.match(cara, /font-display: swap;/);
+    const ruta = /url\("(fuentes\/[\w-]+\.woff2)"\)/.exec(cara)?.[1];
+    assert.ok(ruta, cara);
+    // A variable file can serve two faces. It weighs once.
+    if (!leidos.has(ruta)) {
+      leidos.add(ruta);
+      bytes += statSync(new URL(`../site/${ruta}`, import.meta.url)).size;
+    }
+  }
+  assert.ok(bytes < 300_000, `RQ3: the three families weigh ${bytes} bytes`);
+  for (const licencia of ["ibm-plex-sans-ofl.txt", "ibm-plex-mono-ofl.txt", "archivo-ofl.txt"]) {
+    assert.match(leer(`../site/fuentes/${licencia}`), /SIL OPEN FONT LICENSE/i);
+  }
 });

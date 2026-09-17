@@ -66,6 +66,53 @@
   --c6: #D9B55A;
 }
 
+/* ---- The typefaces (R17) --------------------------------------------------
+   The site hosts the Latin subset of each family, under the SIL Open Font
+   License. font-display: swap shows a system font until a file arrives. */
+
+/* One variable file holds every weight of IBM Plex Sans. */
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("fuentes/ibm-plex-sans.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fuentes/ibm-plex-mono-400.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("fuentes/ibm-plex-mono-500.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("fuentes/ibm-plex-mono-600.woff2") format("woff2");
+}
+
+/* One variable file holds every width and weight of Archivo. */
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 400 700;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url("fuentes/archivo.woff2") format("woff2");
+}
+
 /* ---- Type and motion ----------------------------------------------------- */
 
 :root {
