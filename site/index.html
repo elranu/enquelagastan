@@ -6,6 +6,22 @@
     <title>En qué la gastan</title>
     <meta name="description"
           content="Un mapa navegable del gasto público del Estado nacional argentino." />
+    <script>
+      // Apply the stored look before the first paint, so a look never
+      // flashes. site/app/tema.js holds the same keys, and a test checks it.
+      (() => {
+        const leer = (clave) => {
+          try { return localStorage.getItem(clave); } catch { return null; }
+        };
+        const raiz = document.documentElement;
+        const oscuro = leer("enquelagastan-oscuro");
+        const esOscuro = oscuro === null
+          ? matchMedia("(prefers-color-scheme: dark)").matches
+          : oscuro === "true";
+        raiz.setAttribute("data-tema", esOscuro ? "oscuro" : "claro");
+        raiz.setAttribute("data-vista", leer("enquelagastan-billetes") === "true" ? "billetes" : "simple");
+      })();
+    </script>
     <link rel="stylesheet" href="estilo.css" />
   </head>
   <body>
