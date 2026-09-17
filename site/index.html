@@ -9,7 +9,7 @@
     <script>
       // Apply the stored look before the first paint, so a look never
       // flashes. site/app/tema.js holds the same keys, and a test checks it.
-      // R22: "sistema" is the default and one of three stored values, so
+      // R13: "sistema" is the default and one of three stored values, so
       // estilo.css alone follows prefers-color-scheme; this script never
       // needs matchMedia.
       (() => {
@@ -42,7 +42,7 @@
                   aria-label="Año siguiente" disabled>›</button>
         </div>
         <div class="interruptores">
-          <!-- R22: three states (sistema, claro, oscuro), an icon and no
+          <!-- R13, R23: three states (sistema, claro, oscuro), an icon and no
                word. tema.js sets the icon and the label that matches the
                stored state; this markup shows "sistema" until it runs. -->
           <button type="button" class="interruptor" id="tema" data-interruptor="tema"
