@@ -480,6 +480,31 @@ test("un interruptor cambia el aspecto y no escribe en el historial", async () =
   assert.equal(sitio.historia.escrituras.length, antes, "W9: no entry");
 });
 
+test("el interruptor de billetes reajusta el disco para el tipo de letra nuevo", async () => {
+  // R7: Billetes changes --mono to Archivo, a different width. The fake
+  // document has no layout, so ajustarDisco always returns at once; a spy on
+  // getElementById shows whether the switch asked it to measure the disc.
+  const sitio = montar("#/2025", {
+    ventanaExtra: {
+      localStorage: { getItem: () => null, setItem: () => {} },
+      matchMedia: () => ({ matches: false }),
+    },
+  });
+  await sitio.navegador.listo();
+  const pedidos = [];
+  const original = sitio.documento.getElementById;
+  sitio.documento.getElementById = (id) => {
+    pedidos.push(id);
+    return original(id);
+  };
+  const billetes = sitio.parte("billetes");
+  billetes.setAttribute("data-interruptor", "billetes");
+  await sitio.pulsar(billetes);
+  for (const id of ["disco-numero", "disco", "lienzo"]) {
+    assert.ok(pedidos.includes(id), `the switch must re-measure the disc (${id})`);
+  }
+});
+
 test("un toque durante el movimiento lo termina, y la marca sale una vez", async () => {
   const cuadros = [];
   const marcas = [];

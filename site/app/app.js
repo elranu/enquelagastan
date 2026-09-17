@@ -279,7 +279,13 @@ export function iniciar({ documento, ventana, historia }) {
   function conmutar(interruptor) {
     // W9: a switch changes the look, never the place, and writes no entry.
     tema = cambiarTema(tema, interruptor, almacen);
-    const aplicar = () => aplicarTema(documento, tema);
+    const aplicar = () => {
+      aplicarTema(documento, tema);
+      // R7: Billetes changes the typeface, so the disc must fit again. A
+      // paint or a resize would catch it later, but not before that, and the
+      // number can overflow its hole for the frames in between.
+      ajustarDisco(documento);
+    };
     if (!documento.startViewTransition || prefiere("(prefers-reduced-motion: reduce)")) {
       aplicar();
       return;
@@ -418,6 +424,9 @@ export function iniciar({ documento, ventana, historia }) {
     new ventana.ResizeObserver(() => ajustarDisco(documento))
       .observe(documento.getElementById("lienzo"));
   }
+  // R7: a web font can finish loading after the disc's first measure, with a
+  // width that the fallback font never had.
+  documento.fonts?.ready?.then(() => ajustarDisco(documento));
 
   alCambiarLaEntrada();
   return { ir, informar, listo: () => enCurso };
