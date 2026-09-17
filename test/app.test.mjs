@@ -510,3 +510,35 @@ test("un archivo lento escribe Cargando en el disco", async () => {
   assert.equal(sitio.titulo(), "Nivel 9");
   assert.notEqual(sitio.parte("disco-numero").textContent, "Cargando…");
 });
+
+test("un puntero durante el movimiento resuelve la parte, y el click que sigue no repite el paso", async () => {
+  // R4: the motion already redrew the DOM under the finger, so the click
+  // this same gesture fires next would land on the ancestor #anillos, or
+  // (iOS Safari) never fire at all. The pointerdown must still land the
+  // step, and that click must do nothing.
+  const cuadros = [];
+  const sitio = montar("#/2025", {
+    ventanaExtra: { requestAnimationFrame: (funcion) => { cuadros.push(funcion); } },
+  });
+  await sitio.navegador.listo();
+  const antes = sitio.historia.escrituras.length;
+  const control = sitio.documento.createElement("path");
+  control.setAttribute("data-abrir", "0");
+  sitio.documento.elementoBajoElPuntero = control;
+  sitio.documento.disparar("pointerdown", {});
+  await sitio.navegador.listo();
+  sitio.documento.disparar("click", { target: sitio.parte("anillos"), preventDefault() {} });
+  await sitio.navegador.listo();
+  assert.equal(sitio.titulo(), "Capital Humano");
+  assert.equal(sitio.historia.escrituras.length, antes + 1, "one step, never two");
+});
+
+test("un puntero sin movimiento no hace nada, y el click que sigue navega una vez", async () => {
+  const sitio = montar("#/2025");
+  await sitio.navegador.listo();
+  const antes = sitio.historia.escrituras.length;
+  sitio.documento.disparar("pointerdown", {});
+  await sitio.pulsar(fila(sitio, "Capital Humano"));
+  assert.equal(sitio.titulo(), "Capital Humano");
+  assert.equal(sitio.historia.escrituras.length, antes + 1, "one step, never two");
+});

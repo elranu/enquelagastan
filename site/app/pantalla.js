@@ -745,12 +745,16 @@ export function pintarCargando(documento) {
 
 export function ajustarDisco(documento) {
   // R7: measure the text at 100px, then give it the size that fits the hole.
-  // The fake document of the tests has no layout, so it skips this.
+  // The fake document of the tests has no layout, so it skips this. An
+  // empty disc has no text to measure: before the first paint, and while
+  // the ResizeObserver still finds nothing, this must leave the size alone.
+  const numero = parte(documento, "disco-numero");
   const monto = parte(documento, "disco");
   const lienzo = parte(documento, "lienzo");
-  if (!monto.style || !lienzo.offsetWidth) {
+  if (!monto.style || !lienzo.offsetWidth || numero.textContent === "") {
     return;
   }
+  const previo = monto.style.getPropertyValue("--fs");
   monto.style.setProperty("--fs", "100px");
   const tamanio = tamanioDelDisco({
     ancho: monto.offsetWidth,
@@ -759,6 +763,12 @@ export function ajustarDisco(documento) {
   });
   if (tamanio !== null) {
     monto.style.setProperty("--fs", `${tamanio.toFixed(2)}px`);
+  } else if (previo) {
+    // The measure failed: keep the size the disc already had, and never
+    // the 100px reference that only existed to measure the text.
+    monto.style.setProperty("--fs", previo);
+  } else {
+    monto.style.removeProperty("--fs");
   }
 }
 

@@ -169,6 +169,10 @@ export function iniciar({ documento, ventana, historia }) {
     escribirHistoria(modo, ruta);
     const vista = { ...vistaDeNavegador(estado, pila), nota };
     pintarNavegador(documento, vista);
+    // R7: size the disc for the number the painter just wrote, before the
+    // motion starts. Without this the disc keeps the size of the screen
+    // before it for the whole step, then jumps.
+    ajustarDisco(documento);
     moverNavegador(documento, vista, {
       motor,
       antes: actual?.vista ?? null,
@@ -192,6 +196,8 @@ export function iniciar({ documento, ventana, historia }) {
     const espera = setTimeout(() => {
       if (vigente()) {
         pintarCargando(documento);
+        // R7: "Cargando…" is new text in the disc, so it needs its own size.
+        ajustarDisco(documento);
       }
     }, ESPERA_DE_CARGA);
     // A stale run must write nothing, whether it succeeds or fails.
@@ -350,10 +356,33 @@ export function iniciar({ documento, ventana, historia }) {
     return ir(rutaDeEntrada(ventana.location.hash, historia.state), "carga");
   }
 
-  // A finger or a mouse on a moving ring ends the motion before the click,
-  // so the click lands on an arc with its destination.
-  documento.addEventListener("pointerdown", () => motor.terminar());
-  documento.addEventListener("click", (evento) => { manejarClick(evento); });
+  // R4: a tap ends a running motion and starts the next step at once. The
+  // motion just redrew the part under the finger, so the click this same
+  // gesture fires next would land on the ancestor #anillos, or (iOS Safari)
+  // never fire at all. Resolve the destination now, from the point of the
+  // finger and over the DOM the ended motion just drew, and let that click
+  // do nothing.
+  let atendidoPorElPuntero = false;
+  documento.addEventListener("pointerdown", (evento) => {
+    if (!motor.activo()) {
+      return;
+    }
+    motor.terminar();
+    const control = documento.elementFromPoint?.(evento.clientX, evento.clientY)
+      ?.closest?.("[data-abrir], [data-subir]");
+    if (!control) {
+      return;
+    }
+    atendidoPorElPuntero = true;
+    manejarClick({ target: control, preventDefault() {} });
+  });
+  documento.addEventListener("click", (evento) => {
+    if (atendidoPorElPuntero) {
+      atendidoPorElPuntero = false;
+      return;
+    }
+    manejarClick(evento);
+  });
   documento.addEventListener("keydown", (evento) => { manejarTecla(evento); });
   ventana.addEventListener("popstate", alCambiarLaEntrada);
   ventana.addEventListener("hashchange", alCambiarLaEntrada);

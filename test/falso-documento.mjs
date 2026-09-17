@@ -25,11 +25,13 @@ export function falsoDocumento() {
     setAttribute(nombre, valor) { this.atributos[nombre] = valor; },
     removeAttribute(nombre) { delete this.atributos[nombre]; },
     getAttribute(nombre) { return this.atributos[nombre] ?? null; },
-    // Only the selectors that app.js uses: one attribute, as "[data-abrir]".
-    // The fake element knows no parent, so it answers for itself.
+    // Only the selectors that app.js uses: one attribute, as "[data-abrir]",
+    // or a list of them, as "[data-abrir], [data-subir]". The fake element
+    // knows no parent, so it answers for itself.
     closest(selector) {
-      const nombre = /^\[([\w-]+)\]$/.exec(selector)?.[1];
-      return nombre && this.atributos[nombre] !== undefined ? this : null;
+      const nombres = selector.split(",")
+        .map((parte) => /^\s*\[([\w-]+)\]\s*$/.exec(parte)?.[1]);
+      return nombres.some((nombre) => nombre && this.atributos[nombre] !== undefined) ? this : null;
     },
     appendChild(hijo) { this.hijos.push(hijo); return hijo; },
     removeChild(hijo) { this.hijos = this.hijos.filter((otro) => otro !== hijo); },
@@ -40,7 +42,7 @@ export function falsoDocumento() {
   // The frame of index.html holds every part once. The same element comes
   // back for one id, so a test reads what the navigator wrote there.
   const porId = new Map();
-  return {
+  const documento = {
     ...oyentes(),
     documentElement: crear("html"),
     createElement: crear,
@@ -51,7 +53,12 @@ export function falsoDocumento() {
       }
       return porId.get(id);
     },
+    // A test sets this before it fires "pointerdown", as the point of a
+    // real gesture would resolve to one element under the finger.
+    elementoBajoElPuntero: null,
+    elementFromPoint() { return documento.elementoBajoElPuntero; },
   };
+  return documento;
 }
 
 // The window and the history share one list of entries. pushState and

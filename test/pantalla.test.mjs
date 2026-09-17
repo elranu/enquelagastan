@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import {
-  aniosVecinos, esAusencia, estadoDeLaFila, indiceParaClave, lineaDeDetalle, moverNavegador, pilaDe,
-  pintarAusente, pintarBarra, pintarError, pintarFuentes, pintarNavegador,
-  resolverPantalla, rutaDePila, vistaDeAusente, vistaDeError, vistaDeFuentes,
+  ajustarDisco, aniosVecinos, esAusencia, estadoDeLaFila, indiceParaClave, lineaDeDetalle,
+  moverNavegador, pilaDe, pintarAusente, pintarBarra, pintarError, pintarFuentes,
+  pintarNavegador, resolverPantalla, rutaDePila, vistaDeAusente, vistaDeError, vistaDeFuentes,
   vistaDeNavegador, vistaDeNodo, vistaDeRaiz,
 } from "../site/app/pantalla.js";
 import { svgDeEscena } from "../site/app/anillos.js";
@@ -599,4 +599,45 @@ test("el mismo lugar no mueve nada", () => {
   const vista = vistaDeNavegador(ESTADO, pilaDe(ESTADO.indice, ""));
   moverNavegador(falsoDocumento(), vista, { motor, antes: vista, direccion: "igual" });
   assert.equal(motor.pedido, null);
+});
+
+// A small stand-in for CSSStyleDeclaration, so a test can drive the one
+// property ajustarDisco reads and writes.
+function estiloFalso() {
+  const valores = {};
+  return {
+    setProperty(nombre, valor) { valores[nombre] = valor; },
+    getPropertyValue(nombre) { return valores[nombre] ?? ""; },
+    removeProperty(nombre) { delete valores[nombre]; },
+  };
+}
+
+test("un disco vacio no mide nada", () => {
+  // R7: the ResizeObserver can fire before the first paint, while the disc
+  // still holds no number. That must leave the size alone, and never crowd
+  // the disc for the text that lands there later.
+  const documento = falsoDocumento();
+  const disco = enMarco(documento, "disco");
+  disco.style = estiloFalso();
+  disco.offsetWidth = 40;
+  disco.offsetHeight = 40;
+  enMarco(documento, "lienzo").offsetWidth = 300;
+  ajustarDisco(documento);
+  assert.equal(disco.style.getPropertyValue("--fs"), "");
+});
+
+test("cuando la medida falla el disco no se queda en la referencia de 100px", () => {
+  // R7: the 100px reference exists only to measure the text. A disc with
+  // no layout box of its own (tamanioDelDisco returns null) must keep the
+  // size it already had, and never that reference.
+  const documento = falsoDocumento();
+  const disco = enMarco(documento, "disco");
+  enMarco(documento, "disco-numero").textContent = "105,3";
+  disco.style = estiloFalso();
+  disco.style.setProperty("--fs", "42.00px");
+  disco.offsetWidth = 0;
+  disco.offsetHeight = 0;
+  enMarco(documento, "lienzo").offsetWidth = 300;
+  ajustarDisco(documento);
+  assert.equal(disco.style.getPropertyValue("--fs"), "42.00px");
 });
