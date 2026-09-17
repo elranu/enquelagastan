@@ -529,10 +529,13 @@ test("un puntero durante el movimiento suelta en la parte, y el click que sigue 
   sitio.documento.disparar("pointerdown", { button: 0, pointerId: 1 });
   sitio.documento.disparar("pointerup", { pointerId: 1 });
   await sitio.navegador.listo();
+  // The gesture alone, with no click yet, must already have opened it.
+  assert.equal(sitio.titulo(), "Capital Humano");
+  assert.equal(sitio.historia.escrituras.length, antes + 1, "pointerup alone opens the part");
   sitio.documento.disparar("click", { target: control, detail: 1, preventDefault() {} });
   await sitio.navegador.listo();
   assert.equal(sitio.titulo(), "Capital Humano");
-  assert.equal(sitio.historia.escrituras.length, antes + 1, "one step, never two");
+  assert.equal(sitio.historia.escrituras.length, antes + 1, "the click that follows adds nothing");
 });
 
 test("un puntero cancelado no deja nada pendiente, y un toque despues navega una vez", async () => {
@@ -603,6 +606,81 @@ test("un puntero de boton secundario termina el movimiento y no abre nada", asyn
   sitio.documento.disparar("pointerup", { pointerId: 1 });
   await sitio.navegador.listo();
   assert.equal(sitio.historia.escrituras.length, antes, "a secondary button never opens a part");
+});
+
+test("un click de teclado nunca se ignora, y el puntero siguiente limpia la marca vieja", async () => {
+  // A pointer click clears the mark once it ignores it; a keyboard click
+  // never touches the mark at all, so it can stay set with no click of a
+  // pointer left to clear it. Any later pointerdown, of any gesture, must
+  // still clear it first, or it blocks a normal tap for ever.
+  const cuadros = [];
+  const sitio = montar("#/2025", {
+    ventanaExtra: { requestAnimationFrame: (funcion) => { cuadros.push(funcion); } },
+  });
+  await sitio.navegador.listo();
+  const antes = sitio.historia.escrituras.length;
+  const control = sitio.documento.createElement("path");
+  control.setAttribute("data-abrir", "0");
+  sitio.documento.elementoBajoElPuntero = control;
+  sitio.documento.disparar("pointerdown", { button: 0, pointerId: 1 });
+  sitio.documento.disparar("pointerup", { pointerId: 1 });
+  await sitio.navegador.listo();
+  assert.equal(sitio.historia.escrituras.length, antes + 1, "the gesture alone opens the part");
+
+  // Enter or Space on the first row of the new screen: a real click of
+  // detail 0, with no pointer at all. It must land, mark or no mark.
+  const primeraFila = sitio.parte("renglones").hijos[0].hijos[0].hijos[0];
+  sitio.documento.disparar("click", { target: primeraFila, detail: 0, preventDefault() {} });
+  await sitio.navegador.listo();
+  assert.equal(sitio.historia.escrituras.length, antes + 2, "a keyboard click is never ignored");
+
+  // A pointerdown of an unrelated gesture, over nothing, must still clear
+  // whatever the keyboard click above left set.
+  sitio.documento.elementoBajoElPuntero = null;
+  sitio.documento.disparar("pointerdown", { button: 0, pointerId: 2 });
+  const otraFila = sitio.parte("renglones").hijos[0].hijos[0].hijos[0];
+  await sitio.pulsar(otraFila);
+  assert.equal(sitio.historia.escrituras.length, antes + 3, "one more step, from an ordinary tap");
+});
+
+test("un pointerup con otro pointerId no abre nada", async () => {
+  // Only the pointerup of the same gesture the pointerdown remembered may
+  // open the part it found.
+  const cuadros = [];
+  const sitio = montar("#/2025", {
+    ventanaExtra: { requestAnimationFrame: (funcion) => { cuadros.push(funcion); } },
+  });
+  await sitio.navegador.listo();
+  const antes = sitio.historia.escrituras.length;
+  const control = sitio.documento.createElement("path");
+  control.setAttribute("data-abrir", "0");
+  sitio.documento.elementoBajoElPuntero = control;
+  sitio.documento.disparar("pointerdown", { button: 0, pointerId: 1 });
+  sitio.documento.disparar("pointerup", { pointerId: 2 });
+  await sitio.navegador.listo();
+  assert.equal(sitio.historia.escrituras.length, antes, "a pointerup of a different gesture opens nothing");
+});
+
+test("un pointerup sobre otro elemento no abre nada", async () => {
+  // A mouse drag off the part, or a screen that changed while the press
+  // was held, must not open the part remembered at pointerdown, and never
+  // the different part the finger now sits over either.
+  const cuadros = [];
+  const sitio = montar("#/2025", {
+    ventanaExtra: { requestAnimationFrame: (funcion) => { cuadros.push(funcion); } },
+  });
+  await sitio.navegador.listo();
+  const antes = sitio.historia.escrituras.length;
+  const control = sitio.documento.createElement("path");
+  control.setAttribute("data-abrir", "0");
+  sitio.documento.elementoBajoElPuntero = control;
+  sitio.documento.disparar("pointerdown", { button: 0, pointerId: 1 });
+  const otroElemento = sitio.documento.createElement("path");
+  otroElemento.setAttribute("data-abrir", "1");
+  sitio.documento.elementoBajoElPuntero = otroElemento;
+  sitio.documento.disparar("pointerup", { pointerId: 1 });
+  await sitio.navegador.listo();
+  assert.equal(sitio.historia.escrituras.length, antes, "a moved pointer opens nothing");
 });
 
 test("un puntero sin movimiento no hace nada, y el click que sigue navega una vez", async () => {

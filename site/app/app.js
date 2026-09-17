@@ -392,6 +392,14 @@ export function iniciar({ documento, ventana, historia }) {
     }
     const { control } = recordado;
     recordado = null;
+    // A navigation while the press was held, or a drag off the part, can
+    // leave `control` stale. Read the part under the finger again, now,
+    // and open it only when it is still the same one.
+    const actual = documento.elementFromPoint?.(evento.clientX, evento.clientY)
+      ?.closest?.("[data-abrir], [data-subir]");
+    if (actual !== control) {
+      return;
+    }
     manejado = true;
     manejarClick({ target: control, preventDefault() {} });
   });
