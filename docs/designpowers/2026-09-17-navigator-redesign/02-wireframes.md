@@ -126,8 +126,8 @@ Every flow below uses these IDs. Level 3 reuses them.
 | A5 | Crumb of the previous level | top bar |
 | A6 | Previous-year arrow | top bar |
 | A7 | Next-year arrow | top bar |
-| A8 | Switch "Oscuro" | top bar |
-| A9 | Switch "Billetes" | top bar |
+| A8 | Control "Tema" (three states, an icon, W16) | top bar |
+| A9 | Switch "Billetes" (an icon, W17) | top bar |
 | A10 | "Volver" | chart pane, P2 |
 | A11 | A part of the main ring | chart pane |
 | A12 | The lit arc of the thin ring (the previous level) | chart pane |
@@ -418,23 +418,26 @@ stateDiagram-v2
 
 #### Playback
 
-The visitor flips "Oscuro" (A8) or "Billetes" (A9). The screen stays where it
-is; only the look changes, with a crossfade of 200ms. "Billetes" adds one
-sentence under the title. The browser remembers the choice. A switch is not a
-step, so it adds no history entry, and Back does not undo it.
+The visitor taps "Tema" (A8) and it cycles sistema, claro, oscuro (W16); or
+flips "Billetes" (A9). The screen stays where it is; only the look changes,
+with a crossfade of 200ms. "Billetes" adds one sentence under the title. The
+browser remembers the choice. A tap is not a step, so it adds no history
+entry, and Back does not undo it. In "sistema", the look also follows a
+change of the system preference on its own, with no tap and no reload.
 
 #### Breadboard
 
 ```
 PLACE: any
-  A8 Oscuro    -> none -> same place, dark look, choice stored
+  A8 Tema      -> none -> same place, next state (sistema, claro, oscuro), choice stored
   A9 Billetes  -> none -> same place, bill colours, typeface, sentence, choice stored
 ```
 
 ```mermaid
 stateDiagram-v2
-  Light --> Dark: A8
-  Dark --> Light: A8
+  Sistema --> Claro: A8
+  Claro --> Oscuro: A8
+  Oscuro --> Sistema: A8
   Plain --> Billetes: A9
   Billetes --> Plain: A9
 ```
@@ -477,7 +480,7 @@ left and the tape pane at the right. Each pane gets its own box here, because
 one box of 40 columns cannot hold both. On a telephone the chart pane comes
 first. The top bar is the same on every place, so it has one sketch.
 
-### The top bar (changed, on every place)
+### The top bar (changed, on every place; W16 and W17 changed it again on 2026-09-17)
 
 ```
 +--------------------------------------+
@@ -485,9 +488,13 @@ first. The top bar is the same on every place, so it has one sketch.
 | Inicio > Capital Humano > ... > Prev |
 |  A2      A3               A4    A5   |
 |            A6 <  2025  > A7          |
-|    (o) Oscuro A8   (o) Billetes A9   |
+|             [icon] A8  (o)[icon] A9  |
 +--------------------------------------+
 ```
+
+A8 is a plain button with one inline icon (a screen, a sun or a moon) and no
+word, for the state on screen (W16). A9 keeps its track and adds an icon of a
+banknote in place of the word "Billetes" (W17).
 
 Data shown: the name of the site; the breadcrumb built from the path (the
 names of level 1 and of the previous level); the year on screen.
@@ -534,11 +541,21 @@ Tape pane:
 |======================================|
 | Total devengado 2025                 |
 |         123.533.955.013.702 pesos    |
-| Fuente: Presupuesto Abierto, Minis-  |
-| terio de Economía. Crédito devengado,|
-| publicado el 8 jul 2026.             |
-| Descargar el archivo oficial    A16  |
-| De dónde salen estos números    A15  |
+| [Fuente: Presupuesto Abierto, Min.]  |
++--------------------------------------+
+```
+
+A tap on the foot opens a dialog (W18), a variant of this place:
+
+```
++--------------------------------------+
+|  Fuente: Presupuesto Abierto,        |
+|  Ministerio de Economía              |
+|  Crédito devengado, publicado el     |
+|  8 jul 2026 en credito-anual-2025.zip|
+|  Descargar el archivo oficial   A16  |
+|  De dónde salen estos números   A15  |
+|                          [ Cerrar ]  |
 +--------------------------------------+
 ```
 
@@ -549,10 +566,13 @@ jurisdiccion.
 Inputs collected: none.
 Rules enforced: parts under 4% join "otros"; "otros" takes the neutral colour;
 the text of the disc stays inside the disc; the measure is named here and in
-the foot only; the foot is always visible; no page scroll at 1440x900 or
-1280x720.
+the foot only; the foot is always visible with no action (INV-03); the dialog
+is a native `<dialog>` (`showModal()`, no library); "Cerrar" and Escape close
+it, and the navigator's own Escape does nothing while it is open (W18); no
+page scroll at 1440x900 or 1280x720.
 Variants: loading ("Cargando el gasto público…" in the chart pane); failure
-(the failure screen); "Billetes" on (the sentence); "Oscuro" on.
+(the failure screen); "Billetes" on (the sentence); "Tema" in oscuro; the
+dialog of the foot, open (W18).
 Primary action: open a part (A11, or its row A14).
 
 ### P2 Navigator, nodo (changed)
@@ -591,31 +611,45 @@ Tape pane:
 |======================================|
 | Suma de estas partidas               |
 |           5.732.849.404.275 pesos    |
-| Fuente: ... publicado el 8 jul 2026. |
-| [last level] programa_id=26 ...      |
-| Descargar el archivo oficial    A16  |
-| De dónde salen estos números    A15  |
+| [Fuente: Presupuesto Abierto, Min.]  |
++--------------------------------------+
+```
+
+A tap on the foot opens the same dialog as P1 (W18); at the last level it
+also holds the codes of the rows (C16):
+
+```
++--------------------------------------+
+|  Fuente: Presupuesto Abierto,        |
+|  Ministerio de Economía              |
+|  ... publicado el 8 jul 2026.        |
+|  [last level] programa_id=26 ...     |
+|  Descargar el archivo oficial   A16  |
+|  De dónde salen estos números   A15  |
+|                          [ Cerrar ]  |
 +--------------------------------------+
 ```
 
 Data shown: the name, `d`, `v` and `p` of the nodo; the name and `d` of every
 child; the names on the path; the arcs of the previous level and of level 1;
-at the last level, the codes of the rows.
+at the last level, the codes of the rows, in the dialog.
 Inputs collected: none.
 Rules enforced: the navigator skips a nodo with one child; the deviation says
 "sobre lo aprobado" at the level of the proyecto and above, and "de
-reasignación dentro del proyecto" below it; only a lit arc of an outer ring
-navigates; every arc that navigates has a hit area of 24px or more; "Volver"
-has a hit area of 44x44px or more.
+reasignación dentro del proyecto" below it, in its own colour, never a
+judgement (R25); only a lit arc of an outer ring navigates; every arc that
+navigates has a hit area of 24px or more; "Volver" has a hit area of 44x44px
+or more.
 Variants:
 - A group "otros": the title "Otros", the line shows only the part of the
   total, "Volver" leaves the group.
-- The last level: one full ring, one row, the codes in the foot; A11 does
-  nothing.
+- The last level: one full ring, one row, the codes in the dialog of the
+  foot; A11 does nothing.
 - No spending: an empty ring outline and "Este nivel no gastó nada en <año>".
 - Loading: after 300ms the disc says "Cargando…".
 - A shared link to an absent clave: the nearest ancestor, with the line "Ese
   nivel no existe en <año>; te llevamos al más cercano."
+- The dialog of the foot, open (W18).
 Primary action: open a part (A11, or its row A14). At the last level: "Volver"
 (A10).
 
@@ -750,7 +784,7 @@ invariant. The table lists what the plan needs to read.
 | # | Decision | Alternatives rejected | Level | Date |
 |---|---|---|---|---|
 | W1 | No new place. The five places change. | A place for the settings of the look | 1 | 2026-09-17 |
-| W2 | One top bar on every place: the name of the site, the breadcrumb, the years, "Oscuro", "Billetes" | A top bar only on P1 and P2 | 1 | 2026-09-17 |
+| W2 | One top bar on every place: the name of the site, the breadcrumb, the years, "Tema", "Billetes" (icons since W17) | A top bar only on P1 and P2 | 1 | 2026-09-17 |
 | W3 | The link to P4 and the codes of the source at the last level stay, although the prototype lost them | Follow the prototype | 1 | 2026-09-17 |
 | W4 | On the first load the main ring grows once. No other motion starts without a tap. | No motion on load. Motion on every panel | 2 | 2026-09-17 |
 | W5 | A change of year closes an open group "otros" and keeps its nodo | Keep the group. Go to the root | 2 | 2026-09-17 |
@@ -764,6 +798,10 @@ invariant. The table lists what the plan needs to read.
 | W13 | P4 puts the method in the chart pane and the table of files in the tape pane | The whole P4 in one column | 3 | 2026-09-17 |
 | W14 | The parts do not take a hue from their parent. The colours restart at every level, by size. The lit arc of the thin ring keeps the colour of the parent, so the path stays visible | Tones of the colour of the parent: adjacent parts look the same again (closes RQ1) | 3 | 2026-09-17 |
 | W15 | The sentence of "Billetes" keeps "$<n> los gastó <nodo> en forma directa" when the largest part has the name of the nodo | "fueron al propio <nodo>": the article must agree with every name, as in "a la propia Secretaría" (closes RQ4) | 3 | 2026-09-17 |
+| W16 | The foot of the tape shows one line, a control, with the rest of the source in a native dialog that opens on a tap, and closes with "Cerrar" or Escape; the navigator's own Escape does nothing while it is open | Keep the foot at two or three lines | 3 | 2026-09-17 (owner feedback) |
+| W17 | "Tema" and "Billetes" are icon controls, with no word, and a hit area of 44x44px or more; "Tema" is a plain button with three states (sistema, claro, oscuro), "Billetes" keeps its switch | The words "Oscuro" and "Billetes" | 3 | 2026-09-17 (owner feedback) |
+| W18 | The dialog of the source is a variant of P1 and P2, not a new place | A new place for the dialog | 3 | 2026-09-17 (owner feedback) |
+| W19 | The line of the execution and the deviation gets its own colour, `--dato`, never a judgement (one colour in every case) | The colour of the secondary text, `--tenue` | 3 | 2026-09-17 (owner feedback) |
 
 ## Open questions
 

@@ -1,6 +1,6 @@
 # The navigator redesign: design spec
 
-Version: 2, consolidated on 2026-09-17. Version 1 by brainstorming on 2026-09-17 is in the git history.
+Version: 2.1, consolidated on 2026-09-17. Version 1 by brainstorming on 2026-09-17 is in the git history.
 Base: `2026-09-14-public-spending-navigator-design.md`, version 2. This spec changes the screens of the navigator. It does not change the data, the build, the JSON files, the domain model or the invariants.
 Stages run: brainstorming, wireframing. **Skipped: eventstorming and domain-modeling**, because the redesign adds no event, no command, no aggregate and no invariant. The user asked for the skip on 2026-09-17.
 Artifacts:
@@ -71,7 +71,7 @@ UC-07 (the fiscal result) is out of scope. Source: `02-wireframes.md`, level 0.
 
 **UC-05.** The title names the nodo, the breadcrumb names level 1 and the previous level (R9), and the outer rings light the path (R2). "Volver" and Escape go up one level (R10). A crumb or a lit arc goes to its level; a dim arc does nothing (W7). The name of the site goes to the root (R20). Every step up pushes an entry (W6). After a shared link, Back leaves the site, as on any site, and "Volver" still goes up.
 
-**UC-06.** The foot of the tape is always visible: the source, the measure, the date, "Descargar el archivo oficial", and "De dónde salen estos números", which opens P4 (W3). P4 puts the method in the chart pane and the table of files in the tape pane (W13).
+**UC-06.** The foot of the tape shows one line, always visible with no action: "Fuente: Presupuesto Abierto, Ministerio de Economía." (R22). A tap opens a dialog with the measure, the date, "Descargar el archivo oficial", and "De dónde salen estos números", which opens P4 (W3). P4 puts the method in the chart pane and the table of files in the tape pane (W13).
 
 **UC-08.** The URL always holds the year and the path. A group "otros" is not in the URL, so a shared link opens its nodo (W8). An absent clave opens the nearest ancestor with a one-line notice. A hash that is not valid opens the root.
 
@@ -115,12 +115,12 @@ Terms introduced or changed by this feature: none. "Volver", "Oscuro" and "Bille
 | R10 | **"Volver"** sits at the left of the title on P2, and in a group "otros". An arrow and the word "Volver". It goes up one level, or out of the group. Hit area 44x44px or more. Escape does the same. | Back of the browser only | brainstorming, corrected by W12 | - |
 | R11 | **The years: `‹ 2025 ›` at the right of the top bar**, before the two switches. The arrows have the accessible names "Año anterior" and "Año siguiente". The arrow at an end (2024, 2026) is disabled. ArrowLeft and ArrowRight change the year. An older year slides in from the left, a newer year from the right. The path stays (C17), and P2b does not change (C18). | C3, the arrows at the left of the screen. A segmented control of years, tried on 2026-09-17 | brainstorming | - |
 | R12 | **Every step is an entry in the history.** The root is `#/<year>`. A nodo is `#/<year>/<clave>`. A group "otros" keeps the hash of its nodo and puts its claves in `history.state`. A change of year is an entry. `popstate` draws the entry with the motion of its direction. A skip of a nodo with one child replaces the entry. | A group with no entry | brainstorming | - |
-| R13 | **The switch "Oscuro"** applies the dark tokens. Its first value comes from `prefers-color-scheme`. The choice goes to `localStorage`. The colours change with a crossfade of 200ms. | No dark look | brainstorming | - |
-| R14 | **The switch "Billetes"** applies the colours of the peso bills and the typeface Archivo, and adds the sentence of R15. It works with "Oscuro": a dark variant of the bill colours. | A separate page | brainstorming | - |
+| R13 | **The control "Tema" has three states**: sistema, claro, oscuro (R22). "Sistema" applies the dark tokens with `prefers-color-scheme`, and it follows the system with no reload. The choice goes to `localStorage`. The colours change with a crossfade of 200ms. | No dark look. Two states only | brainstorming, corrected on 2026-09-17 | - |
+| R14 | **The control "Billetes"** applies the colours of the peso bills and the typeface Archivo, and adds the sentence of R15. It works with "Tema": a dark variant of the bill colours. It shows an icon of a banknote and no word (R23). | A separate page | brainstorming, corrected on 2026-09-17 | - |
 | R15 | **The sentence of "Billetes".** "De cada $100 que gastó <nodo> en <año>, $<n> fueron a <largest part>." At the root, <nodo> is "el Estado nacional". When the largest part has the name of the nodo: "$<n> los gastó <nodo> en forma directa." At a nodo with no part to show, the sentence compares the nodo with the national total. Under $1: "<n> centavos". Under 1 centavo: "menos de 1 centavo". | "menos de $1" | brainstorming | - |
 | R16 | **Four palettes**: light, dark, "Billetes" light, "Billetes" dark. "otros" is always the neutral colour. Every slice holds 3:1 against its ground, every text 4.5:1. A test checks every pair. | One blue ramp | brainstorming | - |
 | R17 | **The typefaces**: IBM Plex Sans for the interface, IBM Plex Mono for the amounts of the tape, Archivo for "Billetes". The site hosts the `woff2` files under `site/fuentes/`, with a Latin subset. SIL Open Font License. | The system font. Google Fonts | brainstorming | - |
-| R18 | **The line of the execution and the deviation stays (C19).** At the root: "96,1% de lo autorizado · +31% sobre lo aprobado". At a nodo: "<part>% del gasto total · <exec>% de lo autorizado · <signed>% <word>". The word is "sobre lo aprobado" at the level of the proyecto and above, "de reasignación dentro del proyecto" below it (C23). In a group "otros": only the part of the total. | Drop the line, as the prototype did | brainstorming | - |
+| R18 | **The line of the execution and the deviation stays (C19), with its own colour (R25).** At the root: "96,1% de lo autorizado · +31% sobre lo aprobado". At a nodo: "<part>% del gasto total · <exec>% de lo autorizado · <signed>% <word>". The word is "sobre lo aprobado" at the level of the proyecto and above, "de reasignación dentro del proyecto" below it (C23). In a group "otros": only the part of the total. | Drop the line, as the prototype did. The colour of the secondary text (`--tenue`), which reads as a caption, not a fact that stands apart | brainstorming, corrected on 2026-09-17 | - |
 | R19 | **The new look covers every place**: P1, P2 at the institutional levels and at the levels of the object of the spending, P2b, P4 and the failure screen. | Only the places of the prototype | brainstorming | - |
 | R20 | **The name of the site starts the top bar.** "En qué la gastan", a link to the root of the year on screen. From left to right: the name, the breadcrumb, `‹ 2025 ›`, "Oscuro", "Billetes". At 375px: three rows. | No name on the screen | brainstorming | - |
 | R21 | **The accessibility floor of the navigator stays**: a visible focus ring; every part reachable as a row of the tape; one live region that says what changed; reduced motion respected. | - | brainstorming, from the base navigator | - |
@@ -139,6 +139,10 @@ Terms introduced or changed by this feature: none. "Volver", "Oscuro" and "Bille
 | W13 | P4 puts the method in the chart pane and the table of files in the tape pane. | P4 in one column | wireframing, 3 | - |
 | W14 | The parts do not take a hue from their parent; the colours restart at every level, by size. The lit arc of the thin ring keeps the colour of the parent. Closes RQ1. | Tones of the parent colour | wireframing, 3 | - |
 | W15 | "$<n> los gastó <nodo> en forma directa" stays. Closes RQ4. | "fueron al propio <nodo>", whose article must agree with every name | wireframing, 3 | - |
+| R22 | **The foot of the tape shows one line, a control.** A tap opens a native `<dialog>` (`showModal()`, no library, no custom backdrop) with the measure, the file, its date, "Descargar el archivo oficial", "De dónde salen estos números" and, at the last level, the codes (C16). "Cerrar" and Escape close it; the navigator's own Escape does nothing while the dialog is open. INV-03 still holds: the source is visible with no action. | Keep the foot at two or three lines | owner feedback, 2026-09-17 | - |
+| R23 | **"Tema" and "Billetes" are icon controls.** "Tema" cycles sistema, claro, oscuro (R13) with one inline SVG per state (a screen, a sun, a moon) and no word; it is a `<button>`, not a switch, because a switch has two states. Its accessible name says the state and the next tap, e.g. `aria-label="Tema: sistema. Tocar para el tema claro."` "Billetes" keeps its two states, `role="switch"` and `aria-checked`, with an inline SVG of a banknote and `aria-label="Billetes"`, and no word. Both sit at the right of the top bar with a hit area of 44x44px or more. | Keep the words "Oscuro" and "Billetes" | owner feedback, 2026-09-17 | - |
+| R24 | **One CSS source for the dark palette.** The forced dark look (`[data-tema="oscuro"]`) and the system dark look (`[data-tema="sistema"]` under `prefers-color-scheme: dark`) read the same tokens, written once. | Write the dark values twice | owner feedback, 2026-09-17 | - |
+| R25 | **The line of the execution and the deviation gets its own token, `--dato`, in the four palettes, 4.5:1 against its ground.** One colour in every case: R18's line reports a fact (C19), never a judgement, so it is never green for good or red for bad. | Reuse `--tenue`. A colour keyed to the sign of the deviation | owner feedback, 2026-09-17 | - |
 
 ## Open questions
 
@@ -188,9 +192,9 @@ The navigator has no command and no aggregate, so the table traces use cases to 
 | UC-03 | P1, P2 | A11, A14, A10 | R12, R18, W8 | a group pushes an entry with its claves; a missing group draws the nodo | under 1 s |
 | UC-04 | P1, P2, P2b | A6, A7, K2, A17, A18 | R11, W5 | the arrows stop at the ends; the path stays | under 1.5 s |
 | UC-05 | P1, P2 | A1, A2, A3, A4, A5, A10, A12, A13, K1, B1, B2 | R9, R10, R12, R20, W6, W7 | the short breadcrumb at depths 0 to 6, with and without accents | under 1 s |
-| UC-06 | P1, P2, P2b, P4 | A15, A16, A20, A21 | W3, W13 | the foot is on every place; the codes at the last level | visible with no action |
+| UC-06 | P1, P2, P2b, P4 | A15, A16, A20, A21 | W3, W13, R22 | the foot is on every place; the dialog holds the codes at the last level; Escape closes the dialog only | visible with no action |
 | UC-08 | P2 | the URL | R12, W8 | a hash opens its nodo; an absent clave opens the nearest ancestor | the link opens the same nodo |
-| UC-09 | every place | A8, A9 | R13 to R17, W9, W14, W15 | the theme with no storage and with a storage that throws; the sentence; the contrast of the four palettes | under 0.3 s |
+| UC-09 | every place | A8, A9 | R13 to R17, R22 to R25, W9, W14, W15 | the theme with no storage and with a storage that throws; the sentence; the contrast of the four palettes, with `--dato`; the system look changes with no reload | under 0.3 s |
 
 ## Risks and assumptions
 
@@ -207,6 +211,7 @@ The navigator has no command and no aggregate, so the table traces use cases to 
 - Added: UC-09 as a use case; R21, the accessibility floor, stated; W1 to W15 from wireframing; the performance mark as a measurement point.
 - Removed: none.
 - Corrected: R10 put "Volver" on every screen below the root; W12 removes it from P2b. RQ1, RQ2 and RQ4 are closed.
+- Corrected on 2026-09-17, from owner feedback after the redesign landed: R13 (the theme is three states, sistema, claro, oscuro), R14 (the view "Billetes" is an icon, R23), R18 and UC-06 (the foot shows one line, and a dialog holds the rest, R22), the line of the execution and the deviation gets its own colour (R25). Added R22 to R25.
 
 ## Handoff to writing-plans
 
