@@ -824,6 +824,10 @@ function pintarGrafico(documento, {
     lugar.appendChild(accion);
   }
 
+  // A screen with no rings must not keep the rings of the screen before it.
+  parte(documento, "anillos").innerHTML = "";
+  parte(documento, "disco-numero").textContent = "";
+  parte(documento, "disco-unidad").textContent = "";
   parte(documento, "caja").hidden = anillos === null;
   if (anillos !== null) {
     parte(documento, "anillos").innerHTML = svgDeEscena(anillos);
@@ -889,6 +893,11 @@ function pintarPie(documento, { cuenta = null, fuente, codigos = "", archivo = n
   // INV-03: the source is always visible at the foot of the tape. W3: the
   // link to P4 and the codes of the last level stay.
   parte(documento, "pie").hidden = false;
+  // A screen with no rows to sum must not keep the sum of the screen before
+  // it.
+  parte(documento, "rotulo").textContent = "";
+  parte(documento, "total").textContent = "";
+  parte(documento, "total-texto").textContent = "";
   parte(documento, "cuenta").hidden = cuenta === null;
   if (cuenta) {
     parte(documento, "rotulo").textContent = cuenta.rotulo;
@@ -898,6 +907,9 @@ function pintarPie(documento, { cuenta = null, fuente, codigos = "", archivo = n
   escribir(documento, "fuente", fuente);
   escribir(documento, "codigos", codigos);
   const descargar = parte(documento, "descargar");
+  // Same rule: a screen with no file to offer must not keep the link of the
+  // screen before it.
+  descargar.removeAttribute("href");
   descargar.hidden = archivo === null;
   if (archivo !== null) {
     descargar.setAttribute("href", archivo);

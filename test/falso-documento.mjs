@@ -6,6 +6,7 @@ export function falsoDocumento() {
     hijos: [],
     textContent: "",
     setAttribute(nombre, valor) { this.atributos[nombre] = valor; },
+    removeAttribute(nombre) { delete this.atributos[nombre]; },
     appendChild(hijo) { this.hijos.push(hijo); return hijo; },
     removeChild(hijo) { this.hijos = this.hijos.filter((otro) => otro !== hijo); },
     get firstChild() { return this.hijos[0] ?? null; },

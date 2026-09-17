@@ -663,3 +663,19 @@ test("la pantalla de un fallo tiene sus salidas en el marco", () => {
   assert.equal(enMarco(documento, "fuente").textContent, "Fuente: Presupuesto Abierto");
   assert.equal(enMarco(documento, "descargar").hidden, true);
 });
+
+test("el fallo despues del navegador borra los anillos, el disco y la suma", () => {
+  // A painter that only hides a region can leave the previous screen's
+  // content inside it. Paint a screen with rings and a sum, then a screen
+  // with neither, on the same document, and read what stayed behind.
+  const documento = falsoDocumento();
+  pintarNavegador(documento, vistaDeNavegador(ESTADO, pilaDe(ESTADO.indice, "")));
+  pintarError(documento, vistaDeError(new Error("boom")));
+  assert.equal(enMarco(documento, "anillos").innerHTML, "");
+  assert.equal(enMarco(documento, "disco-numero").textContent, "");
+  assert.equal(enMarco(documento, "disco-unidad").textContent, "");
+  assert.equal(enMarco(documento, "rotulo").textContent, "");
+  assert.equal(enMarco(documento, "total").textContent, "");
+  assert.equal(enMarco(documento, "total-texto").textContent, "");
+  assert.equal(enMarco(documento, "descargar").atributos.href, undefined);
+});
