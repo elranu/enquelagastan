@@ -18,6 +18,7 @@ export const RADIOS = {
 
 export const RADIO_DEL_DISCO = RADIOS.principal[0];
 export const OPACIDAD_TENUE = 0.28;
+export const MARGEN_DEL_DISCO = 0.12;
 
 const COLORES = 7;
 
@@ -217,4 +218,15 @@ export function svgDeEscena(arcos) {
     + `d="${caminoDeAnillo(arco)}" style="fill:${arco.color}" `
     + `fill-opacity="${arco.opacidad.toFixed(3)}" ${accionDe(arco)}></path>`);
   return contorno + golpes.join("") + formas.join("");
+}
+
+export function tamanioDelDisco({ ancho, alto, radio, referencia = 100, maximo = 56 }) {
+  // R7: the text of the disc is measured at a reference size. The size is
+  // linear in the font size, so one division gives the size whose corners
+  // touch a circle of 88% of the inner radius.
+  const diagonal = Math.hypot(ancho, alto);
+  if (!diagonal || !radio) {
+    return null;
+  }
+  return Math.min(maximo, (referencia * 2 * radio * (1 - MARGEN_DEL_DISCO)) / diagonal);
 }

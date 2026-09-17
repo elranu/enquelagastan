@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   angulosDe, caminoDeAnillo, colorDe, desdeCero, escenaDe, interpolar,
-  OPACIDAD_TENUE, RADIOS, svgDeEscena, VUELTA,
+  OPACIDAD_TENUE, RADIOS, svgDeEscena, tamanioDelDisco, VUELTA,
 } from "../site/app/anillos.js";
 
 const parte = (nombre, valor, destino, esOtros = false) => ({
@@ -174,4 +174,13 @@ test("el svg da un area de toque y un destino a cada arco que navega", () => {
 test("un nivel sin partes dibuja un anillo vacio", () => {
   const svg = svgDeEscena(escenaDe([nivel([])]));
   assert.ok(svg.startsWith('<path class="contorno"'));
+});
+
+test("el texto del disco entra en el agujero con un margen del 12%", () => {
+  // A block of 300 by 400 px at 100 px has a diagonal of 500 px. A radius
+  // of 100 px leaves a circle of 176 px across, so 100 * 176 / 500 = 35.2.
+  cerca(tamanioDelDisco({ ancho: 300, alto: 400, radio: 100 }), 35.2, "the size");
+  assert.equal(tamanioDelDisco({ ancho: 300, alto: 400, radio: 1000 }), 56, "a cap");
+  assert.equal(tamanioDelDisco({ ancho: 0, alto: 0, radio: 100 }), null,
+    "a block that is not on screen has no size");
 });
