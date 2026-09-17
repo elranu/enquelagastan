@@ -478,3 +478,35 @@ test("un interruptor cambia el aspecto y no escribe en el historial", async () =
   assert.equal(guardado[CLAVE_OSCURO], "true");
   assert.equal(sitio.historia.escrituras.length, antes, "W9: no entry");
 });
+
+test("un toque durante el movimiento lo termina, y la marca sale una vez", async () => {
+  const cuadros = [];
+  const marcas = [];
+  const sitio = montar("#/2025", {
+    ventanaExtra: {
+      requestAnimationFrame: (funcion) => { cuadros.push(funcion); },
+      performance: { now: () => 0, mark: (nombre) => { marcas.push(nombre); } },
+    },
+  });
+  await sitio.navegador.listo();
+  assert.doesNotMatch(sitio.parte("anillos").innerHTML, /data-abrir/, "the ring is growing");
+  sitio.documento.disparar("pointerdown", {});
+  assert.match(sitio.parte("anillos").innerHTML, /data-abrir="0"/, "R4: the motion ends at once");
+  await sitio.pulsar(fila(sitio, "Capital Humano"));
+  assert.deepEqual(marcas, ["enquelagastan-anillo"]);
+});
+
+test("un archivo lento escribe Cargando en el disco", async () => {
+  // W10: the object file loads before the motion. After 300ms the disc
+  // says so.
+  const objeto = `data/2025/objeto/${CADENA}.json`;
+  const sitio = montar("#/2025/88-1-0-1-1-1-1-1", { demorados: [objeto] });
+  await sitio.navegador.listo();
+  const paso = sitio.pulsar(fila(sitio, "Nivel 9"));
+  await new Promise((seguir) => setTimeout(seguir, 320));
+  assert.equal(sitio.parte("disco-numero").textContent, "Cargando…");
+  sitio.soltar(objeto);
+  await paso;
+  assert.equal(sitio.titulo(), "Nivel 9");
+  assert.notEqual(sitio.parte("disco-numero").textContent, "Cargando…");
+});

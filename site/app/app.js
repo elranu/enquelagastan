@@ -10,14 +10,16 @@
 
 import { cargarInstitucional, cargarManifiesto } from "./datos.js";
 import { montoLargo } from "./formato.js";
+import { crearMotor } from "./movimiento.js";
 import {
-  esAusencia, expandirMiga, indiceParaClave, pilaDe, pintarAusente, pintarError,
-  pintarFuentes, pintarNavegador, resolverPantalla, rutaDePila, vistaDeAusente,
-  vistaDeError, vistaDeFuentes, vistaDeNavegador,
+  ajustarDisco, deslizar, esAusencia, ESPERA_DE_CARGA, expandirMiga, indiceParaClave,
+  moverNavegador, pilaDe, pintarAusente, pintarCargando, pintarError, pintarFuentes,
+  pintarNavegador, resolverPantalla, rutaDePila, vistaDeAusente, vistaDeError,
+  vistaDeFuentes, vistaDeNavegador,
 } from "./pantalla.js";
 import {
-  ancestroQueExiste, ejercicioDeEntrada, ejerciciosDisponibles, entradaDe,
-  escrituraDe, rutaDeEntrada,
+  ancestroQueExiste, direccionEntre, ejercicioDeEntrada, ejerciciosDisponibles,
+  entradaDe, escrituraDe, rutaDeEntrada,
 } from "./ruta.js";
 import { aplicarTema, cambiarTema, leerTema } from "./tema.js";
 
@@ -37,6 +39,14 @@ export function iniciar({ documento, ventana, historia }) {
   const prefiere = (consulta) => Boolean(ventana.matchMedia?.(consulta).matches);
   let tema = leerTema(almacen, prefiere);
   aplicarTema(documento, tema);
+  const reducido = () => prefiere("(prefers-reduced-motion: reduce)");
+  // With no requestAnimationFrame (a test), a motion draws its end at once.
+  const motor = crearMotor({
+    cuadro: ventana.requestAnimationFrame?.bind(ventana),
+    ahora: () => ventana.performance?.now?.() ?? Date.now(),
+  });
+  // The KPI of UC-01: a mark when the ring first appears, read in a walk.
+  let marcado = false;
 
   // The place on screen: { ruta, lugar, pila, vista, indice }. lugar is
   // "navegador", "ausente", "fuentes" or "error".
@@ -144,6 +154,9 @@ export function iniciar({ documento, ventana, historia }) {
         ejercicio: pedido.desde.anio, nombre: pedido.desde.nombre, monto: pedido.desde.monto,
       });
       pintarAusente(documento, vista);
+      if (direccionEntre(actual?.ruta ?? null, ruta) === "anio") {
+        deslizar(documento, ejercicio < actual.ruta.anio);
+      }
       anunciar(`${vista.nombre} no existe en el ejercicio ${ejercicio}`);
       actual = { ruta, lugar: "ausente", pila: vista.pila, vista, indice: estado.indice };
       return;
@@ -156,20 +169,39 @@ export function iniciar({ documento, ventana, historia }) {
     escribirHistoria(modo, ruta);
     const vista = { ...vistaDeNavegador(estado, pila), nota };
     pintarNavegador(documento, vista);
+    moverNavegador(documento, vista, {
+      motor,
+      antes: actual?.vista ?? null,
+      direccion: direccionEntre(actual?.ruta ?? null, ruta),
+      reducido: reducido(),
+    });
+    if (!marcado) {
+      marcado = true;
+      ventana.performance?.mark?.("enquelagastan-anillo");
+    }
     anunciar(`${vista.titulo}. ${montoLargo(vista.total)} pesos.`);
     actual = { ruta, lugar: "navegador", pila, vista, indice: estado.indice };
   }
 
   function ir(pedido, modo) {
+    // A new step ends the running motion at once (R4).
+    motor.terminar();
     generacion += 1;
     const mia = generacion;
     const vigente = () => mia === generacion;
-    // A stale run must write nothing, whether it succeeds or fails.
-    enCurso = correr(pedido, modo, vigente).catch((error) => {
+    const espera = setTimeout(() => {
       if (vigente()) {
-        informar(error);
+        pintarCargando(documento);
       }
-    });
+    }, ESPERA_DE_CARGA);
+    // A stale run must write nothing, whether it succeeds or fails.
+    enCurso = correr(pedido, modo, vigente)
+      .catch((error) => {
+        if (vigente()) {
+          informar(error);
+        }
+      })
+      .finally(() => clearTimeout(espera));
     return enCurso;
   }
 
@@ -318,10 +350,18 @@ export function iniciar({ documento, ventana, historia }) {
     return ir(rutaDeEntrada(ventana.location.hash, historia.state), "carga");
   }
 
+  // A finger or a mouse on a moving ring ends the motion before the click,
+  // so the click lands on an arc with its destination.
+  documento.addEventListener("pointerdown", () => motor.terminar());
   documento.addEventListener("click", (evento) => { manejarClick(evento); });
   documento.addEventListener("keydown", (evento) => { manejarTecla(evento); });
   ventana.addEventListener("popstate", alCambiarLaEntrada);
   ventana.addEventListener("hashchange", alCambiarLaEntrada);
+
+  if (ventana.ResizeObserver) {
+    new ventana.ResizeObserver(() => ajustarDisco(documento))
+      .observe(documento.getElementById("lienzo"));
+  }
 
   alCambiarLaEntrada();
   return { ir, informar, listo: () => enCurso };

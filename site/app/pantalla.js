@@ -4,7 +4,9 @@
 // Every decision lives in the functions that give a view. The painters hold
 // no decision, so a test reads a view without a browser.
 
-import { colorDe, escenaDe, svgDeEscena } from "./anillos.js";
+import {
+  colorDe, desdeCero, escenaDe, interpolar, RADIO_DEL_DISCO, svgDeEscena, tamanioDelDisco,
+} from "./anillos.js";
 import {
   hijosDe, migaCorta, nivelDe, NIVELES_INSTITUCIONALES, raices, saltarHijoUnico,
   totalDe,
@@ -14,8 +16,9 @@ import { desviacionDe, ejecucionDe, REASIGNACION_INTERNA, SOBRE_LO_APROBADO }
   from "./desviacion.js";
 import { fraseDe } from "./frase.js";
 import {
-  conSigno, fechaCorta, montoCorto, montoLargo, partesDelMonto, porcentaje,
+  conSigno, fechaCorta, montoCorto, montoLargo, partesDelMonto, pesosDe, porcentaje,
 } from "./formato.js";
+import { cifrasDe, htmlDelOdometro, ruedasDelOdometro } from "./movimiento.js";
 import { porcionesDe } from "./porciones.js";
 import { procedenciaDe } from "./procedencia.js";
 import { ancestroQueExiste, contiene, RUTA_DE_FUENTES } from "./ruta.js";
@@ -599,6 +602,10 @@ function textoDeCodigos(procedencia) {
   return procedencia.codigos.map(({ eje, codigo }) => `${eje}_id=${codigo}`).join(" · ");
 }
 
+function pintarCifras(documento, pesos, cifras) {
+  parte(documento, "total").innerHTML = htmlDelOdometro(ruedasDelOdometro(pesos, cifras));
+}
+
 function pintarPie(documento, { cuenta = null, fuente, codigos = "", archivo = null }) {
   // INV-03: the source is always visible at the foot of the tape. W3: the
   // link to P4 and the codes of the last level stay.
@@ -611,7 +618,8 @@ function pintarPie(documento, { cuenta = null, fuente, codigos = "", archivo = n
   parte(documento, "cuenta").hidden = cuenta === null;
   if (cuenta) {
     parte(documento, "rotulo").textContent = cuenta.rotulo;
-    parte(documento, "total").textContent = montoLargo(cuenta.total);
+    const pesos = pesosDe(cuenta.total);
+    pintarCifras(documento, pesos, cifrasDe(pesos));
     parte(documento, "total-texto").textContent = `${montoLargo(cuenta.total)} pesos`;
   }
   escribir(documento, "fuente", fuente);
@@ -719,4 +727,93 @@ export function pintarError(documento, vista) {
   pintarRenglones(documento, []);
   // This screen read no manifest, so it names the source and nothing more.
   pintarPie(documento, { fuente: FUENTE_SIN_DATOS });
+}
+
+// ---- The motion of the frame ----------------------------------------------
+//
+// A painter draws the end state first. The motion then starts from the state
+// before, and its last frame draws the end state again, with every
+// destination. A tap during the motion ends it at once (R4).
+
+export const ESPERA_DE_CARGA = 300;
+
+export function pintarCargando(documento) {
+  // W10: the data loads before the motion. A slow file says so in the disc.
+  parte(documento, "disco-numero").textContent = "Cargando…";
+  parte(documento, "disco-unidad").textContent = "";
+}
+
+export function ajustarDisco(documento) {
+  // R7: measure the text at 100px, then give it the size that fits the hole.
+  // The fake document of the tests has no layout, so it skips this.
+  const monto = parte(documento, "disco");
+  const lienzo = parte(documento, "lienzo");
+  if (!monto.style || !lienzo.offsetWidth) {
+    return;
+  }
+  monto.style.setProperty("--fs", "100px");
+  const tamanio = tamanioDelDisco({
+    ancho: monto.offsetWidth,
+    alto: monto.offsetHeight,
+    radio: (RADIO_DEL_DISCO * lienzo.offsetWidth) / 2,
+  });
+  if (tamanio !== null) {
+    monto.style.setProperty("--fs", `${tamanio.toFixed(2)}px`);
+  }
+}
+
+export function deslizar(documento, haciaElPasado) {
+  // R11: an older year slides in from the left, a newer one from the right.
+  // An empty value and a read of offsetWidth restart the CSS animation.
+  const paneles = parte(documento, "app");
+  paneles.setAttribute("data-desliza", "");
+  void paneles.offsetWidth;
+  paneles.setAttribute("data-desliza", haciaElPasado ? "izquierda" : "derecha");
+}
+
+export function moverNavegador(documento, vista, { motor, antes = null, direccion, reducido = false }) {
+  if (direccion === "igual") {
+    return;
+  }
+  if (direccion === "anio") {
+    deslizar(documento, antes !== null && vista.ejercicio < antes.ejercicio);
+  }
+  // W4: with no scene before (the first load, P4, P2b or a failure), the
+  // main ring grows once from 12 o'clock. A change of year slides the whole
+  // screen, so the rings do not move on their own.
+  let trazo = null;
+  if (direccion !== "anio") {
+    trazo = interpolar(antes?.escena ? antes.escena : desdeCero(vista.escena), vista.escena);
+  }
+  const pesosHasta = pesosDe(vista.total);
+  const pesosDesde = antes?.total === undefined ? 0 : pesosDe(antes.total);
+  const cifras = cifrasDe(Math.max(pesosDesde, pesosHasta));
+  const anillos = parte(documento, "anillos");
+  const grafico = parte(documento, "grafico");
+
+  function paso(t) {
+    if (reducido) {
+      // A crossfade of the chart, and no ring moves.
+      grafico.setAttribute("style", `opacity:${t}`);
+      return;
+    }
+    if (trazo) {
+      anillos.innerHTML = svgDeEscena(trazo(t));
+    }
+    // R5: the total rolls like an odometer.
+    pintarCifras(documento, pesosDesde + (pesosHasta - pesosDesde) * t, cifras);
+  }
+
+  // Draw the first frame now, so the end state never flashes before it.
+  paso(0);
+  motor.animar({
+    reducido,
+    paso,
+    fin: () => {
+      grafico.setAttribute("style", "");
+      anillos.innerHTML = svgDeEscena(vista.escena);
+      pintarCifras(documento, pesosHasta, cifrasDe(pesosHasta));
+      ajustarDisco(documento);
+    },
+  });
 }

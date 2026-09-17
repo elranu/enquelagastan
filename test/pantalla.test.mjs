@@ -3,11 +3,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import {
-  aniosVecinos, esAusencia, estadoDeLaFila, indiceParaClave, lineaDeDetalle, pilaDe,
+  aniosVecinos, esAusencia, estadoDeLaFila, indiceParaClave, lineaDeDetalle, moverNavegador, pilaDe,
   pintarAusente, pintarBarra, pintarError, pintarFuentes, pintarNavegador,
   resolverPantalla, rutaDePila, vistaDeAusente, vistaDeError, vistaDeFuentes,
   vistaDeNavegador, vistaDeNodo, vistaDeRaiz,
 } from "../site/app/pantalla.js";
+import { svgDeEscena } from "../site/app/anillos.js";
 import { migaCorta } from "../site/app/arbol.js";
 import { SOBRE_LO_APROBADO } from "../site/app/desviacion.js";
 import { controles, falsoDocumento, textoDe } from "./falso-documento.mjs";
@@ -535,4 +536,67 @@ test("el fallo despues del navegador borra los anillos, el disco y la suma", () 
   assert.equal(enMarco(documento, "total").textContent, "");
   assert.equal(enMarco(documento, "total-texto").textContent, "");
   assert.equal(enMarco(documento, "descargar").atributos.href, undefined);
+});
+
+// ---- The motion of the frame ----------------------------------------------
+
+// A motor that keeps the motion it gets, so a test runs any frame by hand.
+function motorQueGuarda() {
+  const motor = { pedido: null, animar(pedido) { motor.pedido = pedido; } };
+  return motor;
+}
+
+test("el primer dibujo hace crecer el anillo y termina con cada destino", () => {
+  const documento = falsoDocumento();
+  const vista = vistaDeNavegador(ESTADO, pilaDe(ESTADO.indice, ""));
+  pintarNavegador(documento, vista);
+  const motor = motorQueGuarda();
+  moverNavegador(documento, vista, { motor, direccion: "inicio" });
+  const anillos = enMarco(documento, "anillos");
+  assert.doesNotMatch(anillos.innerHTML, /data-abrir/, "W4: the first frame is the ring at zero");
+  assert.equal(motor.pedido.reducido, false);
+  motor.pedido.fin();
+  assert.equal(anillos.innerHTML, svgDeEscena(vista.escena), "the last frame has every destination");
+});
+
+test("el total rueda desde el total de antes", () => {
+  const documento = falsoDocumento();
+  const antes = vistaDeNavegador(ESTADO, pilaDe(ESTADO.indice, ""));
+  const vista = vistaDeNavegador(ESTADO, pilaDe(ESTADO.indice, "88-1"));
+  const motor = motorQueGuarda();
+  moverNavegador(documento, { ...vista, total: 200 }, { motor, antes: { ...antes, total: 100 }, direccion: "abajo" });
+  // Half way from 100 to 200 millones: 150.000.000 pesos, nine wheels.
+  motor.pedido.paso(0.5);
+  const total = enMarco(documento, "total").innerHTML;
+  assert.equal(total.match(/class="rueda"/g).length, 9);
+  assert.match(total, /^<span class="rueda"><span class="tira" style="transform:translateY\(-1\.200em\)">/);
+});
+
+test("un cambio de anio desliza los paneles y no mueve los anillos", () => {
+  const documento = falsoDocumento();
+  const vista = vistaDeNavegador(ESTADO, pilaDe(ESTADO.indice, ""));
+  pintarNavegador(documento, vista);
+  const motor = motorQueGuarda();
+  moverNavegador(documento, vista, { motor, antes: { ...vista, ejercicio: 2026 }, direccion: "anio" });
+  assert.equal(enMarco(documento, "app").atributos["data-desliza"], "izquierda",
+    "R11: an older year comes from the left");
+  assert.equal(enMarco(documento, "anillos").innerHTML, svgDeEscena(vista.escena));
+});
+
+test("con movimiento reducido el grafico se funde", () => {
+  const documento = falsoDocumento();
+  const vista = vistaDeNavegador(ESTADO, pilaDe(ESTADO.indice, ""));
+  const motor = motorQueGuarda();
+  moverNavegador(documento, vista, { motor, direccion: "inicio", reducido: true });
+  assert.equal(enMarco(documento, "grafico").atributos.style, "opacity:0");
+  assert.equal(motor.pedido.reducido, true);
+  motor.pedido.fin();
+  assert.equal(enMarco(documento, "grafico").atributos.style, "");
+});
+
+test("el mismo lugar no mueve nada", () => {
+  const motor = motorQueGuarda();
+  const vista = vistaDeNavegador(ESTADO, pilaDe(ESTADO.indice, ""));
+  moverNavegador(falsoDocumento(), vista, { motor, antes: vista, direccion: "igual" });
+  assert.equal(motor.pedido, null);
 });
