@@ -144,9 +144,10 @@ function montar(hash, { demorados = [], estado = null, ventanaExtra = {} } = {})
     historia,
     parte,
     titulo: () => parte("titulo").textContent,
-    // A click on a painted control, as a browser fires it.
+    // A click on a painted control, as a mouse or a tap fires it. detail 1
+    // marks it as a pointer click, never a keyboard one (detail 0).
     pulsar: (elemento) => {
-      documento.disparar("click", { target: elemento, preventDefault() {} });
+      documento.disparar("click", { target: elemento, detail: 1, preventDefault() {} });
       return navegador.listo();
     },
     tecla: (key) => {
@@ -511,11 +512,11 @@ test("un archivo lento escribe Cargando en el disco", async () => {
   assert.notEqual(sitio.parte("disco-numero").textContent, "Cargando…");
 });
 
-test("un puntero durante el movimiento resuelve la parte, y el click que sigue no repite el paso", async () => {
-  // R4: the motion already redrew the DOM under the finger, so the click
-  // this same gesture fires next would land on the ancestor #anillos, or
-  // (iOS Safari) never fire at all. The pointerdown must still land the
-  // step, and that click must do nothing.
+test("un puntero durante el movimiento suelta en la parte, y el click que sigue no repite el paso", async () => {
+  // R4: pointerdown only ends the motion and remembers the part; the step
+  // itself waits for pointerup of the same gesture. The click that follows
+  // lands on the same arc the gesture just opened, so the ignore must hold
+  // even when that click alone would also open it.
   const cuadros = [];
   const sitio = montar("#/2025", {
     ventanaExtra: { requestAnimationFrame: (funcion) => { cuadros.push(funcion); } },
@@ -525,12 +526,83 @@ test("un puntero durante el movimiento resuelve la parte, y el click que sigue n
   const control = sitio.documento.createElement("path");
   control.setAttribute("data-abrir", "0");
   sitio.documento.elementoBajoElPuntero = control;
-  sitio.documento.disparar("pointerdown", {});
+  sitio.documento.disparar("pointerdown", { button: 0, pointerId: 1 });
+  sitio.documento.disparar("pointerup", { pointerId: 1 });
   await sitio.navegador.listo();
-  sitio.documento.disparar("click", { target: sitio.parte("anillos"), preventDefault() {} });
+  sitio.documento.disparar("click", { target: control, detail: 1, preventDefault() {} });
   await sitio.navegador.listo();
   assert.equal(sitio.titulo(), "Capital Humano");
   assert.equal(sitio.historia.escrituras.length, antes + 1, "one step, never two");
+});
+
+test("un puntero cancelado no deja nada pendiente, y un toque despues navega una vez", async () => {
+  // A pan that starts on a moving ring fires pointercancel, and no click.
+  // The gesture must open nothing, and a later, ordinary tap must still
+  // work: a stale remembered part must never block it.
+  const cuadros = [];
+  const sitio = montar("#/2025", {
+    ventanaExtra: { requestAnimationFrame: (funcion) => { cuadros.push(funcion); } },
+  });
+  await sitio.navegador.listo();
+  const antes = sitio.historia.escrituras.length;
+  const control = sitio.documento.createElement("path");
+  control.setAttribute("data-abrir", "0");
+  sitio.documento.elementoBajoElPuntero = control;
+  sitio.documento.disparar("pointerdown", { button: 0, pointerId: 1 });
+  sitio.documento.disparar("pointercancel", { pointerId: 1 });
+  // A stray pointerup of the cancelled gesture must find nothing remembered.
+  sitio.documento.disparar("pointerup", { pointerId: 1 });
+  await sitio.navegador.listo();
+  assert.equal(sitio.historia.escrituras.length, antes, "the cancelled gesture opens nothing");
+  const filaCapitalHumano = fila(sitio, "Capital Humano");
+  await sitio.pulsar(filaCapitalHumano);
+  assert.equal(sitio.titulo(), "Capital Humano");
+  assert.equal(sitio.historia.escrituras.length, antes + 1, "one step, never two");
+});
+
+test("un puntero pendiente no abre nada solo, y un click de teclado en una fila navega despues", async () => {
+  // Enter or Space on a focused row fires a real click of detail 0, with no
+  // pointerdown of its own. That click must land, whatever a pointerdown
+  // with no pointerup and no click left remembered.
+  const cuadros = [];
+  const sitio = montar("#/2025", {
+    ventanaExtra: { requestAnimationFrame: (funcion) => { cuadros.push(funcion); } },
+  });
+  await sitio.navegador.listo();
+  const antes = sitio.historia.escrituras.length;
+  const control = sitio.documento.createElement("path");
+  control.setAttribute("data-abrir", "0");
+  sitio.documento.elementoBajoElPuntero = control;
+  sitio.documento.disparar("pointerdown", { button: 0, pointerId: 1 });
+  // Let the async chain of a (wrongly) direct navigation run to completion,
+  // so a step from pointerdown alone would already show in the history.
+  await sitio.navegador.listo();
+  assert.equal(sitio.historia.escrituras.length, antes,
+    "R4 ends the motion, but a tap opens nothing before pointerup");
+  const filaCapitalHumano = fila(sitio, "Capital Humano");
+  sitio.documento.disparar("click", { target: filaCapitalHumano, detail: 0, preventDefault() {} });
+  await sitio.navegador.listo();
+  assert.equal(sitio.titulo(), "Capital Humano");
+  assert.equal(sitio.historia.escrituras.length, antes + 1, "one step, from the keyboard click alone");
+});
+
+test("un puntero de boton secundario termina el movimiento y no abre nada", async () => {
+  const cuadros = [];
+  const sitio = montar("#/2025", {
+    ventanaExtra: { requestAnimationFrame: (funcion) => { cuadros.push(funcion); } },
+  });
+  await sitio.navegador.listo();
+  assert.doesNotMatch(sitio.parte("anillos").innerHTML, /data-abrir/, "the ring is growing");
+  const antes = sitio.historia.escrituras.length;
+  const control = sitio.documento.createElement("path");
+  control.setAttribute("data-abrir", "0");
+  sitio.documento.elementoBajoElPuntero = control;
+  // button 2: a right click. R4 still ends the motion.
+  sitio.documento.disparar("pointerdown", { button: 2, pointerId: 1 });
+  assert.match(sitio.parte("anillos").innerHTML, /data-abrir="0"/, "R4: the motion still ends at once");
+  sitio.documento.disparar("pointerup", { pointerId: 1 });
+  await sitio.navegador.listo();
+  assert.equal(sitio.historia.escrituras.length, antes, "a secondary button never opens a part");
 });
 
 test("un puntero sin movimiento no hace nada, y el click que sigue navega una vez", async () => {

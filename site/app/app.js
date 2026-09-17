@@ -356,29 +356,48 @@ export function iniciar({ documento, ventana, historia }) {
     return ir(rutaDeEntrada(ventana.location.hash, historia.state), "carga");
   }
 
-  // R4: a tap ends a running motion and starts the next step at once. The
-  // motion just redrew the part under the finger, so the click this same
-  // gesture fires next would land on the ancestor #anillos, or (iOS Safari)
-  // never fire at all. Resolve the destination now, from the point of the
-  // finger and over the DOM the ended motion just drew, and let that click
-  // do nothing.
-  let atendidoPorElPuntero = false;
+  // R4: a tap ends a running motion at once, and its own gesture still opens
+  // the part under the finger. pointerdown only ends the motion and
+  // remembers the part under the finger, over the DOM that motion just
+  // drew; the step itself waits for pointerup, of the same gesture, so a
+  // pan, a right or middle button, or a cancelled touch never opens a part.
+  // A click that follows a resolved gesture does nothing, except a keyboard
+  // click (Enter or Space on a focused row, detail 0): that one carries no
+  // pointer, and it must always land.
+  let recordado = null;
+  let manejado = false;
   documento.addEventListener("pointerdown", (evento) => {
+    recordado = null;
+    manejado = false;
     if (!motor.activo()) {
       return;
     }
     motor.terminar();
-    const control = documento.elementFromPoint?.(evento.clientX, evento.clientY)
-      ?.closest?.("[data-abrir], [data-subir]");
-    if (!control) {
+    if (evento.button !== 0) {
       return;
     }
-    atendidoPorElPuntero = true;
+    const control = documento.elementFromPoint?.(evento.clientX, evento.clientY)
+      ?.closest?.("[data-abrir], [data-subir]");
+    if (control) {
+      recordado = { control, pointerId: evento.pointerId };
+    }
+  });
+  documento.addEventListener("pointercancel", () => {
+    recordado = null;
+    manejado = false;
+  });
+  documento.addEventListener("pointerup", (evento) => {
+    if (!recordado || recordado.pointerId !== evento.pointerId) {
+      return;
+    }
+    const { control } = recordado;
+    recordado = null;
+    manejado = true;
     manejarClick({ target: control, preventDefault() {} });
   });
   documento.addEventListener("click", (evento) => {
-    if (atendidoPorElPuntero) {
-      atendidoPorElPuntero = false;
+    if (manejado && evento.detail !== 0) {
+      manejado = false;
       return;
     }
     manejarClick(evento);
