@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-tema="claro" data-vista="simple">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,14 +9,75 @@
     <link rel="stylesheet" href="estilo.css" />
   </head>
   <body>
-    <!-- #app carries no aria-live. Every navigation empties and refills it,
-         so a live region here would read the whole new screen: the strip of
-         years, up to 10 crumbs, the headline, 8 rows of the legend and 13
-         codes, as one announcement that nothing can interrupt. The region
-         below is stable and empty, and it says only what changed. -->
-    <main id="app">
-      <p class="cargando">Cargando el gasto público…</p>
-    </main>
+    <!-- The frame draws once. app.js writes its parts on every step, so the
+         top bar, the chart and the tape stay in place, and a motion can run
+         between two places. -->
+    <div class="marco">
+      <header class="barra">
+        <a class="sitio" id="sitio" href="#/" data-clave="">En qué la gastan</a>
+        <nav class="miga" id="miga" aria-label="Camino" hidden></nav>
+        <span class="empuje"></span>
+        <div class="anios" role="group" aria-label="Ejercicio">
+          <button type="button" class="flecha" id="anio-anterior" data-anio=""
+                  aria-label="Año anterior" disabled>‹</button>
+          <span class="anio" id="anio"></span>
+          <button type="button" class="flecha" id="anio-siguiente" data-anio=""
+                  aria-label="Año siguiente" disabled>›</button>
+        </div>
+        <div class="interruptores">
+          <button type="button" class="interruptor" id="oscuro" role="switch"
+                  aria-checked="false" data-interruptor="oscuro"><span class="pista" aria-hidden="true"></span>Oscuro</button>
+          <button type="button" class="interruptor" id="billetes" role="switch"
+                  aria-checked="false" data-interruptor="billetes"><span class="pista" aria-hidden="true"></span>Billetes</button>
+        </div>
+      </header>
+
+      <!-- #app carries no aria-live. A live region here would read the whole
+           place on every step. #aviso below is stable, and it says only what
+           changed. -->
+      <main id="app" class="paneles">
+        <section class="panel-grafico" aria-labelledby="titulo">
+          <div class="cabeza">
+            <button type="button" class="volver" id="volver" data-subir="" hidden>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16 10H4m5-5-5 5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Volver
+            </button>
+            <h1 id="titulo" tabindex="-1">Cargando el gasto público…</h1>
+          </div>
+          <p class="frase" id="frase" hidden></p>
+          <p class="subtitulo" id="subtitulo" hidden></p>
+          <p class="detalle" id="detalle" hidden></p>
+          <div class="nota" id="nota" hidden></div>
+          <div class="acciones" id="acciones" hidden></div>
+          <div class="caja" id="caja">
+            <div class="lienzo" id="lienzo">
+              <svg id="grafico" viewBox="-1 -1 2 2" aria-hidden="true"><g id="anillos"></g></svg>
+              <div class="disco" aria-hidden="true">
+                <div class="monto" id="disco">
+                  <span class="numero" id="disco-numero"></span>
+                  <span class="unidad" id="disco-unidad"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel-cinta" aria-label="Partidas">
+          <div class="renglones" id="renglones"></div>
+          <footer class="pie" id="pie">
+            <div class="cuenta" id="cuenta" hidden>
+              <p class="rotulo" id="rotulo"></p>
+              <p class="total"><span class="cifras" id="total" aria-hidden="true"></span><span class="unidad" aria-hidden="true">pesos</span><span class="solo-lectores" id="total-texto"></span></p>
+            </div>
+            <p class="fuente" id="fuente"></p>
+            <p class="codigos" id="codigos" hidden></p>
+            <p class="enlaces">
+              <a id="descargar" href="" hidden>Descargar el archivo oficial</a>
+              <a id="fuentes-enlace" href="#/fuentes" data-fuentes="">De dónde salen estos números</a>
+            </p>
+          </footer>
+        </section>
+      </main>
+    </div>
     <p id="aviso" role="status" class="solo-lectores"></p>
     <script type="module" src="app/app.js"></script>
   </body>

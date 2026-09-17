@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  hijosDe, llano, migaCorta, migaDePan, nivelDe, raices, saltarHijoUnico, totalDe,
+  hijosDe, llano, migaCorta, nivelDe, raices, saltarHijoUnico, totalDe,
 } from "../site/app/arbol.js";
 
 // Two jurisdicciones. The 45 is a chain of one child, three levels deep.
@@ -38,25 +38,6 @@ test("salta la cadena hasta el nodo que divide", () => {
 
 test("no salta cuando el nodo ya divide", () => {
   assert.equal(saltarHijoUnico(INDICE, "88"), "88");
-});
-
-test("la miga junta los nombres repetidos en un solo tramo", () => {
-  // DGSIAF repeats the name of the parent at every code 0. Three chips that
-  // all read "Defensa" say nothing, and the style cuts them at the same
-  // width. One chip stays, and it points at the shallowest clave.
-  const miga = migaDePan(INDICE, "45-1-0-7");
-  assert.deepEqual(miga.map((t) => t.clave), ["45", "45-1-0-7"]);
-  assert.deepEqual(miga.map((t) => t.nombre), ["Defensa", "Curso"]);
-});
-
-test("la miga conserva un nombre repetido que no es adyacente", () => {
-  const indice = {
-    "1": { n: "A", k: ["2"] },
-    "1-2": { n: "B", k: ["3"] },
-    "1-2-3": { n: "A", k: [] },
-  };
-  assert.deepEqual(migaDePan(indice, "1-2-3").map((t) => t.nombre),
-    ["A", "B", "A"]);
 });
 
 test("el total suma la medida que se pide", () => {

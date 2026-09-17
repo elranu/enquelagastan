@@ -1,4 +1,21 @@
-// A small stand-in for the document, so a test needs no browser.
+// A small stand-in for the document, the window and the history, so a test
+// needs no browser.
+
+function oyentes() {
+  const porTipo = new Map();
+  return {
+    addEventListener(tipo, oyente) {
+      porTipo.set(tipo, [...(porTipo.get(tipo) ?? []), oyente]);
+    },
+    // A test fires an event with one call, as a browser would.
+    disparar(tipo, evento = {}) {
+      for (const oyente of porTipo.get(tipo) ?? []) {
+        oyente(evento);
+      }
+    },
+  };
+}
+
 export function falsoDocumento() {
   const crear = (etiqueta) => ({
     etiqueta,
@@ -7,15 +24,25 @@ export function falsoDocumento() {
     textContent: "",
     setAttribute(nombre, valor) { this.atributos[nombre] = valor; },
     removeAttribute(nombre) { delete this.atributos[nombre]; },
+    getAttribute(nombre) { return this.atributos[nombre] ?? null; },
+    // Only the selectors that app.js uses: one attribute, as "[data-abrir]".
+    // The fake element knows no parent, so it answers for itself.
+    closest(selector) {
+      const nombre = /^\[([\w-]+)\]$/.exec(selector)?.[1];
+      return nombre && this.atributos[nombre] !== undefined ? this : null;
+    },
     appendChild(hijo) { this.hijos.push(hijo); return hijo; },
     removeChild(hijo) { this.hijos = this.hijos.filter((otro) => otro !== hijo); },
     get firstChild() { return this.hijos[0] ?? null; },
     addEventListener() {},
+    focus() {},
   });
-  // app.js asks the document for #app and for #aviso. The same element comes
+  // The frame of index.html holds every part once. The same element comes
   // back for one id, so a test reads what the navigator wrote there.
   const porId = new Map();
   return {
+    ...oyentes(),
+    documentElement: crear("html"),
     createElement: crear,
     createElementNS: (espacio, etiqueta) => crear(etiqueta),
     getElementById(id) {
@@ -27,20 +54,45 @@ export function falsoDocumento() {
   };
 }
 
-// A stand-in for the window and the history. The hash is a plain value, so a
-// test moves the visitor with one assignment and no browser.
+// The window and the history share one list of entries. pushState and
+// replaceState change the hash, and back and forward fire popstate, as a
+// browser does.
 export function falsaVentana(hash = "#/") {
-  return {
-    location: { hash },
-    addEventListener() {},
-  };
+  return { ...oyentes(), location: { hash } };
 }
 
-export function falsaHistoria() {
+export function falsaHistoria(ventana, estadoInicial = null) {
+  const entradas = [{ hash: ventana.location.hash, estado: estadoInicial }];
+  let posicion = 0;
   const escrituras = [];
+  const ir = (paso) => {
+    const destino = posicion + paso;
+    if (destino < 0 || destino >= entradas.length) {
+      return;
+    }
+    posicion = destino;
+    ventana.location.hash = entradas[posicion].hash;
+    ventana.disparar("popstate", { state: entradas[posicion].estado });
+    ventana.disparar("hashchange", {});
+  };
   return {
     escrituras,
-    replaceState(estado, titulo, ruta) { escrituras.push(ruta); },
+    entradas,
+    get state() { return entradas[posicion].estado; },
+    pushState(estado, titulo, hash) {
+      entradas.splice(posicion + 1);
+      entradas.push({ hash, estado: structuredClone(estado) });
+      posicion += 1;
+      ventana.location.hash = hash;
+      escrituras.push(["push", hash]);
+    },
+    replaceState(estado, titulo, hash) {
+      entradas[posicion] = { hash, estado: structuredClone(estado) };
+      ventana.location.hash = hash;
+      escrituras.push(["replace", hash]);
+    },
+    back: () => ir(-1),
+    forward: () => ir(1),
   };
 }
 

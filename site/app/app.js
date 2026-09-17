@@ -1,57 +1,60 @@
-// Join the modules, and answer a change of the URL.
+// Join the modules, and answer the history of the browser.
 //
-// This module holds the DOM and the history, and no rule of the navigator.
-// resolverPantalla in pantalla.js holds the decision, so a test reads it.
+// This module holds the DOM, the history and the switches, and no rule of
+// the navigator. pantalla.js holds the views, and ruta.js holds the model of
+// the history, so a test reads every rule there.
 //
 // iniciar takes the document, the window and the history as arguments. The
 // module therefore loads without a browser, and a test drives the whole
-// routing loop with the fake document of test/falso-documento.mjs.
+// loop with the fakes of test/falso-documento.mjs.
 
 import { cargarInstitucional, cargarManifiesto } from "./datos.js";
 import { montoLargo } from "./formato.js";
 import {
-  dibujarAusente, dibujarError, dibujarFuentes, dibujarNodo, dibujarRaiz,
-  esAusencia, indiceParaClave, resolverPantalla, vistaDeAusente, vistaDeError,
-  vistaDeFuentes, vistaDeNodo, vistaDeRaiz,
+  esAusencia, expandirMiga, indiceParaClave, pilaDe, pintarAusente, pintarError,
+  pintarFuentes, pintarNavegador, resolverPantalla, rutaDePila, vistaDeAusente,
+  vistaDeError, vistaDeFuentes, vistaDeNavegador,
 } from "./pantalla.js";
 import {
-  ejercicioDeEntrada, ejerciciosDisponibles, escribirRuta, leerRuta,
+  ancestroQueExiste, ejercicioDeEntrada, ejerciciosDisponibles, entradaDe,
+  escrituraDe, rutaDeEntrada,
 } from "./ruta.js";
+import { aplicarTema, cambiarTema, leerTema } from "./tema.js";
 
-// The sources screen is static and belongs to no exercise. leerRuta cannot
-// name it, because its first segment is always a year, so app.js checks the
-// raw hash before it asks ruta.js for anything.
-const RUTA_DE_FUENTES = "#/fuentes";
-
-function vaciar(elemento) {
-  while (elemento.firstChild) {
-    elemento.removeChild(elemento.firstChild);
+function almacenDe(ventana) {
+  // The getter of localStorage throws when the browser blocks the storage.
+  try {
+    return ventana.localStorage ?? null;
+  } catch {
+    return null;
   }
 }
 
 export function iniciar({ documento, ventana, historia }) {
-  const app = documento.getElementById("app");
-  // The live region lives outside #app, and it survives every navigation.
-  // #app itself carries no aria-live: a screen reader would read the whole
-  // new screen, the year strip and the codes included, on every tap.
+  // The live region lives outside #app, and it says only what changed.
   const aviso = documento.getElementById("aviso");
+  const almacen = almacenDe(ventana);
+  const prefiere = (consulta) => Boolean(ventana.matchMedia?.(consulta).matches);
+  let tema = leerTema(almacen, prefiere);
+  aplicarTema(documento, tema);
 
-  // The last nodo the visitor actually saw. The arrow of the year keeps the
-  // clave and only changes the exercise. This is the exercise of origin when
-  // the new exercise lacks that clave.
-  let ultimo = null;
+  // The place on screen: { ruta, lugar, pila, vista, indice }. lugar is
+  // "navegador", "ausente", "fuentes" or "error".
+  let actual = null;
+  // The last exercise on screen. P4 and the failure screen belong to no
+  // exercise, and "Volver al inicio" goes back to this one.
+  let ultimoAnio = null;
 
-  // The children of the slice "otros" that the visitor opened, if any. It is
-  // not part of the URL: "otros" names no real nodo, only a group of them. It
-  // belongs to one exercise and one clave, and resolverPantalla drops it when
-  // the screen shows another one.
-  let grupoOtros = null;
-
-  // A hashchange can start a second dibujar while the first one waits for a
-  // file. Both runs would write to the page, and the visitor would read two
-  // screens at once. Every run takes a number, and only the newest one
-  // writes.
+  // A popstate can start a second run while the first one waits for a file.
+  // Both runs would write to the frame. Every run takes a number, and only
+  // the newest one writes.
   let generacion = 0;
+  let enCurso = Promise.resolve();
+
+  // popstate and hashchange both fire on one change of the hash. The key of
+  // the entry that the page answered lets the second event do nothing.
+  let atendida = null;
+  const llaveDe = (hash, estado) => `${hash}|${JSON.stringify(estado ?? null)}`;
 
   function anunciar(texto) {
     if (aviso) {
@@ -59,21 +62,16 @@ export function iniciar({ documento, ventana, historia }) {
     }
   }
 
-  function mostrar(elemento, texto) {
-    vaciar(app);
-    app.appendChild(elemento);
-    anunciar(texto);
-  }
-
-  async function irA(ruta) {
-    // A route equal to the one on screen fires no hashchange. The crumb
-    // "otros" and the arrow back to the exercise of origin both do that. So
-    // draw here, or the click of the visitor does nothing.
-    if (ruta === ventana.location.hash) {
-      await dibujar();
-      return;
+  function escribirHistoria(modo, ruta) {
+    const final = entradaDe(ruta);
+    const actualEntrada = { hash: ventana.location.hash, estado: historia.state };
+    const escritura = escrituraDe(modo, actualEntrada, final);
+    if (escritura === "push") {
+      historia.pushState(final.estado, "", final.hash);
+    } else if (escritura === "replace") {
+      historia.replaceState(final.estado, "", final.hash);
     }
-    ventana.location.hash = ruta;
+    atendida = llaveDe(final.hash, final.estado);
   }
 
   async function indiceDe(ejercicio, institucional, clave) {
@@ -88,153 +86,245 @@ export function iniciar({ documento, ventana, historia }) {
     }
   }
 
-  async function dibujar() {
+  async function correr(pedido, modo, vigente) {
+    const manifiesto = await cargarManifiesto();
+    if (!vigente()) {
+      return;
+    }
+
+    if (pedido.fuentes) {
+      escribirHistoria(modo, pedido);
+      pintarFuentes(documento, vistaDeFuentes(manifiesto));
+      anunciar("De dónde salen estos números");
+      actual = { ruta: pedido, lugar: "fuentes" };
+      return;
+    }
+
+    const disponibles = ejerciciosDisponibles(manifiesto);
+    const valido = disponibles.includes(pedido.anio);
+    const ejercicio = valido ? pedido.anio : ejercicioDeEntrada(disponibles);
+    // UC-08: a year that is not published opens the root of the entry year.
+    let clave = valido ? pedido.clave : "";
+    const grupos = valido ? pedido.grupos : [];
+    const entrada = manifiesto.ejercicios.find((fila) => fila.ejercicio === ejercicio);
+    const institucional = await cargarInstitucional(ejercicio);
+    if (!vigente()) {
+      return;
+    }
+    const base = { ejercicio, entrada, indice: institucional, disponibles };
+    // A change of year carries the exercise of origin. Only then does an
+    // absent clave show P2b. A link or Back to an absent clave opens the
+    // nearest ancestor, with one line that says so.
+    const desdeOtroAnio = Boolean(pedido.desde) && pedido.desde.anio !== ejercicio;
+
+    let estado = base;
+    let decision = null;
+    let nota = "";
+    for (;;) {
+      estado = { ...base, indice: await indiceDe(ejercicio, institucional, clave) };
+      if (!vigente()) {
+        return;
+      }
+      decision = resolverPantalla(estado, clave);
+      if (decision.tipo === "saltar") {
+        clave = decision.clave;
+      } else if (decision.tipo === "ausente" && !desdeOtroAnio) {
+        nota = `Ese nivel no existe en ${ejercicio}; te llevamos al más cercano.`;
+        clave = ancestroQueExiste(estado.indice, clave) ?? "";
+      } else {
+        break;
+      }
+    }
+    ultimoAnio = ejercicio;
+
+    if (decision.tipo === "ausente") {
+      const ruta = { anio: ejercicio, clave, grupos: [], desde: pedido.desde };
+      escribirHistoria(modo, ruta);
+      const vista = vistaDeAusente(estado, clave, {
+        ejercicio: pedido.desde.anio, nombre: pedido.desde.nombre, monto: pedido.desde.monto,
+      });
+      pintarAusente(documento, vista);
+      anunciar(`${vista.nombre} no existe en el ejercicio ${ejercicio}`);
+      actual = { ruta, lugar: "ausente", pila: vista.pila, vista, indice: estado.indice };
+      return;
+    }
+
+    // A group that the data no longer has drops out of the pila. The route
+    // of the pila then differs from the entry, and the entry is replaced.
+    const pila = pilaDe(estado.indice, clave, grupos);
+    const ruta = { anio: ejercicio, ...rutaDePila(pila), desde: null };
+    escribirHistoria(modo, ruta);
+    const vista = { ...vistaDeNavegador(estado, pila), nota };
+    pintarNavegador(documento, vista);
+    anunciar(`${vista.titulo}. ${montoLargo(vista.total)} pesos.`);
+    actual = { ruta, lugar: "navegador", pila, vista, indice: estado.indice };
+  }
+
+  function ir(pedido, modo) {
     generacion += 1;
     const mia = generacion;
     const vigente = () => mia === generacion;
-
     // A stale run must write nothing, whether it succeeds or fails.
-    // A rejection throws at the await, so no vigente check runs on its own.
-    // The catch below adds that check, for a failure and not only for a
-    // success.
-    try {
-      const manifiesto = await cargarManifiesto();
-      if (!vigente()) {
-        return;
-      }
-
-      if (ventana.location.hash === RUTA_DE_FUENTES) {
-        mostrar(dibujarFuentes(vistaDeFuentes(manifiesto), documento),
-          "De dónde salen estos números");
-        return;
-      }
-
-      const disponibles = ejerciciosDisponibles(manifiesto);
-      const pedido = leerRuta(ventana.location.hash);
-      const ejercicio = disponibles.includes(pedido.ejercicio)
-        ? pedido.ejercicio
-        : ejercicioDeEntrada(disponibles);
-      const entrada = manifiesto.ejercicios
-        .find((fila) => fila.ejercicio === ejercicio);
-      const institucional = await cargarInstitucional(ejercicio);
-      if (!vigente()) {
-        return;
-      }
-      const base = { ejercicio, entrada, indice: institucional, disponibles };
-
-      // The visitor never lands on a nodo with one child. A chain that crosses
-      // the object level needs more than one pass, because the index of the next
-      // clave is not loaded yet. Repeat until the destino stops moving.
-      let clave = pedido.clave;
-      let estado = base;
-      let decision = null;
-      for (;;) {
-        estado = { ...base, indice: await indiceDe(ejercicio, institucional, clave) };
-        if (!vigente()) {
-          return;
-        }
-        decision = resolverPantalla(estado, clave, grupoOtros);
-        if (decision.tipo !== "saltar") {
-          break;
-        }
-        clave = decision.clave;
-      }
-      grupoOtros = decision.grupo ? grupoOtros : null;
-
-      // Replace, never push. A jumped clave and a missing year both rewrite the
-      // URL. A push would leave the skipped clave in the history, and Back would
-      // return there and jump forward again, with no way out.
-      const ruta = escribirRuta(ejercicio, clave);
-      if (ruta !== ventana.location.hash) {
-        historia.replaceState(null, "", ruta);
-      }
-
-      if (decision.tipo === "raiz") {
-        const vista = vistaDeRaiz(estado, decision.grupo);
-        mostrar(dibujarRaiz(vista, documento), resumen(vista));
-        ultimo = { ejercicio, clave: "", nombre: null, monto: null };
-        return;
-      }
-
-      if (decision.tipo === "ausente") {
-        const origen = ultimo && ultimo.clave === clave
-          ? { ejercicio: ultimo.ejercicio, monto: ultimo.monto, nombre: ultimo.nombre }
-          : { ejercicio };
-        const vista = vistaDeAusente(estado, clave, origen);
-        mostrar(dibujarAusente(vista, documento),
-          `${vista.nombre} no existe en el ejercicio ${vista.ejercicio}`);
-        return;
-      }
-
-      const vista = vistaDeNodo(estado, clave, decision.grupo);
-      mostrar(dibujarNodo(vista, documento), resumen(vista));
-      ultimo = {
-        ejercicio, clave, nombre: estado.indice[clave].n, monto: estado.indice[clave].d,
-      };
-    } catch (error) {
+    enCurso = correr(pedido, modo, vigente).catch((error) => {
       if (vigente()) {
         informar(error);
       }
-    }
-  }
-
-  async function manejarClick(evento) {
-    const anio = evento.target.closest("[data-anio]");
-    if (anio) {
-      // The arrow changes the exercise and nothing else: keep the clave that
-      // is already on screen.
-      const clave = leerRuta(ventana.location.hash).clave;
-      await irA(escribirRuta(Number(anio.dataset.anio), clave));
-      return;
-    }
-
-    const destinoEl = evento.target.closest("[data-destino]");
-    if (destinoEl) {
-      const destinos = destinoEl.dataset.destino.split(" ").filter(Boolean);
-      const pedido = leerRuta(ventana.location.hash);
-      if (destinos.length === 1) {
-        await irA(escribirRuta(pedido.ejercicio, destinos[0]));
-      } else {
-        // Several destinos mean the slice "otros": stay on this clave and
-        // redraw with only that group.
-        grupoOtros = {
-          ejercicio: pedido.ejercicio, deClave: pedido.clave, claves: destinos,
-        };
-        await dibujar();
-      }
-      return;
-    }
-
-    const claveEl = evento.target.closest("[data-clave]");
-    if (claveEl) {
-      grupoOtros = null;
-      const pedido = leerRuta(ventana.location.hash);
-      await irA(escribirRuta(pedido.ejercicio, claveEl.dataset.clave));
-    }
+    });
+    return enCurso;
   }
 
   function informar(error) {
-    // The exit of this screen is a button with data-clave, and never a link
-    // to "#/". A link to the route that is already on screen fires no event,
-    // so a second attempt from the home route would do nothing.
-    mostrar(dibujarError(vistaDeError(error), documento),
-      "No pudimos mostrar esta pantalla.");
+    pintarError(documento, vistaDeError(error));
+    anunciar("No pudimos mostrar esta pantalla.");
+    actual = { ruta: null, lugar: "error" };
   }
 
-  app.addEventListener("click", (evento) => {
-    manejarClick(evento).catch(informar);
-  });
+  // ---- The steps of the visitor. Every step pushes one entry (W6). ----
 
-  ventana.addEventListener("hashchange", () => {
-    dibujar().catch(informar);
-  });
+  function abrir(orden) {
+    if (actual?.lugar !== "navegador" || actual.vista.hoja) {
+      return enCurso;
+    }
+    const porcion = actual.pila.at(-1).porciones[orden];
+    if (!porcion) {
+      return enCurso;
+    }
+    const { anio, clave, grupos } = actual.ruta;
+    // UC-03: a group keeps the hash of its nodo, and its claves go to state.
+    return ir(porcion.esOtros
+      ? { anio, clave, grupos: [...grupos, porcion.destino], desde: null }
+      : { anio, clave: porcion.destino[0], grupos: [], desde: null }, "paso");
+  }
 
-  dibujar().catch(informar);
-  return { dibujar, manejarClick, informar };
-}
+  function subir(nivel) {
+    // On P2b the pila ends at the nearest ancestor, and every level of it
+    // is a way up. On P1 and P2 the last level is the screen on view.
+    if (!actual?.pila) {
+      return enCurso;
+    }
+    const limite = actual.lugar === "ausente" ? actual.pila.length : actual.pila.length - 1;
+    if (!(nivel >= 0 && nivel < limite)) {
+      return enCurso;
+    }
+    const arriba = rutaDePila(actual.pila.slice(0, nivel + 1));
+    return ir({ anio: actual.ruta.anio, ...arriba, desde: null }, "paso");
+  }
 
-function resumen(vista) {
-  return `${vista.titulo}. ${montoLargo(vista.total)} pesos.`;
+  function volver() {
+    // R10 and K1: one level up, or out of the group. W12: P2b has none.
+    if (actual?.lugar !== "navegador" || actual.pila.length < 2) {
+      return enCurso;
+    }
+    return subir(actual.pila.length - 2);
+  }
+
+  function cambiarAnio(anio) {
+    // R11: the path stays (C17), and W5: an open group closes.
+    if ((actual?.lugar !== "navegador" && actual?.lugar !== "ausente") || !anio) {
+      return enCurso;
+    }
+    const { clave } = actual.ruta;
+    let desde = null;
+    if (actual.lugar === "ausente") {
+      desde = actual.ruta.desde;
+    } else if (clave !== "") {
+      const nodo = actual.indice[clave];
+      desde = { anio: actual.ruta.anio, nombre: nodo.n, monto: nodo.d };
+    }
+    return ir({ anio, clave, grupos: [], desde }, "paso");
+  }
+
+  function irAClave(clave) {
+    return ir({ anio: ultimoAnio, clave, grupos: [], desde: null }, "paso");
+  }
+
+  function conmutar(interruptor) {
+    // W9: a switch changes the look, never the place, and writes no entry.
+    tema = cambiarTema(tema, interruptor, almacen);
+    const aplicar = () => aplicarTema(documento, tema);
+    if (!documento.startViewTransition || prefiere("(prefers-reduced-motion: reduce)")) {
+      aplicar();
+      return;
+    }
+    // R13: a crossfade of 200ms. A hidden tab skips the transition, and the
+    // change still applies. The two promises then reject, and nobody needs
+    // to hear it.
+    const transicion = documento.startViewTransition(aplicar);
+    transicion.ready.catch(() => {});
+    transicion.finished.catch(() => {});
+  }
+
+  function manejarClick(evento) {
+    const objetivo = evento.target;
+    if (!objetivo?.closest) {
+      return enCurso;
+    }
+    const control = (atributo) => objetivo.closest(`[${atributo}]`);
+    const valor = (atributo) => control(atributo)?.getAttribute(atributo);
+    // A link opened with a modifier goes to a new tab, as the visitor asks.
+    const enOtraPestania = evento.metaKey || evento.ctrlKey || evento.shiftKey;
+
+    if (control("data-expandir")) {
+      expandirMiga(control("data-expandir"));
+      return enCurso;
+    }
+    if (control("data-interruptor")) {
+      conmutar(valor("data-interruptor"));
+      return enCurso;
+    }
+    if (control("data-abrir")) {
+      return abrir(Number(valor("data-abrir")));
+    }
+    if (control("data-subir")) {
+      return subir(Number(valor("data-subir")));
+    }
+    if (control("data-anio")) {
+      return cambiarAnio(Number(valor("data-anio")));
+    }
+    if (control("data-clave") && !enOtraPestania) {
+      evento.preventDefault?.();
+      return irAClave(valor("data-clave"));
+    }
+    if (control("data-fuentes") && !enOtraPestania) {
+      evento.preventDefault?.();
+      return ir({ fuentes: true }, "paso");
+    }
+    return enCurso;
+  }
+
+  function manejarTecla(evento) {
+    if (evento.altKey || evento.ctrlKey || evento.metaKey || evento.shiftKey) {
+      return enCurso;
+    }
+    if (evento.key === "Escape") {
+      return volver();
+    }
+    // K2: the arrow at an end has no year, so the key does nothing there.
+    if (evento.key === "ArrowLeft") {
+      return cambiarAnio(actual?.vista?.anterior);
+    }
+    if (evento.key === "ArrowRight") {
+      return cambiarAnio(actual?.vista?.siguiente);
+    }
+    return enCurso;
+  }
+
+  function alCambiarLaEntrada() {
+    const llave = llaveDe(ventana.location.hash, historia.state);
+    if (llave === atendida) {
+      return enCurso;
+    }
+    atendida = llave;
+    return ir(rutaDeEntrada(ventana.location.hash, historia.state), "carga");
+  }
+
+  documento.addEventListener("click", (evento) => { manejarClick(evento); });
+  documento.addEventListener("keydown", (evento) => { manejarTecla(evento); });
+  ventana.addEventListener("popstate", alCambiarLaEntrada);
+  ventana.addEventListener("hashchange", alCambiarLaEntrada);
+
+  alCambiarLaEntrada();
+  return { ir, informar, listo: () => enCurso };
 }
 
 if (typeof document !== "undefined") {
