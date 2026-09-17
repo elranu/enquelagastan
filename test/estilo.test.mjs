@@ -7,16 +7,56 @@ import { CLAVE_BILLETES, CLAVE_OSCURO } from "../site/app/tema.js";
 const leer = (ruta) => readFileSync(new URL(ruta, import.meta.url), "utf8");
 
 // Every block of tokens of estilo.css, by selector: { ":root": { fondo: "#F2F3EF" } }.
+// A value can be a literal hex or a var(--otro-nombre); resolverPaleta below
+// follows the reference.
 function bloques(css) {
   const salida = {};
   for (const [, selector, cuerpo] of css.matchAll(/(:root(?:\[[^\]]+\])*)\s*\{([^}]*)\}/g)) {
     const tokens = salida[selector] ?? {};
-    for (const [, nombre, valor] of cuerpo.matchAll(/--([\w-]+):\s*(#[0-9A-Fa-f]{6})\s*;/g)) {
+    for (const [, nombre, valor] of cuerpo.matchAll(/--([\w-]+):\s*(#[0-9A-Fa-f]{6}|var\(--[\w-]+\))\s*;/g)) {
       tokens[nombre] = valor;
     }
     salida[selector] = tokens;
   }
   return salida;
+}
+
+// R22: the dark palette lives once, under html { --nombre-oscuro: #hex; },
+// on purpose outside the selectors that bloques() reads (see estilo.css).
+// This reads every custom property of the file, by name, with no regard for
+// its selector, so a var(--x-oscuro) reference can resolve to its value.
+function variablesGlobales(css) {
+  const mapa = {};
+  for (const [, nombre, valor] of css.matchAll(/--([\w-]+):\s*(#[0-9A-Fa-f]{6})\s*;/g)) {
+    mapa[nombre] = valor;
+  }
+  return mapa;
+}
+
+function resolverPaleta(paleta, variables) {
+  const resuelta = {};
+  for (const [nombre, valor] of Object.entries(paleta)) {
+    const referencia = /^var\(--([\w-]+)\)$/.exec(valor);
+    resuelta[nombre] = referencia ? variables[referencia[1]] : valor;
+  }
+  return resuelta;
+}
+
+// The four palettes of R16, resolved to literal hex values. Shared by the
+// two tests that need them, so a token that only a "billetes" block touches
+// never slips past either one (fold-in item 2).
+function construirPaletas(css) {
+  const bloquesCss = bloques(css);
+  const variables = variablesGlobales(css);
+  const paleta = (...partes) => resolverPaleta(
+    partes.reduce((todo, parte) => ({ ...todo, ...bloquesCss[parte] }), {}), variables,
+  );
+  return {
+    claro: paleta(":root"),
+    oscuro: paleta(":root", TEMA),
+    "billetes claro": paleta(":root", VISTA),
+    "billetes oscuro": paleta(":root", TEMA, VISTA, AMBOS),
+  };
 }
 
 // WCAG 2.x: the relative luminance of an sRGB colour, and the ratio of two.
@@ -34,17 +74,13 @@ function contraste(uno, otro) {
 }
 
 const TEMA = ':root[data-tema="oscuro"]';
+const SISTEMA_OSCURO = ':root[data-tema="sistema"]';
 const VISTA = ':root[data-vista="billetes"]';
 const AMBOS = ':root[data-vista="billetes"][data-tema="oscuro"]';
 
 test("las cuatro paletas cumplen el contraste de cada par", () => {
-  const css = bloques(leer("../site/estilo.css"));
-  const paletas = {
-    claro: { ...css[":root"] },
-    oscuro: { ...css[":root"], ...css[TEMA] },
-    "billetes claro": { ...css[":root"], ...css[VISTA] },
-    "billetes oscuro": { ...css[":root"], ...css[TEMA], ...css[VISTA], ...css[AMBOS] },
-  };
+  const css = leer("../site/estilo.css");
+  const paletas = construirPaletas(css);
   const porciones = ["c0", "c1", "c2", "c3", "c4", "c5", "c6", "otros"];
   const fallas = [];
   for (const [nombre, paleta] of Object.entries(paletas)) {
@@ -58,8 +94,9 @@ test("las cuatro paletas cumplen el contraste de cada par", () => {
       }
     }
     for (const suelo of ["fondo", "panel", "hover"]) {
-      // Every text holds 4.5:1, on a row under the pointer too.
-      for (const token of ["texto", "tenue", "acento"]) {
+      // Every text holds 4.5:1, on a row under the pointer too. R25: --dato
+      // (the line of the execution and the deviation) holds it too.
+      for (const token of ["texto", "tenue", "acento", "dato"]) {
         const razon = contraste(paleta[token], paleta[suelo]);
         if (!(razon >= 4.5)) {
           fallas.push(`${nombre}: --${token} on --${suelo} is ${razon.toFixed(2)}`);
@@ -68,7 +105,14 @@ test("las cuatro paletas cumplen el contraste de cada par", () => {
     }
   }
   assert.deepEqual(fallas, []);
-  assert.equal(Object.keys(paletas["billetes oscuro"]).length, 16, "every palette has 16 tokens");
+  assert.equal(Object.keys(paletas["billetes oscuro"]).length, 17, "every palette has 17 tokens");
+
+  // R22: the system dark path gives the same tokens as the forced dark path,
+  // because both only read the dark palette that html {} holds once.
+  const bloquesCss = bloques(css);
+  const variables = variablesGlobales(css);
+  const sistemaOscuro = resolverPaleta({ ...bloquesCss[":root"], ...bloquesCss[SISTEMA_OSCURO] }, variables);
+  assert.deepEqual(sistemaOscuro, paletas.oscuro);
 });
 
 test("la pista del interruptor apagado tiene 3:1 contra el fondo de la barra", () => {
@@ -79,11 +123,9 @@ test("la pista del interruptor apagado tiene 3:1 contra el fondo de la barra", (
   const apagada = /\.interruptor\[aria-checked="false"\]\s*\.pista\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
   const token = /var\(--([\w-]+)\)/.exec(apagada)?.[1];
   assert.ok(token, "the off track needs a border or shadow from a palette token");
-  const bloquesCss = bloques(css);
-  const paletas = {
-    claro: bloquesCss[":root"],
-    oscuro: { ...bloquesCss[":root"], ...bloquesCss[TEMA] },
-  };
+  // Fold-in item 2: reuse the four-palette map, so a later token in a
+  // "billetes" block cannot slip past.
+  const paletas = construirPaletas(css);
   for (const [nombre, paleta] of Object.entries(paletas)) {
     const razon = contraste(paleta[token], paleta.fondo);
     assert.ok(razon >= 3, `${nombre}: --${token} on --fondo is ${razon.toFixed(2)}`);
@@ -92,14 +134,13 @@ test("la pista del interruptor apagado tiene 3:1 contra el fondo de la barra", (
 
 test("el script de index.html lee las mismas claves que tema.js", () => {
   // The inline script applies the look before the first paint. A key that
-  // differs from tema.js would flash the default look on every visit.
+  // differs from tema.js would flash the default look on every visit. R22:
+  // "sistema" is a value like the others, and estilo.css alone answers
+  // prefers-color-scheme, so the script needs no matchMedia at all.
   const pagina = leer("../site/index.html");
   assert.ok(pagina.includes(`"${CLAVE_OSCURO}"`));
   assert.ok(pagina.includes(`"${CLAVE_BILLETES}"`));
-  assert.match(pagina, /prefers-color-scheme: dark/);
-  // A bare matchMedia(...) throws when the browser has none. The call must
-  // be guarded, or the script never reaches either setAttribute below it.
-  assert.match(pagina, /matchMedia\?\.\(/);
+  assert.match(pagina, /data-tema="sistema"/, "sistema is the first value, and it wins");
 });
 
 test("index.html trae cada id que los pintores y app.js leen, y sus atributos", () => {
@@ -111,7 +152,10 @@ test("index.html trae cada id que los pintores y app.js leen, y sus atributos", 
   const pagina = leer("../site/index.html");
   const codigo = leer("../site/app/pantalla.js") + leer("../site/app/app.js");
   const ids = new Set();
-  for (const [, id] of codigo.matchAll(/(?:parte\(documento,\s*|getElementById\()"([\w-]+)"/g)) {
+  // escribir(documento, id, ...) also reaches the DOM by id (fold-in item
+  // 1): subtitulo, detalle, fuente-dialogo-medida and codigos read no other
+  // way, and this alternation missed all four before.
+  for (const [, id] of codigo.matchAll(/(?:parte\(documento,\s*|getElementById\(|escribir\(documento,\s*)"([\w-]+)"/g)) {
     ids.add(id);
   }
   // pintarBarra reads these two from an array of pairs, not a literal call.
@@ -124,15 +168,24 @@ test("index.html trae cada id que los pintores y app.js leen, y sus atributos", 
 
   assert.match(pagina, /id="sitio"[^>]*data-clave="/, "the site name is a data-clave control");
   assert.match(pagina, /id="fuentes-enlace"[^>]*data-fuentes="/, "app.js reads data-fuentes");
-  for (const interruptor of ["oscuro", "billetes"]) {
-    assert.match(pagina,
-      new RegExp(`id="${interruptor}"[^>]*role="switch"[^>]*data-interruptor="${interruptor}"`),
-      `${interruptor} must be a switch that names itself`);
-  }
+  // R22: "tema" cycles three states, so it is a plain button, not a switch.
+  assert.match(pagina, /id="tema"[^>]*data-interruptor="tema"/, "tema names itself");
+  assert.doesNotMatch(pagina, /id="tema"[^>]*role="switch"/, "a switch has two states, tema has three");
+  // R23: "billetes" keeps its two states and its role.
+  assert.match(pagina,
+    /id="billetes"[^>]*role="switch"[^>]*data-interruptor="billetes"/,
+    "billetes must be a switch that names itself");
   assert.match(pagina, /id="grafico"[^>]*aria-hidden="true"/, "the chart is decorative");
   assert.match(pagina, /id="total"[^>]*aria-hidden="true"/,
     "the odometer is decorative; total-texto reads for it");
   assert.match(pagina, /id="aviso"[^>]*role="status"/, "the live region announces politely");
+  // R22: the foot shows one line, always, and it opens the dialog with the
+  // rest of the source (INV-03: the name of the source is visible with no
+  // action).
+  assert.match(pagina,
+    /id="fuente-control"[^>]*data-abrir-fuente=""[^>]*>\s*Fuente: Presupuesto Abierto, Ministerio de Economía\.\s*</,
+    "the foot names the source in one line, with no action needed to see it");
+  assert.match(pagina, /<dialog[^>]*id="fuente-dialogo"/, "R22: a native dialog, no library");
 });
 
 test("la pagina no carga nada de otro servidor", () => {

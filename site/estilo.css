@@ -15,6 +15,9 @@
   --acento: #4B3A8C;
   --foco: #4B3A8C;
   --hover: #E4E6E0;
+  /* R25: the line of the execution and the deviation carries no judgement,
+     so it gets its own token, never --tenue, and one colour in every case. */
+  --dato: #4B3A8C;
   --c0: #1F4E79;
   --c1: #B23A48;
   --c2: #2E7D5B;
@@ -25,23 +28,75 @@
   --otros: #7A7F85;
 }
 
+/* R22: the values of the dark palette live here once, under their own
+   names. This selector is "html", not ":root", on purpose: the two
+   selectors below only point at these tokens with var(), so a value never
+   repeats, and test/estilo.test.mjs never mistakes this block for a palette
+   of its own. */
+html {
+  --fondo-oscuro: #0F1724;
+  --panel-oscuro: #172234;
+  --texto-oscuro: #E9EDF3;
+  --tenue-oscuro: #9AA7B9;
+  --regla-oscuro: #2A3950;
+  --acento-oscuro: #B29CEE;
+  --foco-oscuro: #FFFFFF;
+  --hover-oscuro: #213049;
+  --dato-oscuro: #B29CEE;
+  --c0-oscuro: #6DB3EC;
+  --c1-oscuro: #F0A35E;
+  --c2-oscuro: #79CF8A;
+  --c3-oscuro: #E27C9C;
+  --c4-oscuro: #B29CEE;
+  --c5-oscuro: #5CCBC2;
+  --c6-oscuro: #E3CD68;
+  --otros-oscuro: #7D8898;
+}
+
+/* R22: the forced dark look. It only reads the values above. */
 :root[data-tema="oscuro"] {
-  --fondo: #0F1724;
-  --panel: #172234;
-  --texto: #E9EDF3;
-  --tenue: #9AA7B9;
-  --regla: #2A3950;
-  --acento: #B29CEE;
-  --foco: #FFFFFF;
-  --hover: #213049;
-  --c0: #6DB3EC;
-  --c1: #F0A35E;
-  --c2: #79CF8A;
-  --c3: #E27C9C;
-  --c4: #B29CEE;
-  --c5: #5CCBC2;
-  --c6: #E3CD68;
-  --otros: #7D8898;
+  --fondo: var(--fondo-oscuro);
+  --panel: var(--panel-oscuro);
+  --texto: var(--texto-oscuro);
+  --tenue: var(--tenue-oscuro);
+  --regla: var(--regla-oscuro);
+  --acento: var(--acento-oscuro);
+  --foco: var(--foco-oscuro);
+  --hover: var(--hover-oscuro);
+  --dato: var(--dato-oscuro);
+  --c0: var(--c0-oscuro);
+  --c1: var(--c1-oscuro);
+  --c2: var(--c2-oscuro);
+  --c3: var(--c3-oscuro);
+  --c4: var(--c4-oscuro);
+  --c5: var(--c5-oscuro);
+  --c6: var(--c6-oscuro);
+  --otros: var(--otros-oscuro);
+}
+
+/* R22: "sistema" follows the system. It stays the light default of :root
+   until the system itself prefers dark, and then it gives the exact same
+   tokens as the forced dark look, from the same source. */
+@media (prefers-color-scheme: dark) {
+  :root[data-tema="sistema"] {
+    --fondo: var(--fondo-oscuro);
+    --panel: var(--panel-oscuro);
+    --texto: var(--texto-oscuro);
+    --tenue: var(--tenue-oscuro);
+    --regla: var(--regla-oscuro);
+    --acento: var(--acento-oscuro);
+    --foco: var(--foco-oscuro);
+    --hover: var(--hover-oscuro);
+    --dato: var(--dato-oscuro);
+    --c0: var(--c0-oscuro);
+    --c1: var(--c1-oscuro);
+    --c2: var(--c2-oscuro);
+    --c3: var(--c3-oscuro);
+    --c4: var(--c4-oscuro);
+    --c5: var(--c5-oscuro);
+    --c6: var(--c6-oscuro);
+    --otros: var(--otros-oscuro);
+  }
 }
 
 /* R14: the colours of the peso bills. */
@@ -126,6 +181,7 @@
 }
 
 :root[data-tema="oscuro"] { color-scheme: dark; }
+:root[data-tema="sistema"] { color-scheme: light dark; }
 
 :root[data-vista="billetes"] {
   --sans: "Archivo", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -279,14 +335,19 @@ h1:focus { outline: none; }
 
 .interruptores { display: flex; gap: 16px; flex: none; }
 
+/* R22, R23: an icon control with a hit area of 44x44px or more. */
 .interruptor {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  min-width: 44px;
   min-height: 44px;
   padding: 0 6px;
   border-radius: 8px;
 }
+
+.interruptor svg { width: 20px; height: 20px; }
 
 .pista {
   position: relative;
@@ -378,7 +439,11 @@ h1 {
 /* R14: the sentence belongs to the view "Billetes". */
 :root[data-vista="simple"] .frase { display: none; }
 
-.subtitulo, .detalle, .nota p { margin: 0; color: var(--tenue); }
+.subtitulo, .nota p { margin: 0; color: var(--tenue); }
+
+/* R25: the line of the execution and the deviation stands apart from the
+   secondary text, with one colour for every case (C19: no judgement). */
+.detalle { margin: 0; color: var(--dato); }
 
 .nota p { max-width: 38rem; text-wrap: pretty; }
 
@@ -556,13 +621,46 @@ h1 {
 
 .tira span { height: var(--alto-de-cifra); line-height: var(--alto-de-cifra); }
 
-.fuente, .codigos, .enlaces { margin: 8px 0 0; color: var(--tenue); overflow-wrap: anywhere; }
+/* R22: the source is now one control at the foot of the tape. */
+.fuente-control {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 6px 0;
+  text-align: left;
+  color: var(--tenue);
+  text-decoration: underline;
+  text-decoration-color: var(--regla);
+  text-underline-offset: 3px;
+}
+
+/* R22: the dialog holds the measure, the file, the download, the link to
+   P4 and the codes (C16) that the foot held before. */
+.fuente-dialogo {
+  max-width: 32rem;
+  margin: auto;
+  padding: 24px 28px;
+  border: 1px solid var(--regla);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--texto);
+}
+
+.fuente-dialogo[open] { display: flex; flex-direction: column; gap: 12px; }
+
+.fuente-dialogo h2 { margin: 0; font-size: 20px; }
+
+#fuente-dialogo-medida { margin: 0; color: var(--tenue); }
+
+.codigos, .enlaces { margin: 0; color: var(--tenue); overflow-wrap: anywhere; }
 
 .codigos { font: 13px/1.5 var(--mono); }
 
 .enlaces { display: flex; flex-wrap: wrap; gap: 4px 20px; }
 
 .enlaces a { display: inline-flex; align-items: center; min-height: 24px; }
+
+#fuente-dialogo-cerrar { align-self: flex-end; }
 
 /* ---- The slide of a year (R11) ---------------------------------------------- */
 
