@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>En qué la gastan</title>
+<script>
+// Apply the stored switches before the first paint, so a theme never flashes.
+(() => {
+  const leer = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+  const oscuro = leer("mezcla-oscuro");
+  const d = document.documentElement;
+  d.dataset.oscuro = oscuro == null ? String(matchMedia("(prefers-color-scheme: dark)").matches) : oscuro;
+  d.dataset.billetes = leer("mezcla-billetes") ?? "false";
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Archivo:wdth,wght@62..125,400..700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Light: the tokens of La cinta. */
+  --fondo: #F2F3EF; --panel: #FBFBF8; --texto: #1C1F22; --tenue: #555B61;
+  --regla: #D3D6CF; --acento: #4B3A8C; --foco: #4B3A8C; --hover: #E4E6E0;
+  --c0: #1F4E79; --c1: #B23A48; --c2: #2E7D5B; --c3: #B7791F; --c4: #5B4B8A; --c5: #2F7A8C; --c6: #8A5A44; --otros: #7A7F85;
+  --sans: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --ancho-titulo: 100%; --ancho-num: 100%;
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+  color-scheme: light;
+}
+/* Dark: the tokens of Anillos. */
+[data-oscuro="true"] {
+  --fondo: #0F1724; --panel: #172234; --texto: #E9EDF3; --tenue: #9AA7B9;
+  --regla: #2A3950; --acento: #B29CEE; --foco: #FFFFFF; --hover: #213049;
+  --c0: #6DB3EC; --c1: #F0A35E; --c2: #79CF8A; --c3: #E27C9C; --c4: #B29CEE; --c5: #5CCBC2; --c6: #E3CD68; --otros: #7D8898;
+  color-scheme: dark;
+}
+/* Billetes: the colors of the peso and Archivo. */
+[data-billetes="true"] {
+  --c0: #C8612B; --c1: #3F7F4F; --c2: #2F5FA8; --c3: #6E4E9E; --c4: #B5476C; --c5: #2E8BB0; --c6: #9A7A2A;
+  --sans: "Archivo", system-ui, sans-serif; --mono: "Archivo", system-ui, sans-serif;
+  --ancho-titulo: 112%; --ancho-num: 80%;
+}
+/* The bills made lighter for the dark ground; each holds more than 3:1 on #0F1724. */
+[data-billetes="true"][data-oscuro="true"] {
+  --c0: #F08A4E; --c1: #6FBF7F; --c2: #7FA6E8; --c3: #B79AE6; --c4: #E48AAA; --c5: #5CC3E6; --c6: #D9B55A;
+}
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 200ms; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--fondo); color: var(--texto); font: 16px/1.4 var(--sans); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; border-radius: 4px; }
+a { color: var(--acento); }
+
+.app { height: 100dvh; display: grid; grid-template-rows: auto 1fr; }
+.barra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; padding: 10px 24px; border-bottom: 1px solid var(--regla); min-width: 0; }
+.sitio { font-weight: 600; color: var(--texto); text-decoration: none; padding: 4px 6px; border-radius: 6px; flex: none; }
+.sitio:hover { background: var(--hover); }
+.anios { display: flex; align-items: center; gap: 4px; flex: none; }
+.anios button { width: 40px; height: 40px; border-radius: 8px; font-size: 22px; }
+.anios button:hover:not(:disabled), .miga button:hover, .volver:hover { background: var(--hover); }
+.anios button:disabled { opacity: .3; cursor: default; }
+.anio { font: 600 20px var(--mono); font-stretch: var(--ancho-num); font-variant-numeric: tabular-nums; min-width: 3.2em; text-align: center; }
+.cabeza { display: flex; align-items: flex-start; gap: 8px; }
+.volver { flex: none; display: flex; align-items: center; gap: 6px; min-width: 44px; min-height: 44px; margin: -4px 0 0 -10px; padding: 0 12px 0 8px; border-radius: 8px; font-weight: 500; }
+.volver svg { width: 20px; height: 20px; }
+.volver[hidden] { display: none; }
+.torta h1:focus { outline: none; }
+.miga { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; min-width: 0; margin: 0; padding: 0; list-style: none; }
+.miga li { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.miga li + li::before { content: "›"; color: var(--tenue); }
+.miga button { padding: 4px 6px; border-radius: 6px; color: var(--tenue); text-decoration: underline; text-decoration-color: var(--regla); text-underline-offset: 3px; max-width: 28ch; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.miga button:hover { color: var(--texto); }
+.flex { flex: 1; }
+.interruptores { display: flex; gap: 16px; flex: none; }
+.interruptor { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 6px; border-radius: 8px; }
+.interruptor:hover { background: var(--hover); }
+.pista { width: 34px; height: 20px; border-radius: 10px; background: var(--regla); position: relative; transition: background-color 200ms; }
+.pista::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--panel); box-shadow: 0 1px 2px #0004; transition: transform 200ms var(--ease); }
+.interruptor[aria-checked="true"] .pista { background: var(--acento); }
+.interruptor[aria-checked="true"] .pista::after { transform: translateX(14px); }
+
+.panes { display: grid; grid-template-columns: 55fr 45fr; min-height: 0; }
+.torta { display: grid; grid-template-rows: auto 1fr; padding: 20px 32px 24px; min-height: 0; overflow: hidden; gap: 12px; }
+.torta h1 { font-size: 28px; font-weight: 600; font-stretch: var(--ancho-titulo); line-height: 1.2; margin: 0; text-wrap: balance; }
+.torta .de, .torta .detalle { color: var(--tenue); margin: 4px 0 0; }
+.torta .de:empty, .torta .detalle:empty { display: none; }
+.frase { margin: 6px 0 0; font-size: 20px; font-stretch: var(--ancho-titulo); line-height: 1.3; text-wrap: balance; }
+.frase b { font-stretch: var(--ancho-num); font-variant-numeric: tabular-nums; }
+[data-billetes="false"] .frase { display: none; }
+.aviso { color: var(--acento); margin: 4px 0 0; }
+.aviso:empty { display: none; }
+.caja { min-height: 0; container-type: size; display: grid; place-items: center; }
+.lienzo { position: relative; width: min(100cqw, 100cqh); aspect-ratio: 1; }
+svg { width: 100%; height: 100%; display: block; overflow: visible; }
+svg path { cursor: pointer; transition: filter 150ms ease; }
+svg path.ciego { cursor: default; pointer-events: none; }
+svg path.golpe { fill: none; stroke: transparent; stroke-width: 24px; pointer-events: stroke; }
+svg path.caliente { filter: brightness(1.15); }
+.disco { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; }
+.disco .monto { --fs: 34px; white-space: nowrap; }
+.disco .grande { font: 600 var(--fs)/1 var(--mono); font-stretch: var(--ancho-num); font-variant-numeric: tabular-nums; }
+.disco .chico { color: var(--tenue); font-size: calc(var(--fs) * 0.45); line-height: 1.2; margin-top: calc(var(--fs) * 0.12); }
+
+.cinta { background: var(--panel); border-left: 1px solid var(--regla); display: grid; grid-template-rows: 1fr auto; min-height: 0; }
+.renglones { overflow-y: auto; margin: 0; padding: 12px 0; list-style: none; }
+.renglones li { border-bottom: 1px dashed var(--regla); }
+.renglones button { width: 100%; display: grid; grid-template-columns: 14px 1fr auto; column-gap: 12px; padding: 10px 28px; text-align: left; }
+.renglones button:hover, .renglones button.caliente { background: var(--hover); }
+.renglones .color { width: 14px; height: 14px; border-radius: 3px; margin-top: 4px; grid-row: span 2; }
+.renglones .nombre { font-weight: 500; }
+.renglones .pct, .renglones .corto { font-family: var(--mono); font-stretch: var(--ancho-num); font-variant-numeric: tabular-nums; text-align: right; }
+.renglones .pct { font-weight: 600; }
+.renglones .corto { grid-column: 2 / 4; color: var(--tenue); }
+.renglones .fin { padding: 16px 28px; color: var(--tenue); border: 0; }
+.imprime { animation: imprime 180ms var(--ease) both; }
+@keyframes imprime { from { opacity: 0; transform: translateY(-6px); } }
+
+.pie { padding: 12px 28px 16px; border-top: 4px double var(--texto); }
+.rotulo { color: var(--tenue); }
+.total { font: 600 30px/1.2 var(--mono); font-stretch: var(--ancho-num); font-variant-numeric: tabular-nums; display: flex; justify-content: flex-end; overflow: hidden; height: 1.2em; white-space: nowrap; }
+.total .col { display: inline-block; height: 1.2em; overflow: hidden; }
+.total .tira { display: flex; flex-direction: column; }
+.total .tira span { height: 1.2em; }
+.total .unidad { font-size: 16px; font-weight: 400; margin-left: .5em; align-self: flex-end; line-height: 1.9; }
+.talon { margin: 8px 0 0; color: var(--tenue); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.desliza { animation: desliza 420ms var(--ease) both; }
+@keyframes desliza { from { opacity: 0; transform: translateX(var(--desde)); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .imprime { animation: none; }
+  .desliza { animation: funde 150ms linear both; }
+  @keyframes funde { from { opacity: 0; } }
+}
+
+@media (max-width: 800px) {
+  .app { height: auto; display: block; }
+  .barra { padding: 8px 16px; gap: 4px 12px; }
+  .flex { flex-basis: 100%; height: 0; }
+  .panes { display: block; }
+  .torta { padding: 16px; }
+  .torta h1 { font-size: 22px; }
+  .caja { height: min(92vw, 420px); }
+  .cinta { border-left: 0; border-top: 1px solid var(--regla); }
+  .renglones button, .renglones .fin { padding: 10px 16px; }
+  .pie { padding: 12px 16px 24px; }
+  .total { font-size: 22px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="barra">
+    <a class="sitio" id="sitio" href="#">En qué la gastan</a>
+    <nav aria-label="Recorrido"><ol class="miga" id="miga"></ol></nav>
+    <span class="flex"></span>
+    <div class="anios" id="anios">
+      <button id="anioAntes" aria-label="Año anterior">‹</button>
+      <span class="anio" id="anioTexto"></span>
+      <button id="anioDespues" aria-label="Año siguiente">›</button>
+    </div>
+    <div class="interruptores">
+      <button class="interruptor" role="switch" aria-checked="false" id="oscuro"><span class="pista" aria-hidden="true"></span>Oscuro</button>
+      <button class="interruptor" role="switch" aria-checked="false" id="billetes"><span class="pista" aria-hidden="true"></span>Billetes</button>
+    </div>
+  </header>
+  <main class="panes" id="panes">
+    <section class="torta">
+      <div>
+        <div class="cabeza">
+          <button class="volver" id="volver" hidden><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16 10H4m5-5-5 5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Volver</button>
+          <h1 id="titulo" tabindex="-1"></h1>
+        </div>
+        <p class="frase" id="frase"></p>
+        <p class="de" id="de"></p>
+        <p class="detalle" id="detalle"></p>
+        <p class="aviso" id="aviso"></p>
+      </div>
+      <div class="caja">
+        <div class="lienzo">
+          <svg id="grafico" viewBox="-1 -1 2 2" aria-hidden="true"><g id="anillos"></g></svg>
+          <div class="disco" aria-hidden="true">
+            <div class="monto" id="discoMonto"><div class="grande"></div><div class="chico"></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="cinta" aria-label="Partidas">
+      <ul class="renglones" id="renglones"></ul>
+      <div class="pie">
+        <div class="rotulo" id="rotulo"></div>
+        <div class="total" id="total" aria-hidden="true"></div>
+        <span class="sr" id="totalTexto"></span>
+        <p class="talon" id="talon"></p>
+      </div>
+    </section>
+  </main>
+  <p class="sr" aria-live="polite" id="vivo"></p>
+</div>
+
+<script type="module">
+import { raices, hijosDe, saltarHijoUnico, totalDe } from "../../../../site/app/arbol.js";
+import { porcionesDe } from "../../../../site/app/porciones.js";
+import { montoLargo, montoCorto, porcentaje, fechaCorta, pesosDe, conSigno } from "../../../../site/app/formato.js";
+import { ancestroQueExiste, leerRuta, escribirRuta } from "../../../../site/app/ruta.js";
+import { desviacionDe, ejecucionDe, REASIGNACION_INTERNA, SOBRE_LO_APROBADO } from "../../../../site/app/desviacion.js";
+
+const TAU = Math.PI * 2;
+const DURA = 550;
+const RADIOS = { main: [0.44, 0.80], prev: [0.845, 0.895], first: [0.94, 0.955] };
+const reducido = matchMedia("(prefers-reduced-motion: reduce)");
+const $ = (id) => document.getElementById(id);
+const color = (q, i) => q.esOtros ? "var(--otros)" : `var(--c${i % 7})`;
+const llano = (x) => x.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+
+// ---------- switches ----------
+function interruptor(id, clave) {
+  const b = $(id), d = document.documentElement;
+  const pintar = () => b.setAttribute("aria-checked", d.dataset[id]);
+  pintar();
+  b.onclick = () => {
+    const valor = String(d.dataset[id] !== "true");
+    const cambiar = () => { d.dataset[id] = valor; pintar(); };
+    // A 200ms crossfade of the whole page; without the API the colors change at once.
+    if (document.startViewTransition && !reducido.matches) {
+      // A hidden tab aborts the transition; the change itself still applies.
+      const vt = document.startViewTransition(cambiar);
+      vt.ready.catch(() => {}); vt.finished.catch(() => {});
+    } else cambiar();
+    try { localStorage.setItem(clave, valor); } catch {}
+  };
+}
+interruptor("oscuro", "mezcla-oscuro");
+interruptor("billetes", "mezcla-billetes");
+
+// ---------- data ----------
+const manifiesto = await fetch("../../../../site/data/manifest.json").then((r) => r.json());
+const anios = manifiesto.ejercicios.filter((e) => e.en_este_artefacto !== false).map((e) => e.ejercicio).sort();
+const cache = new Map();
+const cargar = (a) => { if (!cache.has(a)) cache.set(a, fetch(`../../../../site/data/${a}/institucional.json`).then((r) => r.json())); return cache.get(a); };
+const ejercicio = () => manifiesto.ejercicios.find((x) => x.ejercicio === anio);
+
+let anio = anios.includes(2025) ? 2025 : anios.at(-1);
+let indice = await cargar(anio);
+let pila = [];
+
+function vista(clave, claves, otros = false) {
+  const { total, porciones } = porcionesDe(indice, claves, "d");
+  const nodo = indice[clave];
+  const v = { clave, claves, otros, porciones, elegida: null, total: claves.length ? total : nodo.d,
+    nombre: otros ? "Otros" : clave === "" ? "Inicio" : nodo.n };
+  // At the root, the headline is the audited pesos of the manifest; the rows of the file are rounded to the peso.
+  if (clave === "" && !otros) {
+    const e = ejercicio();
+    v.coincide = e.verificado && Math.abs(pesosDe(v.total) - e.total_devengado) <= claves.length;
+    if (v.coincide) v.total = e.total_devengado / 1e6;
+  }
+  return v;
+}
+// The last institutional level lists object codes that are not in institucional.json.
+const vistaDe = (clave) => vista(clave, clave === "" ? raices(indice) : hijosDe(indice, clave).filter((c) => indice[c]));
+const saltar = (clave) => ancestroQueExiste(indice, saltarHijoUnico(indice, clave)) ?? "";
+const llave = (nivel, p) => `${nivel}:${p.destino.join("|")}`;
+const contiene = (destino, objetivo) => objetivo === destino || objetivo.startsWith(destino + "-");
+
+function pilaHasta(objetivo) {
+  const salida = [vistaDe("")];
+  objetivo = objetivo === "" ? "" : saltar(objetivo);
+  while (salida.at(-1).clave !== objetivo || salida.at(-1).otros) {
+    const arriba = salida.at(-1);
+    const p = arriba.porciones.find((q) => q.destino.some((d) => contiene(d, objetivo)));
+    if (!p) break;
+    salida.push(siguiente(arriba, salida.length - 1, p));
+  }
+  return salida;
+}
+function siguiente(arriba, nivel, p) {
+  arriba.elegida = llave(nivel, p);
+  return p.esOtros ? vista(arriba.clave, p.destino, true) : vistaDe(saltar(p.destino[0]));
+}
+function tituloDe(pos) {
+  const v = pila[pos];
+  if (pos === 0) return "En qué la gastó el Estado nacional";
+  if (!v.otros) return v.nombre;
+  const padre = pila[pos - 1];
+  return padre.clave === "" ? "Otros del Estado nacional" : `Otros de ${indice[padre.clave].n}`;
+}
+
+// ---------- geometry (ported from Anillos) ----------
+function escena(p) {
+  const items = [];
+  const n = p.length;
+  const anillo = (nivel, rol) => {
+    let a = 0;
+    p[nivel].porciones.forEach((q, i) => {
+      const key = llave(nivel, q);
+      const encendida = nivel < n - 1 && key === p[nivel].elegida;
+      const span = q.parte * TAU;
+      items.push({ key, nivel, rol, color: color(q, i), r0: RADIOS[rol][0], r1: RADIOS[rol][1], a0: a, a1: a + span,
+        op: rol === "main" || encendida ? 1 : 0.28, padre: nivel > 0 ? p[nivel - 1].elegida : null, i, encendida });
+      a += span;
+    });
+  };
+  anillo(n - 1, "main");
+  if (n >= 2) anillo(n - 2, "prev");
+  if (n >= 3) anillo(0, "first");
+  return items;
+}
+function fantasma(item, otra) {
+  const padre = otra.find((o) => o.key === item.padre && o.nivel === item.nivel - 1);
+  if (!padre) return { ...item, op: 0 };
+  const k = (padre.a1 - padre.a0) / TAU;
+  return { ...item, a0: padre.a0 + item.a0 * k, a1: padre.a0 + item.a1 * k, r0: padre.r0, r1: padre.r1, op: item.op };
+}
+function arco({ r0, r1, a0, a1 }) {
+  const span = Math.min(a1 - a0, TAU - 1e-4);
+  if (span <= 0 || r1 <= r0) return "";
+  a1 = a0 + span;
+  const pt = (r, a) => `${(r * Math.sin(a)).toFixed(5)} ${(-r * Math.cos(a)).toFixed(5)}`;
+  const grande = span > Math.PI ? 1 : 0;
+  return `M${pt(r1, a0)}A${r1} ${r1} 0 ${grande} 1 ${pt(r1, a1)}L${pt(r0, a1)}A${r0} ${r0} 0 ${grande} 0 ${pt(r0, a0)}Z`;
+}
+function dibujar(items) {
+  const vivos = items.filter((it) => it.op > 0.005);
+  const accion = (it) => it.rol === "main" ? `data-abrir="${it.i}"` : it.encendida ? `data-volver="${it.nivel + 1}"` : "";
+  // Hit areas first: a transparent 24px stroke under every tappable arc, so the thin outer rings are easy to tap.
+  const golpes = vivos.filter(accion).map((it) =>
+    `<path class="golpe" d="${arco(it)}" vector-effect="non-scaling-stroke" ${accion(it)}></path>`).join("");
+  $("anillos").innerHTML = golpes + vivos.map((it) =>
+    `<path class="vis ${accion(it) ? "" : "ciego"}" d="${arco(it)}" style="fill:${it.color};stroke:var(--fondo)" fill-opacity="${it.op.toFixed(3)}" stroke-width="${it.rol === "main" ? 0.006 : 0.003}" ${accion(it)}></path>`).join("");
+}
+
+// ---------- motion (one animation at a time, from La cinta) ----------
+const lerp = (a, b, t) => a + (b - a) * t;
+const easeOut = (t) => 1 - Math.pow(1 - t, 4);
+let corriendo = null;
+function terminar() { if (corriendo) { const c = corriendo; corriendo = null; cancelAnimationFrame(c.raf); c.fin(); } }
+function animar(paso, fin, dura = DURA) {
+  terminar();
+  const inicio = performance.now();
+  const c = { fin, raf: 0 };
+  const tick = (ahora) => {
+    const t = Math.min(1, (ahora - inicio) / dura);
+    paso(easeOut(t));
+    if (t < 1) c.raf = requestAnimationFrame(tick); else { corriendo = null; fin(); }
+  };
+  corriendo = c;
+  c.raf = requestAnimationFrame(tick);
+}
+
+// ---------- odometer (from La cinta) ----------
+let desdeTotal = 0;
+function odometro(pesos) {
+  const v = Math.max(0, pesos);
+  const entero = Math.floor(v);
+  const digitos = Math.max(1, String(Math.round(Math.max(v, desdeTotal))).length);
+  // A wheel turns only while the wheel below goes from 9 to 0.
+  const pos = [];
+  for (let p = 0; p < digitos; p += 1) {
+    const d = Math.floor(entero / 10 ** p) % 10;
+    pos[p] = p === 0 ? d + (v - entero) : d + (pos[p - 1] > 9 ? pos[p - 1] - 9 : 0);
+  }
+  let html = "";
+  for (let p = digitos - 1; p >= 0; p -= 1) {
+    const visible = entero >= 10 ** p || p === 0;
+    html += `<span class="col" style="${visible ? "" : "width:0"}"><span class="tira" style="transform:translateY(${-pos[p] * 1.2}em)">${[0,1,2,3,4,5,6,7,8,9,0].map((d) => `<span>${d}</span>`).join("")}</span></span>`;
+    if (p % 3 === 0 && p > 0 && visible) html += "<span>.</span>";
+  }
+  $("total").innerHTML = html + `<span class="unidad">pesos</span>`;
+}
+// The disc: the number large, the unit small under it, scaled so the block stays inside the hole.
+function pintarDisco(millones) {
+  const [numero, unidad = "pesos"] = montoCorto(millones).split(" ");
+  const m = $("discoMonto");
+  m.children[0].textContent = numero; m.children[1].textContent = unidad;
+  m.style.setProperty("--fs", "100px");
+  const diagonal = Math.hypot(m.offsetWidth, m.offsetHeight);
+  const radio = RADIOS.main[0] * m.parentElement.offsetWidth / 2;
+  // The corners of the block touch a circle of 88% of the inner radius; the size is linear in --fs.
+  if (diagonal) m.style.setProperty("--fs", `${Math.min(56, 100 * (2 * radio * 0.88) / diagonal).toFixed(2)}px`);
+}
+new ResizeObserver(() => pila.length && pintarDisco(pila.at(-1).total)).observe(document.querySelector(".lienzo"));
+function pintarMonto(desde, hasta, t) {
+  pintarDisco(lerp(desde, hasta, t));
+  odometro(t >= 1 ? pesosDe(hasta) : lerp(pesosDe(desde), pesosDe(hasta), t));
+}
+
+function transicion(desde, hasta, totalDesde, totalHasta) {
+  terminar();
+  desdeTotal = pesosDe(Math.max(totalDesde, totalHasta));
+  const fin = () => { dibujar(hasta); desdeTotal = 0; pintarMonto(totalDesde, totalHasta, 1); };
+  if (reducido.matches) { fin(); $("grafico").animate([{ opacity: 0.2 }, { opacity: 1 }], 150); return; }
+  const pares = new Map();
+  for (const it of desde) pares.set(it.key, [it, null]);
+  for (const it of hasta) { if (pares.has(it.key)) pares.get(it.key)[1] = it; else pares.set(it.key, [fantasma(it, desde), it]); }
+  for (const par of pares.values()) if (!par[1]) par[1] = fantasma(par[0], hasta);
+  const lista = [...pares.values()];
+  animar((e) => {
+    dibujar(lista.map(([a, b]) => ({ ...b, r0: lerp(a.r0, b.r0, e), r1: lerp(a.r1, b.r1, e),
+      a0: lerp(a.a0, b.a0, e), a1: lerp(a.a1, b.a1, e), op: lerp(a.op, b.op, e), encendida: false, rol: "anim" })));
+    pintarMonto(totalDesde, totalHasta, e);
+  }, fin);
+}
+
+// ---------- words (from Billetes) ----------
+function deCien(parte) {
+  const centavos = parte * 10000;
+  if (centavos < 1) return "menos de 1 centavo";
+  if (Math.round(centavos) < 100) return Math.round(centavos) === 1 ? "1 centavo" : `${Math.round(centavos)} centavos`;
+  return `$${Math.round(parte * 100)}`;
+}
+function frase(pos) {
+  const v = pila[pos];
+  const nodo = pos === 0 ? "el Estado nacional" : v.otros ? tituloDe(pos).replace(/^Otros/, "el grupo otros") : v.nombre;
+  // At the end of the path, compare the nodo with the national total of the year.
+  if (!v.porciones.length) return `De cada $100 que gastó el Estado nacional en ${anio}, <b>${deCien(pila[0].total ? v.total / pila[0].total : 0)}</b> fueron a ${nodo}.`;
+  const mayor = v.porciones[0];
+  const cuanto = `<b>${deCien(mayor.parte)}</b>`;
+  const cola = !mayor.esOtros && llano(mayor.nombre) === llano(v.nombre)
+    ? `${cuanto} los gastó ${nodo} en forma directa.`
+    : `${cuanto} fueron a ${mayor.esOtros ? "otros gastos chicos" : mayor.nombre}.`;
+  return `De cada $100 que gastó ${nodo} en ${anio}, ${cola}`;
+}
+
+// ---------- execution and deviation line (ported from pantalla.js) ----------
+const PALABRA_DESVIACION = {
+  [SOBRE_LO_APROBADO]: "sobre lo aprobado",
+  [REASIGNACION_INTERNA]: "de reasignación dentro del proyecto",
+};
+const totalesRaiz = () => {
+  const claves = raices(indice);
+  return { d: totalDe(indice, claves, "d"), p: totalDe(indice, claves, "p"), v: totalDe(indice, claves, "v") };
+};
+function detalleDe(pos) {
+  const v = pila[pos];
+  const t = totalesRaiz();
+  const partes = [];
+  if (pos === 0) {
+    const ejecucion = ejecucionDe(t);
+    if (ejecucion !== null) partes.push(`${porcentaje(ejecucion)} de lo autorizado`);
+    const desviacion = desviacionDe(t, "");
+    if (desviacion) partes.push(`${conSigno(desviacion.valor)} ${PALABRA_DESVIACION[desviacion.tipo]}`);
+    return partes.join(" · ");
+  }
+  if (t.d > 0) partes.push(`${porcentaje((v.otros ? v.total : indice[v.clave].d) / t.d)} del gasto total`);
+  if (v.otros) return partes.join(" · ");
+  const nodo = indice[v.clave];
+  const ejecucion = ejecucionDe(nodo);
+  if (ejecucion !== null) partes.push(`${porcentaje(ejecucion)} de lo autorizado`);
+  const desviacion = desviacionDe(nodo, v.clave);
+  if (desviacion) partes.push(`${conSigno(desviacion.valor)} ${PALABRA_DESVIACION[desviacion.tipo]}`);
+  return partes.join(" · ");
+}
+
+// ---------- screen ----------
+function panel(aviso = "") {
+  const pos = pila.length - 1;
+  const v = pila[pos];
+  const e = ejercicio();
+  const raiz = pos === 0;
+  $("titulo").textContent = tituloDe(pos);
+  $("frase").innerHTML = frase(pos).replace(/^el/, "El");
+  $("de").textContent = raiz ? `Crédito devengado del ejercicio ${anio}, por jurisdicción` : "";
+  $("detalle").textContent = detalleDe(pos);
+  $("aviso").textContent = aviso;
+  $("anioTexto").textContent = anio;
+  $("anioAntes").disabled = anio === anios[0];
+  $("anioDespues").disabled = anio === anios.at(-1);
+  const volver = $("volver");
+  if (raiz && document.activeElement === volver) $("titulo").focus();
+  volver.hidden = raiz;
+
+  // Miga: Inicio › level 1 › … › previous. The title names the current nodo.
+  // A crumb whose name equals the next crumb (accents and case ignored) is dropped.
+  const ol = $("miga");
+  ol.innerHTML = "";
+  const idx = pila.map((_, i) => i).filter((i) => i < pos && (i + 1 === pos || llano(pila[i].nombre) !== llano(pila[i + 1].nombre)));
+  const crumb = (i) => {
+    const li = document.createElement("li"), b = document.createElement("button");
+    b.textContent = pila[i].nombre; b.title = pila[i].nombre; b.onclick = () => volverA(i + 1);
+    li.append(b); return li;
+  };
+  const ocultos = idx.length >= 4 ? idx.slice(2, -1) : [];
+  idx.forEach((i) => {
+    if (!ocultos.includes(i)) return ol.append(crumb(i));
+    if (i !== ocultos[0]) return;
+    const li = document.createElement("li"), b = document.createElement("button");
+    b.textContent = "…"; b.setAttribute("aria-label", `Mostrar ${ocultos.length} niveles intermedios`);
+    b.onclick = () => { const nuevos = ocultos.map(crumb); li.replaceWith(...nuevos); nuevos[0].querySelector("button").focus(); };
+    li.append(b); ol.append(li);
+  });
+
+  // Tape
+  const ul = $("renglones");
+  ul.innerHTML = v.porciones.length ? "" : `<li class="fin">${v.otros ? `Estas partidas no gastaron nada en ${anio}.` : "Acá termina el recorrido institucional."}</li>`;
+  v.porciones.forEach((p, i) => {
+    const li = document.createElement("li");
+    li.className = "imprime";
+    li.style.animationDelay = `${i * 30}ms`;
+    const b = document.createElement("button");
+    b.dataset.i = i;
+    b.innerHTML = `<span class="color" style="background:${color(p, i)}"></span><span class="nombre"></span><span class="pct">${porcentaje(p.parte)}</span><span class="corto">${montoCorto(p.monto)}</span>`;
+    b.querySelector(".nombre").textContent = p.esOtros ? `Otros (${p.destino.length})` : p.nombre;
+    b.onclick = () => abrir(i);
+    li.append(b); ul.append(li);
+  });
+  ul.scrollTop = 0;
+
+  $("rotulo").textContent = raiz ? `Total devengado ${anio}` : "Suma de estas partidas";
+  $("totalTexto").textContent = `${montoLargo(v.total)} pesos`;
+  $("talon").innerHTML = `Fuente: Presupuesto Abierto, Ministerio de Economía. Crédito devengado, publicado el ${fechaCorta(e.publicado)}. <a href="${e.archivo}">Descargar el archivo oficial</a>`;
+  $("vivo").textContent = `${tituloDe(pos)}, ${montoCorto(v.total)}`;
+}
+
+// ---------- navigation: one route is the state; a click and a popstate both draw it ----------
+// ruta = { anio, clave, grupos }: grupos holds the claves of each open "otros" group on top of the nodo.
+function rutaDe(p) {
+  const grupos = [];
+  for (let i = p.length - 1; i > 0 && p[i].otros; i -= 1) grupos.unshift(p[i].claves);
+  return { anio, clave: p.at(-1).clave, grupos };
+}
+let turno = 0;
+async function navegar(ruta, modo) {
+  const mio = ++turno;
+  const nuevoIndice = await cargar(ruta.anio);
+  if (mio !== turno) return;
+  terminar();
+  const antes = pila, anioAntes = anio;
+  indice = nuevoIndice; anio = ruta.anio;
+  const existe = ancestroQueExiste(indice, ruta.clave) ?? "";
+  const nueva = pilaHasta(existe);
+  for (const g of existe === ruta.clave ? ruta.grupos : []) {
+    const arriba = nueva.at(-1), p = arriba.porciones.find((q) => q.esOtros && q.destino.join() === g.join());
+    if (!p) break;
+    nueva.push(siguiente(arriba, nueva.length - 1, p));
+  }
+  pila = nueva;
+  const nombre = antes.at(-1)?.clave === ruta.clave && !antes.at(-1).otros ? antes.at(-1).nombre : "Ese nivel";
+  panel(existe !== ruta.clave ? `${nombre} no existe en ${anio}; te llevamos al nivel más cercano.` : "");
+
+  // History: a push stores the final route; a skip or a missing clave replaces the entry it came from.
+  const final = rutaDe(pila), hash = escribirRuta(final.anio, final.clave);
+  const igual = hash === location.hash && JSON.stringify(final.grupos) === JSON.stringify(history.state?.grupos ?? []);
+  if (modo === "push" && !igual) history.pushState(final, "", hash);
+  else if (!igual || !history.state) history.replaceState(final, "", hash);
+
+  const hasta = pila.at(-1).total;
+  if (!antes.length) { dibujar(escena(pila)); return pintarMonto(hasta, hasta, 1); }
+  const totalAntes = antes.at(-1).total;
+  if (anioAntes === anio) return transicion(escena(antes), escena(pila), totalAntes, hasta);
+  dibujar(escena(pila));
+  const panes = $("panes");
+  panes.classList.remove("desliza"); void panes.offsetWidth;
+  panes.style.setProperty("--desde", anio < anioAntes ? "-48px" : "48px");
+  panes.classList.add("desliza");
+  if (reducido.matches) return pintarMonto(totalAntes, hasta, 1);
+  desdeTotal = pesosDe(Math.max(totalAntes, hasta));
+  animar((t) => pintarMonto(totalAntes, hasta, t), () => { desdeTotal = 0; pintarMonto(totalAntes, hasta, 1); }, 450);
+}
+function abrir(i) {
+  const arriba = pila.at(-1), p = arriba.porciones[i], ruta = rutaDe(pila);
+  navegar(p.esOtros ? { ...ruta, grupos: [...ruta.grupos, p.destino] } : { anio, clave: saltar(p.destino[0]), grupos: [] }, "push");
+}
+function volverA(largo) {
+  if (largo >= pila.length) return;
+  navegar(rutaDe(pila.slice(0, largo)), "push");
+}
+function cambiarAnio(nuevo) {
+  if (!anios.includes(nuevo) || nuevo === anio) return;
+  navegar({ anio: nuevo, clave: pila.at(-1).clave, grupos: [] }, "push");
+}
+function rutaDeLaUrl() {
+  const { ejercicio, clave } = leerRuta(location.hash);
+  if (!anios.includes(ejercicio)) return { anio, clave: "", grupos: [] };
+  return { anio: ejercicio, clave, grupos: history.state?.clave === clave && history.state?.anio === ejercicio ? history.state.grupos : [] };
+}
+addEventListener("popstate", () => navegar(rutaDeLaUrl(), null));
+
+$("grafico").addEventListener("click", (ev) => {
+  const t = ev.target.closest("path");
+  if (!t) return;
+  if (t.dataset.abrir) abrir(Number(t.dataset.abrir));
+  else if (t.dataset.volver) volverA(Number(t.dataset.volver));
+});
+// Link a slice and its tape row on hover and focus.
+const caliente = (i) => {
+  document.querySelectorAll(".caliente").forEach((el) => el.classList.remove("caliente"));
+  if (i == null) return;
+  document.querySelector(`#anillos path.vis[data-abrir="${i}"]`)?.classList.add("caliente");
+  document.querySelector(`#renglones button[data-i="${i}"]`)?.classList.add("caliente");
+};
+$("grafico").addEventListener("pointerover", (ev) => caliente(ev.target.dataset?.abrir ?? null));
+$("grafico").addEventListener("pointerleave", () => caliente(null));
+$("renglones").addEventListener("pointerover", (ev) => caliente(ev.target.closest("button")?.dataset.i ?? null));
+$("renglones").addEventListener("pointerleave", () => caliente(null));
+$("renglones").addEventListener("focusin", (ev) => caliente(ev.target.dataset.i ?? null));
+
+$("anioAntes").onclick = () => cambiarAnio(anios[anios.indexOf(anio) - 1]);
+$("anioDespues").onclick = () => cambiarAnio(anios[anios.indexOf(anio) + 1]);
+$("volver").onclick = () => volverA(pila.length - 1);
+$("sitio").onclick = (ev) => { ev.preventDefault(); navegar({ anio, clave: "", grupos: [] }, "push"); };
+addEventListener("keydown", (ev) => {
+  if (ev.altKey || ev.ctrlKey || ev.metaKey) return;
+  if (ev.target.closest?.("input, textarea, select, [contenteditable]")) return;
+  if (ev.key === "ArrowLeft") cambiarAnio(anios[anios.indexOf(anio) - 1]);
+  if (ev.key === "ArrowRight") cambiarAnio(anios[anios.indexOf(anio) + 1]);
+  if (ev.key === "Escape" && pila.length > 1) volverA(pila.length - 1);
+});
+
+await navegar(rutaDeLaUrl(), null);
+// Test hook for the verification in the browser.
+window.__mezcla = { get pila() { return pila; }, get indice() { return indice; }, totalDe, raices,
+  ir: (c) => { terminar(); pila = pilaHasta(c); panel(); dibujar(escena(pila)); pintarMonto(0, pila.at(-1).total, 1); } };
+</script>
+</body>
+</html>
