@@ -21,7 +21,7 @@ import {
 import { cifrasDe, htmlDelOdometro, ruedasDelOdometro } from "./movimiento.js";
 import { porcionesDe } from "./porciones.js";
 import { procedenciaDe } from "./procedencia.js";
-import { ancestroQueExiste, contiene, RUTA_DE_FUENTES } from "./ruta.js";
+import { ancestroQueExiste, contiene, escribirRuta, RUTA_DE_FUENTES } from "./ruta.js";
 
 function totalesDeLaRaiz(indice) {
   const claves = raices(indice);
@@ -129,9 +129,12 @@ export function vistaDeAusente(estado, clave, origen) {
   // P2b. origen is the exercise where the visitor saw this clave:
   // { ejercicio, nombre, monto }.
   const { ejercicio, indice } = estado;
-  const ancestro = ancestroQueExiste(indice, clave);
+  // W12: P2b has two exits, so both must exist. When the whole jurisdiccion
+  // is absent, ancestroQueExiste finds no ancestor at all; the root is then
+  // the nearest level that exists, as app.js does for the same lookup.
+  const ancestro = ancestroQueExiste(indice, clave) ?? "";
   const nombre = origen.nombre ?? clave.split("-").at(-1);
-  const pila = pilaDe(indice, ancestro ?? "");
+  const pila = pilaDe(indice, ancestro);
   const lineas = [`Este nivel no existe en ${ejercicio}.`];
   if (origen.monto !== undefined && origen.ejercicio !== ejercicio) {
     const { numero, unidad } = partesDelMonto(origen.monto);
@@ -450,6 +453,9 @@ function pasoDeMiga(documento, tramo, oculto) {
 
 export function pintarBarra(documento, barra) {
   // W2: one top bar on every place. A place with no exercise passes null.
+  // R20: the site name is a real link to the root of the year on screen, so
+  // a middle-click or "copy link" never gives the default year instead.
+  parte(documento, "sitio").setAttribute("href", escribirRuta(barra.ejercicio, ""));
   parte(documento, "anio").textContent = barra.ejercicio === null ? "" : String(barra.ejercicio);
   for (const [id, anio] of [["anio-anterior", barra.anterior], ["anio-siguiente", barra.siguiente]]) {
     const flecha = parte(documento, id);
@@ -610,6 +616,9 @@ function pintarPie(documento, { cuenta = null, fuente, codigos = "", archivo = n
   // INV-03: the source is always visible at the foot of the tape. W3: the
   // link to P4 and the codes of the last level stay.
   parte(documento, "pie").hidden = false;
+  // D7: the failure screen keeps this link once, in the chart pane, and
+  // hides this one; every other screen shows it.
+  parte(documento, "fuentes-enlace").hidden = false;
   // A screen with no rows to sum must not keep the sum of the screen before
   // it.
   parte(documento, "rotulo").textContent = "";
@@ -727,6 +736,9 @@ export function pintarError(documento, vista) {
   pintarRenglones(documento, []);
   // This screen read no manifest, so it names the source and nothing more.
   pintarPie(documento, { fuente: FUENTE_SIN_DATOS });
+  // D7: the chart pane above already offers this exit. The foot's own copy
+  // would say the same thing twice.
+  parte(documento, "fuentes-enlace").hidden = true;
 }
 
 // ---- The motion of the frame ----------------------------------------------

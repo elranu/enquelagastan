@@ -232,6 +232,19 @@ test("el ausente sin ejercicio de origen no ofrece volver al mismo ejercicio", (
     "the breadcrumb is the exit");
 });
 
+test("el ausente cuya jurisdiccion entera no existe ofrece subir a la raiz", () => {
+  // Real data: jurisdiccion 30 exists in 2024 and 2026 but not in 2025, and
+  // jurisdiccion 89 exists in 2025 but not in 2024. ancestroQueExiste finds
+  // no ancestor at all then, and the root is the nearest level that exists
+  // (W12: P2b has two exits, so both must be offered).
+  const vista = vistaDeAusente(ESTADO, "30-1", { ejercicio: 2024, monto: 12 });
+  assert.equal(vista.ancestro, "", "the root is the nearest level that exists");
+  const documento = falsoDocumento();
+  pintarAusente(documento, vista);
+  assert.deepEqual(controles(documento.getElementById("acciones"), "data-clave"),
+    [{ texto: "Subir al nivel que sí existe", valor: "" }]);
+});
+
 // esAusencia holds the rule that tells absence from a failure of ours.
 // A test reads it here, with no import of app.js.
 
@@ -352,6 +365,8 @@ test("un hijo que el k declara pero el indice no tiene no rompe la vista", () =>
 test("la vista de un grupo otros solo dice su parte del total", () => {
   const vista = vistaDeNavegador(CON_OTROS, pilaDe(CON_OTROS.indice, "", [["2", "3"]]));
   assert.equal(vista.titulo, "Otros");
+  // "Chica" (3) plus "Menor" (2), never the total of the whole root (95).
+  assert.equal(vista.total, 5);
   // 5 of 95 is 5,26%.
   assert.equal(vista.detalle, "5,3% del gasto total");
   assert.equal(vista.subtitulo, "Parte del gasto del Estado nacional.");
@@ -468,6 +483,21 @@ test("las flechas del anio se apagan en las puntas", () => {
   assert.equal(enMarco(documento, "miga").hidden, true, "the root has no breadcrumb");
 });
 
+test("el nombre del sitio enlaza a la raiz del anio en pantalla", () => {
+  // R20: a middle-click or "copy link" reads href, never the click handler.
+  const documento = falsoDocumento();
+  pintarBarra(documento, { ejercicio: 2026, anterior: 2025, siguiente: null, miga: [] });
+  assert.equal(enMarco(documento, "sitio").atributos.href, "#/2026");
+});
+
+test("el nombre del sitio enlaza a la raiz cuando no hay ejercicio en pantalla", () => {
+  // P4 and the failure screen pass ejercicio null, and the root of no
+  // exercise is the bare entry, never a link of "#/null".
+  const documento = falsoDocumento();
+  pintarBarra(documento, { ejercicio: null, anterior: null, siguiente: null, miga: [] });
+  assert.equal(enMarco(documento, "sitio").atributos.href, "#/");
+});
+
 test("la pantalla del ausente no tiene Volver y ofrece dos salidas", () => {
   const documento = falsoDocumento();
   pintarAusente(documento, {
@@ -520,6 +550,21 @@ test("la pantalla de un fallo tiene sus salidas en el marco", () => {
     [{ texto: "De dónde salen estos números", valor: "#/fuentes" }]);
   assert.equal(enMarco(documento, "fuente").textContent, "Fuente: Presupuesto Abierto");
   assert.equal(enMarco(documento, "descargar").hidden, true);
+  // D7: the link to P4 lives once, in the chart pane. The foot keeps its own
+  // copy for every other screen, so it must hide here and nowhere else.
+  assert.equal(enMarco(documento, "fuentes-enlace").hidden, true,
+    "the chart pane already offers this exit");
+});
+
+test("el pie de un fallo esconde su propio enlace a las fuentes, y lo recupera despues", () => {
+  const documento = falsoDocumento();
+  pintarNavegador(documento, vistaDeNavegador(ESTADO, pilaDe(ESTADO.indice, "")));
+  assert.equal(enMarco(documento, "fuentes-enlace").hidden, false);
+  pintarError(documento, vistaDeError(new Error("boom")));
+  assert.equal(enMarco(documento, "fuentes-enlace").hidden, true);
+  pintarNavegador(documento, vistaDeNavegador(ESTADO, pilaDe(ESTADO.indice, "")));
+  assert.equal(enMarco(documento, "fuentes-enlace").hidden, false,
+    "a normal screen after a failure must recover its own link");
 });
 
 test("el fallo despues del navegador borra los anillos, el disco y la suma", () => {
