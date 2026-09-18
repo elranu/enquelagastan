@@ -185,6 +185,9 @@ test("index.html trae cada id que los pintores y app.js leen, y sus atributos", 
   }
 
   assert.match(pagina, /id="sitio"[^>]*data-clave="/, "the site name is a data-clave control");
+  // R26: the top bar shows the logo, drawn from enqlagastan-logo.svg, and reserves its room.
+  assert.match(pagina, /<a class="sitio" id="sitio"[^>]*>\s*<img src="marca\.webp" alt="En qué la gastan" width="968" height="240" decoding="async"\s*\/?>\s*<\/a>/,
+    "the logo image sits inside #sitio, with its real size so the page never jumps");
   assert.match(pagina, /id="fuentes-enlace"[^>]*data-fuentes="/, "app.js reads data-fuentes");
   // R13: "tema" cycles three states, so it is a plain button, not a switch.
   assert.match(pagina, /id="tema"[^>]*data-interruptor="tema"/, "tema names itself");
