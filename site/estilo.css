@@ -1,0 +1,499 @@
+/* The style of the navigator.
+   Every rule here answers one class that site/app/ emits. The copy is in
+   Spanish, because the visitor reads Spanish. The names of the classes are
+   Spanish too, because the screens write them. */
+
+:root {
+  color-scheme: light;
+
+  /* Ink and surface. Every pair below meets AA on the page background. */
+  --fondo: #fbfbf9;
+  --superficie: #ffffff;
+  --tinta: #1a1a1a;          /* 16.8:1 on --fondo */
+  --tenue: #5f5f5f;          /* 6.2:1  on --fondo */
+  --linea: #e2e2dc;          /* a divider, never a control boundary */
+  --linea-fuerte: #c9c9c2;
+  --borde-control: #8a8a83;  /* 3.35:1 on --fondo, so a control is visible */
+  --foco: #0b57d0;           /* 6.2:1  on --fondo */
+  --aviso: #8a3a12;          /* 6.4:1  on --fondo */
+
+  /* The slices. The ramp runs dark to mid, and never lighter: the lightest
+     step still holds 3.25:1 against the page, so a slice stays visible.
+     Adjacent steps are close, and the 2px stroke of the page colour is what
+     separates one slice from the next. */
+  --porcion-0: #0b2545;
+  --porcion-1: #10365d;
+  --porcion-2: #164875;
+  --porcion-3: #1c5a8d;
+  --porcion-4: #226ca4;
+  --porcion-5: #2a7cb5;
+  --porcion-6: #3589c0;
+  --porcion-7: #4593c6;
+
+  /* One step of space. Space groups the screen; a line only helps where
+     space alone cannot. The gap between groups is at least twice the gap
+     inside one. */
+  --e-1: 0.25rem;
+  --e-2: 0.5rem;
+  --e-3: 1rem;
+  --e-4: 1.5rem;
+  --e-5: 2.5rem;
+
+  --radio: 0.5rem;
+  --curva: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--tinta);
+  font: 400 1rem/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+main {
+  /* The measure of the prose, not of the screen. */
+  max-width: 38rem;
+  margin-inline: auto;
+  padding-inline: var(--e-3);
+  padding-block: var(--e-3) var(--e-5);
+  /* The page must reflow at 320px with no sideways scroll. */
+  padding-bottom: max(var(--e-5), env(safe-area-inset-bottom));
+}
+
+/* ---- The frame of a screen -------------------------------------------- */
+
+/* Every screen is a column. The foot goes to the bottom of it, so the line
+   that names the source is at the foot of a short screen too. INV-03 asks
+   for a source that is always visible, and a source floating in the middle
+   of a blank page is not that. */
+.pantalla {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - 4rem);
+}
+
+.pantalla > .procedencia { margin-top: auto; }
+
+/* ---- Controls -------------------------------------------------------- */
+
+/* Every control carries a shape, so it never reads as the text beside it. */
+button, .principal, .secundario {
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* WCAG 2.5.8 asks for 24px. A finger asks for more. */
+  min-height: 2.75rem;
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid var(--borde-control);
+  border-radius: var(--radio);
+  background: var(--superficie);
+  color: var(--tinta);
+  text-decoration: none;
+  text-align: start;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button:hover, .principal:hover, .secundario:hover {
+    background: #f1f1ec;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  button, .principal, .secundario, .porcion {
+    transition: transform 160ms var(--curva), background-color 150ms ease;
+  }
+  button:active, .principal:active, .secundario:active {
+    transform: scale(0.97);
+  }
+}
+
+/* The ring is the only thing that tells a keyboard where it is. It never
+   sets a radius: the radius belongs to the control, so the ring follows the
+   shape the control already has. */
+:focus-visible {
+  outline: 3px solid var(--foco);
+  outline-offset: 2px;
+}
+
+/* ---- The strip of years ---------------------------------------------- */
+
+.anios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-2);
+  margin-bottom: var(--e-3);
+}
+
+.anio { font-variant-numeric: tabular-nums; }
+
+/* aria-current carries the state to a screen reader. The fill carries it to
+   an eye, and the two never disagree. */
+button[aria-current="true"] {
+  background: var(--tinta);
+  border-color: var(--tinta);
+  color: var(--fondo);
+}
+
+/* ---- The miga de pan -------------------------------------------------- */
+
+/* Q7: what the miga does on a telephone when the camino is long.
+   The tree goes 13 levels deep, and the names of an actividad run past 60
+   characters. Wrapped, that camino is eleven rows and 560 pixels, and it
+   pushes the headline off the screen of a telephone.
+   So the miga is one row that scrolls. "Inicio" stays at the start, because
+   it is the way out. The chip that is half visible at the end is the cue
+   that more camino is there. The miga does carry the level the visitor is
+   on, as its last chip. That chip carries aria-current, so the rule below
+   fills it. */
+.miga {
+  margin-bottom: var(--e-4);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  /* The ring of a chip needs room, or the scroller cuts it. */
+  padding-block: 3px 0.4rem;
+}
+
+/* The steps live in an <ol>, so a screen reader reads a list. The row of
+   chips is still this element's job, not the list's own default column. */
+.miga ol {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--e-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tramo {
+  flex: 0 0 auto;
+  font-size: 0.875rem;
+  font-weight: 400;
+  min-height: 2.25rem;
+  padding: var(--e-1) var(--e-2);
+  /* A name of an actividad can pass 60 characters. The chip stops, and the
+     full name is one tap away: the screen of that level writes it as the
+     h1. No name is lost. */
+  max-width: 13rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  color: var(--tenue);
+  background: transparent;
+  border-color: var(--borde-control);
+  line-height: 1.65rem;
+}
+
+/* Each step now sits alone in its own <li>, so :last-child on the button
+   itself would match every step. Read the last step from the list instead.
+   The current step already gets its color from button[aria-current="true"].
+   This rule sets no color there, or a fixed color would return and hide
+   the text again. */
+.miga li:last-child .tramo { font-weight: 500; }
+.miga li:last-child .tramo:not([aria-current="true"]) { color: var(--tinta); }
+
+/* Above the width of a telephone the column is wider, so a chip may show
+   more of its name before it stops. */
+@media (min-width: 30rem) {
+  .tramo { max-width: 20rem; }
+}
+
+/* ---- The headline ----------------------------------------------------- */
+
+h1 {
+  font-size: clamp(1.375rem, 5vw, 1.75rem);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin: 0 0 var(--e-2);
+}
+
+/* The title of the root is one short phrase that this project writes, so it
+   can be balanced across its lines. */
+.pantalla-raiz h1, .pantalla-fuentes h1 { text-wrap: balance; }
+
+/* The title of a nodo is a name that the state writes. A name of an
+   actividad runs past 60 characters, so it wraps instead, and a long word
+   breaks rather than leave the column. */
+.pantalla-nodo h1, .pantalla-ausente h1 {
+  text-wrap: pretty;
+  overflow-wrap: break-word;
+}
+
+.total {
+  font-size: clamp(1.875rem, 8vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  /* The figure changes from screen to screen. Tabular digits hold the line. */
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+.detalle {
+  color: var(--tenue);
+  font-size: 0.9375rem;
+  text-wrap: pretty;
+  margin: var(--e-2) 0 0;
+}
+
+/* The deviation gets no colour. The state that spends over what the Congress
+   approved is a fact, and a reassignment inside a project is a legal
+   instrument. Neither one is good news or bad news, so the words carry the
+   meaning and nothing here says "right" or "wrong". */
+
+/* ---- The pie chart ---------------------------------------------------- */
+
+/* The first level is one slice of 59,8%. The chart is a headline, not a
+   graph: it gets room, and it carries no label. The legend below holds every
+   word and every number. */
+.torta {
+  display: block;
+  width: 100%;
+  max-width: 20rem;
+  height: auto;
+  margin: var(--e-5) auto var(--e-4);
+}
+
+.porcion {
+  cursor: pointer;
+  stroke: var(--fondo);
+  stroke-width: 2;
+}
+
+.porcion-0 { fill: var(--porcion-0); }
+.porcion-1 { fill: var(--porcion-1); }
+.porcion-2 { fill: var(--porcion-2); }
+.porcion-3 { fill: var(--porcion-3); }
+.porcion-4 { fill: var(--porcion-4); }
+.porcion-5 { fill: var(--porcion-5); }
+.porcion-6 { fill: var(--porcion-6); }
+.porcion-7 { fill: var(--porcion-7); }
+
+/* Nearly half of the "otros" slices are under 0,5% of the circle, which is a
+   wedge of under two degrees. The wedge keeps its true angle, because the
+   angle is the money. A finger and a keyboard both use the row of the legend
+   below, which runs the full width of the column. */
+
+@media (hover: hover) and (pointer: fine) {
+  .porcion:hover { stroke: var(--tinta); stroke-width: 3; }
+}
+
+/* ---- The legend ------------------------------------------------------- */
+
+/* The legend row is the reliable target. A finger cannot hit a wedge of two
+   degrees, so every row runs the full width and holds a generous hit area.
+   Each row carries the same data-destino as its slice. */
+.leyenda {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--e-5);
+}
+
+.leyenda .fila {
+  cursor: pointer;
+  /* The row is a <button> now, so it undoes what the shape of a control
+     brings: the box, the fill, the weight and the centred content. */
+  border: 0;
+  border-bottom: 1px solid var(--linea);
+  background: transparent;
+  font-weight: 400;
+  text-align: start;
+  justify-content: flex-start;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e-2);
+  width: 100%;
+  min-height: 3rem;
+  padding: var(--e-2) var(--e-2);
+  font-variant-numeric: tabular-nums;
+  text-wrap: pretty;
+  overflow-wrap: break-word;
+  border-radius: var(--radio) var(--radio) 0 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .leyenda .fila:hover { background: #f1f1ec; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .leyenda .fila:active { transform: scale(0.97); }
+}
+
+/* The swatch ties the row to its wedge. It repeats what the chart shows, so
+   it is decoration and never the only cue: the row says the name, the share
+   and the amount as text. */
+.leyenda .fila::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 0.875rem;
+  height: 0.875rem;
+  /* Optical alignment: the swatch sits on the first line of the row, and
+     never in the middle of a row that wrapped. */
+  margin-top: 0.32em;
+  border-radius: 0.25rem;
+  background: var(--linea-fuerte);
+}
+
+.leyenda-0 .fila::before { background: var(--porcion-0); }
+.leyenda-1 .fila::before { background: var(--porcion-1); }
+.leyenda-2 .fila::before { background: var(--porcion-2); }
+.leyenda-3 .fila::before { background: var(--porcion-3); }
+.leyenda-4 .fila::before { background: var(--porcion-4); }
+.leyenda-5 .fila::before { background: var(--porcion-5); }
+.leyenda-6 .fila::before { background: var(--porcion-6); }
+.leyenda-7 .fila::before { background: var(--porcion-7); }
+
+/* ---- The screen of a nodo --------------------------------------------- */
+
+.sin-ejecucion {
+  margin: var(--e-4) 0 var(--e-5);
+  padding: var(--e-3);
+  border: 1px solid var(--linea-fuerte);
+  border-radius: 0.75rem;
+  background: var(--superficie);
+  color: var(--tenue);
+}
+
+/* ---- The screen of an absent camino ----------------------------------- */
+
+
+.pantalla-ausente .origen {
+  color: var(--tenue);
+  margin: 0 0 var(--e-4);
+}
+
+.principal {
+  background: var(--tinta);
+  border-color: var(--tinta);
+  color: var(--fondo);
+}
+
+/* The screen is a column, so a button that is a direct child would stretch
+   to the width of the column. Every exit hugs its own label instead. */
+.pantalla > .principal, .pantalla > .secundario { align-self: flex-start; }
+
+.pantalla-ausente .principal { margin-bottom: var(--e-3); }
+
+.pantalla-ausente .secundario { margin-bottom: var(--e-5); }
+
+/* ---- The screen of the sources ---------------------------------------- */
+
+.pantalla-fuentes p { text-wrap: pretty; max-width: 34rem; }
+
+.fuentes {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--e-4) 0;
+  font-size: 0.875rem;
+}
+
+.fuentes td {
+  padding: var(--e-2) var(--e-2) var(--e-2) 0;
+  border-bottom: 1px solid var(--linea);
+  vertical-align: top;
+}
+
+/* The year and the verdict are short. Only the name of the file is long, so
+   only that cell may break a word. A year cut in two reads as two years. */
+.fuentes td:first-child, .fuentes td:last-child { white-space: nowrap; }
+
+.fuentes td:first-child { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.fuentes a { overflow-wrap: anywhere; }
+
+/* The two ways out of this screen sit on their own rows, so neither one
+   collides with the other on a telephone. */
+.pantalla-fuentes .principal { display: flex; width: fit-content; margin-top: var(--e-4); }
+
+.pantalla-fuentes > a:last-child {
+  display: inline-block;
+  margin-top: var(--e-3);
+  min-height: 2.75rem;
+  padding-block: var(--e-2);
+}
+
+/* ---- The foot of every screen ----------------------------------------- */
+
+/* INV-03: the source is at the foot of every screen, and it is always
+   visible. It is the reason a reader can believe the number above it. */
+.procedencia {
+  border-top: 1px solid var(--linea-fuerte);
+  padding-top: var(--e-3);
+  margin-top: var(--e-4);
+  color: var(--tenue);
+  font-size: 0.875rem;
+}
+
+.procedencia p { margin: 0 0 var(--e-2); overflow-wrap: break-word; }
+
+.procedencia .codigos {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+a {
+  color: var(--foco);
+  text-underline-position: from-font;
+  text-decoration-thickness: from-font;
+  text-underline-offset: 0.1em;
+}
+
+/* A link in the foot is a real target for a finger. */
+.procedencia a {
+  display: inline-block;
+  min-height: 2.75rem;
+  padding-block: var(--e-2);
+}
+
+/* ---- Loading and failure ---------------------------------------------- */
+
+.cargando { color: var(--tenue); padding: var(--e-3); }
+
+.error {
+  margin: var(--e-3) 0;
+  padding: var(--e-3);
+  border: 1px solid var(--aviso);
+  border-radius: 0.75rem;
+  background: var(--superficie);
+  color: var(--aviso);
+  text-wrap: pretty;
+}
+
+/* ---- What only a screen reader reads ---------------------------------- */
+
+/* The live region says what changed after a navigation. It has no size on
+   the page, and it is never focusable, so nothing here is hidden from a
+   visitor who can see. */
+.solo-lectores {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- The screen of a failure ------------------------------------------ */
+
+/* The technical detail is English inside Spanish copy. It helps a person who
+   reports the fault, so it stays, under the message and never as it. */
+.detalle-tecnico {
+  margin-top: var(--e-4);
+  color: var(--tenue);
+  font-size: 0.875rem;
+  overflow-wrap: break-word;
+}
+
+/* The line that says what a group of "otros" is a part of. */
+.parte-de { color: var(--tenue); margin-top: 0; }

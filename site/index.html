@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>En qué la gastan</title>
+    <meta name="description"
+          content="Un mapa navegable del gasto público del Estado nacional argentino." />
+    <link rel="stylesheet" href="estilo.css" />
+  </head>
+  <body>
+    <!-- #app carries no aria-live. Every navigation empties and refills it,
+         so a live region here would read the whole new screen: the strip of
+         years, up to 10 crumbs, the headline, 8 rows of the legend and 13
+         codes, as one announcement that nothing can interrupt. The region
+         below is stable and empty, and it says only what changed. -->
+    <main id="app">
+      <p class="cargando">Cargando el gasto público…</p>
+    </main>
+    <p id="aviso" role="status" class="solo-lectores"></p>
+    <script type="module" src="app/app.js"></script>
+  </body>
+</html>

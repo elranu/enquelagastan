@@ -44,6 +44,14 @@ somebody who was not in the conversation. STE is a good fit for both.
   rule. A payment link that a merchant in Argentina reads is in Spanish.
 - **Existing content.** The repo is mixed today. This applies to what you write
   from now on. Do not translate old files unless somebody asks for it.
+- **The name of a test, and its description.** A test says what a piece of the
+  domain does, in the words of the domain. The domain of this project is in
+  Spanish, and `CONTEXT.md` keeps `camino`, `porcion`, `ejercicio` and
+  `devengado` in Spanish on purpose. So a test reads
+  `test("agrupa las porciones abajo del umbral")` and not a sentence that mixes
+  two languages. **The comment that explains the test is in English**, like
+  every other comment. The rule applies to the name of a Python test and to the
+  description of a JavaScript test in the same way.
 
 ## An example
 
