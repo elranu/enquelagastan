@@ -26,9 +26,10 @@ the spending. The outer rings keep the path in sight.
 go up. The arrows of the top bar change the year, and the path stays. Every
 step is an entry of the history, so a link opens the same nodo.
 
-Two switches change the look. "Oscuro" gives a dark look. "Billetes" gives
-the colours of the peso bills, and one sentence: how many pesos of every 100
-went to the largest part.
+One button changes the look, through three states: sistema, claro and
+oscuro. One switch, "Billetes", gives the colours of the peso bills, and one
+sentence: how many pesos of every 100 went to the largest part. Both
+controls are icons.
 
 The foot of the tape names the file and the date the number comes from.
 That foot is always visible.
