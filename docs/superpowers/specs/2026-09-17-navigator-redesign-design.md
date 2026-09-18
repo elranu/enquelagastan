@@ -75,7 +75,7 @@ UC-07 (the fiscal result) is out of scope. Source: `02-wireframes.md`, level 0.
 
 **UC-08.** The URL always holds the year and the path. A group "otros" is not in the URL, so a shared link opens its nodo (W8). An absent clave opens the nearest ancestor with a one-line notice. A hash that is not valid opens the root.
 
-**UC-09.** "Oscuro" (R13) and "Billetes" (R14) change the look with a crossfade of 200ms, and never the place. A switch adds no history entry (W9). A storage that refuses writes keeps the look for this visit only.
+**UC-09.** "Tema" (R13) and "Billetes" (R14) change the look with a crossfade of 200ms, and never the place. A switch adds no history entry (W9). A storage that refuses writes keeps the look for this visit only.
 
 **Failures**
 
@@ -97,7 +97,7 @@ Unchanged. Domain modeling did not run for this redesign. The contexts, the aggr
 
 ## Glossary
 
-Terms introduced or changed by this feature: none. "Volver", "Oscuro" and "Billetes" name controls of the interface, not terms of the budget.
+Terms introduced or changed by this feature: none. "Volver", "Tema" and "Billetes" name controls of the interface, not terms of the budget.
 
 ## Decisions
 
@@ -113,7 +113,7 @@ Terms introduced or changed by this feature: none. "Volver", "Oscuro" and "Bille
 | R8 | **The measure is named twice only**: in the subtitle of the root, and in the foot of the tape. | "crédito devengado" on every screen | brainstorming | - |
 | R9 | **The breadcrumb is `Inicio › <level 1> › … › <previous>`.** It never names the current nodo, because the title does. "…" holds every level between, and it opens on a tap. Names that differ only in accents or case are one crumb ("Educacion", "Educación"). | UC-05 of the base spec, every name of the path. Closes Q7 of the base spec | brainstorming | - |
 | R10 | **"Volver"** sits at the left of the title on P2, and in a group "otros". An arrow and the word "Volver". It goes up one level, or out of the group. Hit area 44x44px or more. Escape does the same. | Back of the browser only | brainstorming, corrected by W12 | - |
-| R11 | **The years: `‹ 2025 ›` at the right of the top bar**, before the two switches. The arrows have the accessible names "Año anterior" and "Año siguiente". The arrow at an end (2024, 2026) is disabled. ArrowLeft and ArrowRight change the year. An older year slides in from the left, a newer year from the right. The path stays (C17), and P2b does not change (C18). | C3, the arrows at the left of the screen. A segmented control of years, tried on 2026-09-17 | brainstorming | - |
+| R11 | **The years: `‹ 2025 ›` at the right of the top bar**, before "Tema" and "Billetes". The arrows have the accessible names "Año anterior" and "Año siguiente". The arrow at an end (2024, 2026) is disabled. ArrowLeft and ArrowRight change the year. An older year slides in from the left, a newer year from the right. The path stays (C17), and P2b does not change (C18). | C3, the arrows at the left of the screen. A segmented control of years, tried on 2026-09-17 | brainstorming | - |
 | R12 | **Every step is an entry in the history.** The root is `#/<year>`. A nodo is `#/<year>/<clave>`. A group "otros" keeps the hash of its nodo and puts its claves in `history.state`. A change of year is an entry. `popstate` draws the entry with the motion of its direction. A skip of a nodo with one child replaces the entry. | A group with no entry | brainstorming | - |
 | R13 | **The control "Tema" has three states**: sistema, claro, oscuro (R22). "Sistema" applies the dark tokens with `prefers-color-scheme`, and it follows the system with no reload. The choice goes to `localStorage`. The colours change with a crossfade of 200ms. | No dark look. Two states only | brainstorming, corrected on 2026-09-17 | - |
 | R14 | **The control "Billetes"** applies the colours of the peso bills and the typeface Archivo, and adds the sentence of R15. It works with "Tema": a dark variant of the bill colours. It shows an icon of a banknote and no word (R23). | A separate page | brainstorming, corrected on 2026-09-17 | - |
@@ -122,7 +122,7 @@ Terms introduced or changed by this feature: none. "Volver", "Oscuro" and "Bille
 | R17 | **The typefaces**: IBM Plex Sans for the interface, IBM Plex Mono for the amounts of the tape, Archivo for "Billetes". The site hosts the `woff2` files under `site/fuentes/`, with a Latin subset. SIL Open Font License. | The system font. Google Fonts | brainstorming | - |
 | R18 | **The line of the execution and the deviation stays (C19), with its own colour (R25).** At the root: "96,1% de lo autorizado · +31% sobre lo aprobado". At a nodo: "<part>% del gasto total · <exec>% de lo autorizado · <signed>% <word>". The word is "sobre lo aprobado" at the level of the proyecto and above, "de reasignación dentro del proyecto" below it (C23). In a group "otros": only the part of the total. | Drop the line, as the prototype did. The colour of the secondary text (`--tenue`), which reads as a caption, not a fact that stands apart | brainstorming, corrected on 2026-09-17 | - |
 | R19 | **The new look covers every place**: P1, P2 at the institutional levels and at the levels of the object of the spending, P2b, P4 and the failure screen. | Only the places of the prototype | brainstorming | - |
-| R20 | **The name of the site starts the top bar.** "En qué la gastan", a link to the root of the year on screen. From left to right: the name, the breadcrumb, `‹ 2025 ›`, "Oscuro", "Billetes". At 375px: three rows. | No name on the screen | brainstorming | - |
+| R20 | **The name of the site starts the top bar.** "En qué la gastan", a link to the root of the year on screen. From left to right: the name, the breadcrumb, `‹ 2025 ›`, "Tema", "Billetes". At 375px: three rows. | No name on the screen | brainstorming | - |
 | R21 | **The accessibility floor of the navigator stays**: a visible focus ring; every part reachable as a row of the tape; one live region that says what changed; reduced motion respected. | - | brainstorming, from the base navigator | - |
 | W1 | No new place. The five places change. | A place for the settings of the look | wireframing, 1 | - |
 | W2 | One top bar on every place. | A top bar only on P1 and P2 | wireframing, 1 | - |
@@ -224,7 +224,7 @@ Read this document first, then `02-wireframes.md` for the flows and the sketches
   - a motion runner, new: one loop on `requestAnimationFrame` for the rings and the odometer, with an instant end and the reduced-motion path.
   - `site/app/frase.js`, new, pure: the sentence of R15.
   - a pure function in `site/app/arbol.js`: the short breadcrumb of R9.
-  - `site/app/tema.js`, new: the two switches and their storage.
+  - `site/app/tema.js`, new: the button "Tema" of three states and the switch "Billetes", both icons, and their storage.
   - `site/app/app.js`, changed: the history of R12; the generation counter stays.
   - `site/app/pantalla.js`, changed: the two panes, "Volver", the years, the disc, the tape, P2b, P4, the failure screen.
   - `site/estilo.css`, rewritten: the tokens of the five palettes, chosen by two attributes on `<html>`.
