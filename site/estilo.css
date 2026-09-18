@@ -1,499 +1,757 @@
 /* The style of the navigator.
-   Every rule here answers one class that site/app/ emits. The copy is in
-   Spanish, because the visitor reads Spanish. The names of the classes are
-   Spanish too, because the screens write them. */
+   Every rule here answers one class or id that index.html or site/app/
+   writes. The four palettes are tokens on :root, and two attributes on
+   <html> pick them: data-tema ("claro", "oscuro") and data-vista ("simple",
+   "billetes"). test/estilo.test.mjs reads the four blocks below and checks
+   every contrast, so keep each block a plain list of tokens. */
+
+:root {
+  /* Light. */
+  --fondo: #F2F3EF;
+  --panel: #FBFBF8;
+  --texto: #1C1F22;
+  --tenue: #555B61;
+  --regla: #D3D6CF;
+  --acento: #4B3A8C;
+  --foco: #4B3A8C;
+  --hover: #E4E6E0;
+  /* R25: the line of the execution and the deviation carries no judgement,
+     so it gets its own token, never --tenue, and one colour in every case. */
+  --dato: #2C3E63;
+  --c0: #1F4E79;
+  --c1: #B23A48;
+  --c2: #2E7D5B;
+  --c3: #B7791F;
+  --c4: #5B4B8A;
+  --c5: #2F7A8C;
+  --c6: #8A5A44;
+  --otros: #7A7F85;
+}
+
+/* R24: the values of the dark palette live here once, under their own
+   names. This selector is "html", not ":root", on purpose: the two
+   selectors below only point at these tokens with var(), so a value never
+   repeats, and test/estilo.test.mjs never mistakes this block for a palette
+   of its own. */
+html {
+  --fondo-oscuro: #0F1724;
+  --panel-oscuro: #172234;
+  --texto-oscuro: #E9EDF3;
+  --tenue-oscuro: #9AA7B9;
+  --regla-oscuro: #2A3950;
+  --acento-oscuro: #B29CEE;
+  --foco-oscuro: #FFFFFF;
+  --hover-oscuro: #213049;
+  --dato-oscuro: #A8C0E8;
+  --c0-oscuro: #6DB3EC;
+  --c1-oscuro: #F0A35E;
+  --c2-oscuro: #79CF8A;
+  --c3-oscuro: #E27C9C;
+  --c4-oscuro: #B29CEE;
+  --c5-oscuro: #5CCBC2;
+  --c6-oscuro: #E3CD68;
+  --otros-oscuro: #7D8898;
+  /* R16 (review, fix round 1): the dark bill colours, once, for the same
+     reason: [data-tema="oscuro"][data-vista="billetes"] and
+     [data-tema="sistema"][data-vista="billetes"] under a dark system must
+     never drift apart. */
+  --c0-billete-oscuro: #F08A4E;
+  --c1-billete-oscuro: #6FBF7F;
+  --c2-billete-oscuro: #7FA6E8;
+  --c3-billete-oscuro: #B79AE6;
+  --c4-billete-oscuro: #E48AAA;
+  --c5-billete-oscuro: #5CC3E6;
+  --c6-billete-oscuro: #D9B55A;
+}
+
+/* R24: the forced dark look. It only reads the values above. */
+:root[data-tema="oscuro"] {
+  --fondo: var(--fondo-oscuro);
+  --panel: var(--panel-oscuro);
+  --texto: var(--texto-oscuro);
+  --tenue: var(--tenue-oscuro);
+  --regla: var(--regla-oscuro);
+  --acento: var(--acento-oscuro);
+  --foco: var(--foco-oscuro);
+  --hover: var(--hover-oscuro);
+  --dato: var(--dato-oscuro);
+  --c0: var(--c0-oscuro);
+  --c1: var(--c1-oscuro);
+  --c2: var(--c2-oscuro);
+  --c3: var(--c3-oscuro);
+  --c4: var(--c4-oscuro);
+  --c5: var(--c5-oscuro);
+  --c6: var(--c6-oscuro);
+  --otros: var(--otros-oscuro);
+}
+
+/* R24: "sistema" follows the system. It stays the light default of :root
+   until the system itself prefers dark, and then it gives the exact same
+   tokens as the forced dark look, from the same source. */
+@media (prefers-color-scheme: dark) {
+  :root[data-tema="sistema"] {
+    --fondo: var(--fondo-oscuro);
+    --panel: var(--panel-oscuro);
+    --texto: var(--texto-oscuro);
+    --tenue: var(--tenue-oscuro);
+    --regla: var(--regla-oscuro);
+    --acento: var(--acento-oscuro);
+    --foco: var(--foco-oscuro);
+    --hover: var(--hover-oscuro);
+    --dato: var(--dato-oscuro);
+    --c0: var(--c0-oscuro);
+    --c1: var(--c1-oscuro);
+    --c2: var(--c2-oscuro);
+    --c3: var(--c3-oscuro);
+    --c4: var(--c4-oscuro);
+    --c5: var(--c5-oscuro);
+    --c6: var(--c6-oscuro);
+    --otros: var(--otros-oscuro);
+  }
+}
+
+/* R14: the colours of the peso bills. */
+:root[data-vista="billetes"] {
+  --c0: #C8612B;
+  --c1: #3F7F4F;
+  --c2: #2F5FA8;
+  --c3: #6E4E9E;
+  --c4: #B5476C;
+  --c5: #2E8BB0;
+  --c6: #9A7A2A;
+}
+
+/* The bills made lighter for the dark ground. Both this selector and
+   [data-tema="sistema"][data-vista="billetes"] below carry two attributes,
+   so either one outranks the plain :root[data-vista="billetes"] above,
+   whichever order the browser reads them in (R16, review, fix round 1). */
+:root[data-vista="billetes"][data-tema="oscuro"] {
+  --c0: var(--c0-billete-oscuro);
+  --c1: var(--c1-billete-oscuro);
+  --c2: var(--c2-billete-oscuro);
+  --c3: var(--c3-billete-oscuro);
+  --c4: var(--c4-billete-oscuro);
+  --c5: var(--c5-billete-oscuro);
+  --c6: var(--c6-billete-oscuro);
+}
+
+/* R16 (review, fix round 1): "sistema" on a dark system, with "Billetes" on,
+   must give these same dark bill colours, and never the light ones that
+   :root[data-vista="billetes"] alone would otherwise still win with. */
+@media (prefers-color-scheme: dark) {
+  :root[data-tema="sistema"][data-vista="billetes"] {
+    --c0: var(--c0-billete-oscuro);
+    --c1: var(--c1-billete-oscuro);
+    --c2: var(--c2-billete-oscuro);
+    --c3: var(--c3-billete-oscuro);
+    --c4: var(--c4-billete-oscuro);
+    --c5: var(--c5-billete-oscuro);
+    --c6: var(--c6-billete-oscuro);
+  }
+}
+
+/* ---- The typefaces (R17) --------------------------------------------------
+   The site hosts the Latin subset of each family, under the SIL Open Font
+   License. font-display: swap shows a system font until a file arrives. */
+
+/* One variable file holds every weight of IBM Plex Sans. */
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("fuentes/ibm-plex-sans.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fuentes/ibm-plex-mono-400.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("fuentes/ibm-plex-mono-500.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("fuentes/ibm-plex-mono-600.woff2") format("woff2");
+}
+
+/* One variable file holds every width and weight of Archivo. */
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 400 700;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url("fuentes/archivo.woff2") format("woff2");
+}
+
+/* ---- Type and motion ----------------------------------------------------- */
 
 :root {
   color-scheme: light;
-
-  /* Ink and surface. Every pair below meets AA on the page background. */
-  --fondo: #fbfbf9;
-  --superficie: #ffffff;
-  --tinta: #1a1a1a;          /* 16.8:1 on --fondo */
-  --tenue: #5f5f5f;          /* 6.2:1  on --fondo */
-  --linea: #e2e2dc;          /* a divider, never a control boundary */
-  --linea-fuerte: #c9c9c2;
-  --borde-control: #8a8a83;  /* 3.35:1 on --fondo, so a control is visible */
-  --foco: #0b57d0;           /* 6.2:1  on --fondo */
-  --aviso: #8a3a12;          /* 6.4:1  on --fondo */
-
-  /* The slices. The ramp runs dark to mid, and never lighter: the lightest
-     step still holds 3.25:1 against the page, so a slice stays visible.
-     Adjacent steps are close, and the 2px stroke of the page colour is what
-     separates one slice from the next. */
-  --porcion-0: #0b2545;
-  --porcion-1: #10365d;
-  --porcion-2: #164875;
-  --porcion-3: #1c5a8d;
-  --porcion-4: #226ca4;
-  --porcion-5: #2a7cb5;
-  --porcion-6: #3589c0;
-  --porcion-7: #4593c6;
-
-  /* One step of space. Space groups the screen; a line only helps where
-     space alone cannot. The gap between groups is at least twice the gap
-     inside one. */
-  --e-1: 0.25rem;
-  --e-2: 0.5rem;
-  --e-3: 1rem;
-  --e-4: 1.5rem;
-  --e-5: 2.5rem;
-
-  --radio: 0.5rem;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --ancho-titulo: 100%;
+  --ancho-numero: 100%;
   --curva: cubic-bezier(0.23, 1, 0.32, 1);
+  --alto-de-cifra: 1.2em;
+}
+
+:root[data-tema="oscuro"] { color-scheme: dark; }
+:root[data-tema="sistema"] { color-scheme: light dark; }
+
+:root[data-vista="billetes"] {
+  --sans: "Archivo", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "Archivo", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ancho-titulo: 112%;
+  --ancho-numero: 80%;
+}
+
+/* R13: a switch of the look is a crossfade of 200ms. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 200ms;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* The attribute hidden wins over every display rule below. */
+[hidden] { display: none !important; }
+
+html, body { margin: 0; height: 100%; }
+
 body {
-  margin: 0;
   background: var(--fondo);
-  color: var(--tinta);
-  font: 400 1rem/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--texto);
+  font: 400 16px/1.45 var(--sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-main {
-  /* The measure of the prose, not of the screen. */
-  max-width: 38rem;
-  margin-inline: auto;
-  padding-inline: var(--e-3);
-  padding-block: var(--e-3) var(--e-5);
-  /* The page must reflow at 320px with no sideways scroll. */
-  padding-bottom: max(var(--e-5), env(safe-area-inset-bottom));
-}
-
-/* ---- The frame of a screen -------------------------------------------- */
-
-/* Every screen is a column. The foot goes to the bottom of it, so the line
-   that names the source is at the foot of a short screen too. INV-03 asks
-   for a source that is always visible, and a source floating in the middle
-   of a blank page is not that. */
-.pantalla {
-  display: flex;
-  flex-direction: column;
-  min-height: calc(100dvh - 4rem);
-}
-
-.pantalla > .procedencia { margin-top: auto; }
-
-/* ---- Controls -------------------------------------------------------- */
-
-/* Every control carries a shape, so it never reads as the text beside it. */
-button, .principal, .secundario {
+button {
   font: inherit;
-  font-weight: 500;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  /* WCAG 2.5.8 asks for 24px. A finger asks for more. */
-  min-height: 2.75rem;
-  padding: var(--e-2) var(--e-3);
-  border: 1px solid var(--borde-control);
-  border-radius: var(--radio);
-  background: var(--superficie);
-  color: var(--tinta);
-  text-decoration: none;
-  text-align: start;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  button:hover, .principal:hover, .secundario:hover {
-    background: #f1f1ec;
-  }
-}
+a { color: var(--acento); text-underline-offset: 3px; }
 
-@media (prefers-reduced-motion: no-preference) {
-  button, .principal, .secundario, .porcion {
-    transition: transform 160ms var(--curva), background-color 150ms ease;
-  }
-  button:active, .principal:active, .secundario:active {
-    transform: scale(0.97);
-  }
-}
-
-/* The ring is the only thing that tells a keyboard where it is. It never
-   sets a radius: the radius belongs to the control, so the ring follows the
-   shape the control already has. */
+/* R21: the ring is the only thing that tells a keyboard where it is. */
 :focus-visible {
   outline: 3px solid var(--foco);
   outline-offset: 2px;
+  border-radius: 4px;
 }
 
-/* ---- The strip of years ---------------------------------------------- */
+h1:focus { outline: none; }
 
-.anios {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--e-2);
-  margin-bottom: var(--e-3);
-}
-
-.anio { font-variant-numeric: tabular-nums; }
-
-/* aria-current carries the state to a screen reader. The fill carries it to
-   an eye, and the two never disagree. */
-button[aria-current="true"] {
-  background: var(--tinta);
-  border-color: var(--tinta);
-  color: var(--fondo);
-}
-
-/* ---- The miga de pan -------------------------------------------------- */
-
-/* Q7: what the miga does on a telephone when the camino is long.
-   The tree goes 13 levels deep, and the names of an actividad run past 60
-   characters. Wrapped, that camino is eleven rows and 560 pixels, and it
-   pushes the headline off the screen of a telephone.
-   So the miga is one row that scrolls. "Inicio" stays at the start, because
-   it is the way out. The chip that is half visible at the end is the cue
-   that more camino is there. The miga does carry the level the visitor is
-   on, as its last chip. That chip carries aria-current, so the rule below
-   fills it. */
-.miga {
-  margin-bottom: var(--e-4);
-  overflow-x: auto;
-  overscroll-behavior-inline: contain;
-  scrollbar-width: thin;
-  /* The ring of a chip needs room, or the scroller cuts it. */
-  padding-block: 3px 0.4rem;
-}
-
-/* The steps live in an <ol>, so a screen reader reads a list. The row of
-   chips is still this element's job, not the list's own default column. */
-.miga ol {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: var(--e-2);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.tramo {
-  flex: 0 0 auto;
-  font-size: 0.875rem;
-  font-weight: 400;
-  min-height: 2.25rem;
-  padding: var(--e-1) var(--e-2);
-  /* A name of an actividad can pass 60 characters. The chip stops, and the
-     full name is one tap away: the screen of that level writes it as the
-     h1. No name is lost. */
-  max-width: 13rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: block;
-  color: var(--tenue);
-  background: transparent;
-  border-color: var(--borde-control);
-  line-height: 1.65rem;
-}
-
-/* Each step now sits alone in its own <li>, so :last-child on the button
-   itself would match every step. Read the last step from the list instead.
-   The current step already gets its color from button[aria-current="true"].
-   This rule sets no color there, or a fixed color would return and hide
-   the text again. */
-.miga li:last-child .tramo { font-weight: 500; }
-.miga li:last-child .tramo:not([aria-current="true"]) { color: var(--tinta); }
-
-/* Above the width of a telephone the column is wider, so a chip may show
-   more of its name before it stops. */
-@media (min-width: 30rem) {
-  .tramo { max-width: 20rem; }
-}
-
-/* ---- The headline ----------------------------------------------------- */
-
-h1 {
-  font-size: clamp(1.375rem, 5vw, 1.75rem);
-  line-height: 1.15;
-  letter-spacing: -0.015em;
-  margin: 0 0 var(--e-2);
-}
-
-/* The title of the root is one short phrase that this project writes, so it
-   can be balanced across its lines. */
-.pantalla-raiz h1, .pantalla-fuentes h1 { text-wrap: balance; }
-
-/* The title of a nodo is a name that the state writes. A name of an
-   actividad runs past 60 characters, so it wraps instead, and a long word
-   breaks rather than leave the column. */
-.pantalla-nodo h1, .pantalla-ausente h1 {
-  text-wrap: pretty;
-  overflow-wrap: break-word;
-}
-
-.total {
-  font-size: clamp(1.875rem, 8vw, 2.75rem);
-  font-weight: 700;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
-  /* The figure changes from screen to screen. Tabular digits hold the line. */
-  font-variant-numeric: tabular-nums;
-  margin: 0;
-}
-
-.detalle {
-  color: var(--tenue);
-  font-size: 0.9375rem;
-  text-wrap: pretty;
-  margin: var(--e-2) 0 0;
-}
-
-/* The deviation gets no colour. The state that spends over what the Congress
-   approved is a fact, and a reassignment inside a project is a legal
-   instrument. Neither one is good news or bad news, so the words carry the
-   meaning and nothing here says "right" or "wrong". */
-
-/* ---- The pie chart ---------------------------------------------------- */
-
-/* The first level is one slice of 59,8%. The chart is a headline, not a
-   graph: it gets room, and it carries no label. The legend below holds every
-   word and every number. */
-.torta {
-  display: block;
-  width: 100%;
-  max-width: 20rem;
-  height: auto;
-  margin: var(--e-5) auto var(--e-4);
-}
-
-.porcion {
-  cursor: pointer;
-  stroke: var(--fondo);
-  stroke-width: 2;
-}
-
-.porcion-0 { fill: var(--porcion-0); }
-.porcion-1 { fill: var(--porcion-1); }
-.porcion-2 { fill: var(--porcion-2); }
-.porcion-3 { fill: var(--porcion-3); }
-.porcion-4 { fill: var(--porcion-4); }
-.porcion-5 { fill: var(--porcion-5); }
-.porcion-6 { fill: var(--porcion-6); }
-.porcion-7 { fill: var(--porcion-7); }
-
-/* Nearly half of the "otros" slices are under 0,5% of the circle, which is a
-   wedge of under two degrees. The wedge keeps its true angle, because the
-   angle is the money. A finger and a keyboard both use the row of the legend
-   below, which runs the full width of the column. */
-
-@media (hover: hover) and (pointer: fine) {
-  .porcion:hover { stroke: var(--tinta); stroke-width: 3; }
-}
-
-/* ---- The legend ------------------------------------------------------- */
-
-/* The legend row is the reliable target. A finger cannot hit a wedge of two
-   degrees, so every row runs the full width and holds a generous hit area.
-   Each row carries the same data-destino as its slice. */
-.leyenda {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 var(--e-5);
-}
-
-.leyenda .fila {
-  cursor: pointer;
-  /* The row is a <button> now, so it undoes what the shape of a control
-     brings: the box, the fill, the weight and the centred content. */
-  border: 0;
-  border-bottom: 1px solid var(--linea);
-  background: transparent;
-  font-weight: 400;
-  text-align: start;
-  justify-content: flex-start;
-  display: flex;
-  align-items: flex-start;
-  gap: var(--e-2);
-  width: 100%;
-  min-height: 3rem;
-  padding: var(--e-2) var(--e-2);
-  font-variant-numeric: tabular-nums;
-  text-wrap: pretty;
-  overflow-wrap: break-word;
-  border-radius: var(--radio) var(--radio) 0 0;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .leyenda .fila:hover { background: #f1f1ec; }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .leyenda .fila:active { transform: scale(0.97); }
-}
-
-/* The swatch ties the row to its wedge. It repeats what the chart shows, so
-   it is decoration and never the only cue: the row says the name, the share
-   and the amount as text. */
-.leyenda .fila::before {
-  content: "";
-  flex: 0 0 auto;
-  width: 0.875rem;
-  height: 0.875rem;
-  /* Optical alignment: the swatch sits on the first line of the row, and
-     never in the middle of a row that wrapped. */
-  margin-top: 0.32em;
-  border-radius: 0.25rem;
-  background: var(--linea-fuerte);
-}
-
-.leyenda-0 .fila::before { background: var(--porcion-0); }
-.leyenda-1 .fila::before { background: var(--porcion-1); }
-.leyenda-2 .fila::before { background: var(--porcion-2); }
-.leyenda-3 .fila::before { background: var(--porcion-3); }
-.leyenda-4 .fila::before { background: var(--porcion-4); }
-.leyenda-5 .fila::before { background: var(--porcion-5); }
-.leyenda-6 .fila::before { background: var(--porcion-6); }
-.leyenda-7 .fila::before { background: var(--porcion-7); }
-
-/* ---- The screen of a nodo --------------------------------------------- */
-
-.sin-ejecucion {
-  margin: var(--e-4) 0 var(--e-5);
-  padding: var(--e-3);
-  border: 1px solid var(--linea-fuerte);
-  border-radius: 0.75rem;
-  background: var(--superficie);
-  color: var(--tenue);
-}
-
-/* ---- The screen of an absent camino ----------------------------------- */
-
-
-.pantalla-ausente .origen {
-  color: var(--tenue);
-  margin: 0 0 var(--e-4);
-}
-
-.principal {
-  background: var(--tinta);
-  border-color: var(--tinta);
-  color: var(--fondo);
-}
-
-/* The screen is a column, so a button that is a direct child would stretch
-   to the width of the column. Every exit hugs its own label instead. */
-.pantalla > .principal, .pantalla > .secundario { align-self: flex-start; }
-
-.pantalla-ausente .principal { margin-bottom: var(--e-3); }
-
-.pantalla-ausente .secundario { margin-bottom: var(--e-5); }
-
-/* ---- The screen of the sources ---------------------------------------- */
-
-.pantalla-fuentes p { text-wrap: pretty; max-width: 34rem; }
-
-.fuentes {
-  width: 100%;
-  border-collapse: collapse;
-  margin: var(--e-4) 0;
-  font-size: 0.875rem;
-}
-
-.fuentes td {
-  padding: var(--e-2) var(--e-2) var(--e-2) 0;
-  border-bottom: 1px solid var(--linea);
-  vertical-align: top;
-}
-
-/* The year and the verdict are short. Only the name of the file is long, so
-   only that cell may break a word. A year cut in two reads as two years. */
-.fuentes td:first-child, .fuentes td:last-child { white-space: nowrap; }
-
-.fuentes td:first-child { font-variant-numeric: tabular-nums; font-weight: 600; }
-
-.fuentes a { overflow-wrap: anywhere; }
-
-/* The two ways out of this screen sit on their own rows, so neither one
-   collides with the other on a telephone. */
-.pantalla-fuentes .principal { display: flex; width: fit-content; margin-top: var(--e-4); }
-
-.pantalla-fuentes > a:last-child {
-  display: inline-block;
-  margin-top: var(--e-3);
-  min-height: 2.75rem;
-  padding-block: var(--e-2);
-}
-
-/* ---- The foot of every screen ----------------------------------------- */
-
-/* INV-03: the source is at the foot of every screen, and it is always
-   visible. It is the reason a reader can believe the number above it. */
-.procedencia {
-  border-top: 1px solid var(--linea-fuerte);
-  padding-top: var(--e-3);
-  margin-top: var(--e-4);
-  color: var(--tenue);
-  font-size: 0.875rem;
-}
-
-.procedencia p { margin: 0 0 var(--e-2); overflow-wrap: break-word; }
-
-.procedencia .codigos {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.8125rem;
-  overflow-wrap: anywhere;
-}
-
-a {
-  color: var(--foco);
-  text-underline-position: from-font;
-  text-decoration-thickness: from-font;
-  text-underline-offset: 0.1em;
-}
-
-/* A link in the foot is a real target for a finger. */
-.procedencia a {
-  display: inline-block;
-  min-height: 2.75rem;
-  padding-block: var(--e-2);
-}
-
-/* ---- Loading and failure ---------------------------------------------- */
-
-.cargando { color: var(--tenue); padding: var(--e-3); }
-
-.error {
-  margin: var(--e-3) 0;
-  padding: var(--e-3);
-  border: 1px solid var(--aviso);
-  border-radius: 0.75rem;
-  background: var(--superficie);
-  color: var(--aviso);
-  text-wrap: pretty;
-}
-
-/* ---- What only a screen reader reads ---------------------------------- */
-
-/* The live region says what changed after a navigation. It has no size on
-   the page, and it is never focusable, so nothing here is hidden from a
-   visitor who can see. */
 .solo-lectores {
   position: absolute;
   width: 1px;
   height: 1px;
+  /* The negative margin cancels the box in the flow. #aviso sits after
+     .marco in the body, with no positioned ancestor: with no negative
+     margin, its static position falls below .marco and the page scrolls
+     at 1440x900 and 1280x720 (G4). */
   margin: -1px;
   padding: 0;
   overflow: hidden;
-  clip-path: inset(50%);
+  clip: rect(0 0 0 0);
   white-space: nowrap;
 }
 
-/* ---- The screen of a failure ------------------------------------------ */
+/* ---- The frame (R1, G4) ---------------------------------------------------- */
 
-/* The technical detail is English inside Spanish copy. It helps a person who
-   reports the fault, so it stays, under the message and never as it. */
-.detalle-tecnico {
-  margin-top: var(--e-4);
-  color: var(--tenue);
-  font-size: 0.875rem;
-  overflow-wrap: break-word;
+/* One screen on a desktop: the frame takes the height of the window, and
+   only the list of the tape scrolls. */
+.marco {
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
 }
 
-/* The line that says what a group of "otros" is a part of. */
-.parte-de { color: var(--tenue); margin-top: 0; }
+.paneles {
+  display: grid;
+  grid-template-columns: 55fr 45fr;
+  min-height: 0;
+}
+
+/* ---- The top bar (R20, W2) --------------------------------------------------- */
+
+.barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+  padding: 8px 24px;
+  border-bottom: 1px solid var(--regla);
+}
+
+.sitio {
+  flex: none;
+  padding: 10px 6px;
+  border-radius: 6px;
+  font-weight: 600;
+  color: var(--texto);
+  text-decoration: none;
+}
+
+.miga ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.miga li { display: flex; align-items: center; gap: 6px; min-width: 0; }
+
+.miga li + li::before { content: "›"; color: var(--tenue); }
+
+/* WCAG 2.5.8: a target of 24px or more. */
+.tramo {
+  min-height: 24px;
+  max-width: 28ch;
+  padding: 4px 6px;
+  border-radius: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--tenue);
+  text-decoration: underline;
+  text-decoration-color: var(--regla);
+  text-underline-offset: 3px;
+}
+
+.empuje { flex: 1; }
+
+.anios { display: flex; align-items: center; gap: 4px; flex: none; }
+
+.flecha {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  font-size: 22px;
+}
+
+.flecha:disabled { opacity: 0.35; cursor: default; }
+
+.anio {
+  min-width: 3.2em;
+  text-align: center;
+  font: 600 20px var(--mono);
+  font-stretch: var(--ancho-numero);
+  font-variant-numeric: tabular-nums;
+}
+
+.interruptores { display: flex; gap: 16px; flex: none; }
+
+/* R23: an icon control with a hit area of 44x44px or more. */
+.interruptor {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 6px;
+  border-radius: 8px;
+}
+
+.interruptor svg { width: 20px; height: 20px; }
+
+.pista {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--regla);
+  transition: background-color 200ms;
+}
+
+.pista::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--panel);
+  box-shadow: 0 1px 2px #0004;
+  transition: transform 200ms var(--curva);
+}
+
+/* WCAG 1.4.11: --regla alone holds 1.32:1 in light and 1.54:1 in dark
+   against --fondo. --tenue already holds 4.5:1 there (checked above), so an
+   inset ring of it gives the off track the 3:1 that a background cannot. */
+.interruptor[aria-checked="false"] .pista { box-shadow: inset 0 0 0 1px var(--tenue); }
+
+.interruptor[aria-checked="true"] .pista { background: var(--acento); }
+
+.interruptor[aria-checked="true"] .pista::after { transform: translateX(14px); }
+
+@media (hover: hover) and (pointer: fine) {
+  .sitio:hover, .tramo:hover, .flecha:hover:not(:disabled), .interruptor:hover,
+  .volver:hover, .fila[data-abrir]:hover {
+    background: var(--hover);
+  }
+  .tramo:hover { color: var(--texto); }
+}
+
+/* ---- The chart pane (R2, R7, R10) ------------------------------------------- */
+
+.panel-grafico {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  padding: 20px 32px 24px;
+  overflow-y: auto;
+}
+
+.cabeza { display: flex; align-items: flex-start; gap: 8px; }
+
+/* R10: 44 by 44 px or more. */
+.volver {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: -6px 0 0 -10px;
+  padding: 0 12px 0 8px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.volver svg { width: 20px; height: 20px; }
+
+h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  font-stretch: var(--ancho-titulo);
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.frase {
+  margin: 0;
+  font-size: 20px;
+  font-stretch: var(--ancho-titulo);
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+.frase b { font-stretch: var(--ancho-numero); font-variant-numeric: tabular-nums; }
+
+/* R14: the sentence belongs to the view "Billetes". */
+:root[data-vista="simple"] .frase { display: none; }
+
+.subtitulo, .nota p { margin: 0; color: var(--tenue); }
+
+/* R25: the line of the execution and the deviation stands apart from the
+   secondary text, with one colour for every case (C19: no judgement). */
+.detalle { margin: 0; color: var(--dato); }
+
+.nota p { max-width: 38rem; text-wrap: pretty; }
+
+.acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 8px; }
+
+.principal, .secundario {
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.principal { background: var(--texto); color: var(--fondo); }
+
+.secundario { text-decoration: underline; text-underline-offset: 3px; }
+
+.caja {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  container-type: size;
+}
+
+.lienzo { position: relative; width: min(100cqw, 100cqh); aspect-ratio: 1; }
+
+#grafico { display: block; width: 100%; height: 100%; overflow: visible; }
+
+/* The slices are separated by a line of the ground colour, so two
+   neighbours never read as one. */
+.arco {
+  stroke: var(--fondo);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+  transition: filter 150ms ease;
+}
+
+.arco.ciego { cursor: default; pointer-events: none; }
+
+/* R3: a transparent stroke of 24px under every arc that navigates. */
+.golpe {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 24px;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+.contorno {
+  fill: none;
+  stroke: var(--regla);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .arco[data-abrir]:hover, .arco[data-subir]:hover { filter: brightness(1.12); }
+}
+
+.disco {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* app.js sets --fs from the radius of the hole (R7). */
+.monto { --fs: 34px; display: flex; flex-direction: column; align-items: center; white-space: nowrap; }
+
+.monto .numero {
+  font: 600 var(--fs)/1 var(--mono);
+  font-stretch: var(--ancho-numero);
+  font-variant-numeric: tabular-nums;
+}
+
+.monto .unidad {
+  margin-top: calc(var(--fs) * 0.12);
+  font-size: calc(var(--fs) * 0.45);
+  line-height: 1.2;
+  color: var(--tenue);
+}
+
+/* ---- The tape pane (R5, INV-03) --------------------------------------------- */
+
+.panel-cinta {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-height: 0;
+  background: var(--panel);
+  border-left: 1px solid var(--regla);
+}
+
+.renglones { min-height: 0; overflow-y: auto; }
+
+.renglones ul { margin: 0; padding: 12px 0; list-style: none; }
+
+.renglones li { border-bottom: 1px dashed var(--regla); }
+
+.fila {
+  width: 100%;
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  column-gap: 12px;
+  padding: 10px 28px;
+  text-align: left;
+}
+
+/* R21: .renglones scrolls in y, and so it clips in x. An outline of the
+   usual offset falls outside the row and is clipped at its left and right
+   sides. Pull the ring inside the row, and keep its width and colour. */
+.fila:focus-visible { outline-offset: -3px; }
+
+.muestra { width: 14px; height: 14px; margin-top: 4px; border-radius: 3px; grid-row: span 2; }
+
+.fila .nombre { font-weight: 500; }
+
+.fila .pct, .fila .corto {
+  font-family: var(--mono);
+  font-stretch: var(--ancho-numero);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.fila .pct { font-weight: 600; }
+
+.fila .corto { grid-column: 2 / 4; color: var(--tenue); }
+
+.vacio { margin: 0; padding: 16px 28px; color: var(--tenue); }
+
+.imprime { animation: imprime 180ms var(--curva) both; }
+
+@keyframes imprime {
+  from { opacity: 0; transform: translateY(-6px); }
+}
+
+.fuentes { width: 100%; margin: 12px 0; border-collapse: collapse; }
+
+/* Comment 3: the header names the four columns for a screen reader. --texto
+   already holds 4.5:1 against --fondo in every palette (test/estilo.test.mjs),
+   and the double border under it reads as a header, not one more row. */
+.fuentes th {
+  padding: 10px 28px 10px 0;
+  border-bottom: 2px solid var(--texto);
+  font: 600 13px var(--mono);
+  letter-spacing: 0.02em;
+  color: var(--texto);
+  text-align: left;
+}
+
+.fuentes th:first-child { padding-left: 28px; }
+
+.fuentes td { padding: 10px 28px 10px 0; border-bottom: 1px solid var(--regla); vertical-align: top; }
+
+.fuentes td:first-child {
+  padding-left: 28px;
+  font: 600 16px var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.fuentes a { overflow-wrap: anywhere; }
+
+.pie { padding: 12px 28px 16px; border-top: 4px double var(--texto); }
+
+.cuenta p { margin: 0; }
+
+.rotulo { color: var(--tenue); }
+
+.total {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 0.5em;
+  font: 600 30px/1.2 var(--mono);
+  font-stretch: var(--ancho-numero);
+  font-variant-numeric: tabular-nums;
+}
+
+.total .unidad { font-size: 16px; font-weight: 400; }
+
+.cifras { display: inline-flex; height: var(--alto-de-cifra); overflow: hidden; white-space: nowrap; }
+
+.rueda { display: inline-block; height: var(--alto-de-cifra); overflow: hidden; }
+
+.tira { display: flex; flex-direction: column; }
+
+.tira span { height: var(--alto-de-cifra); line-height: var(--alto-de-cifra); }
+
+/* R22: the source is now one control at the foot of the tape. */
+.fuente-control {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 6px 0;
+  text-align: left;
+  color: var(--tenue);
+  text-decoration: underline;
+  /* Review, fix round 1, item 4: --regla alone fails 3:1 against every
+     ground. currentColor is --tenue here, already checked at 4.5:1. */
+  text-decoration-color: currentColor;
+  text-underline-offset: 3px;
+}
+
+/* R22: the dialog holds the measure, the file, the download, the link to
+   P4 and the codes (C16) that the foot held before. */
+.fuente-dialogo {
+  max-width: 32rem;
+  margin: auto;
+  padding: 24px 28px;
+  border: 1px solid var(--regla);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--texto);
+}
+
+.fuente-dialogo[open] { display: flex; flex-direction: column; gap: 12px; }
+
+.fuente-dialogo h2 { margin: 0; font-size: 20px; }
+
+#fuente-dialogo-medida { margin: 0; color: var(--tenue); }
+
+.codigos, .enlaces { margin: 0; color: var(--tenue); overflow-wrap: anywhere; }
+
+.codigos { font: 13px/1.5 var(--mono); }
+
+.enlaces { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+
+.enlaces a { display: inline-flex; align-items: center; min-height: 24px; }
+
+#fuente-dialogo-cerrar { align-self: flex-end; }
+
+/* ---- The slide of a year (R11) ---------------------------------------------- */
+
+.paneles[data-desliza="izquierda"] { animation: desde-la-izquierda 420ms var(--curva) both; }
+
+.paneles[data-desliza="derecha"] { animation: desde-la-derecha 420ms var(--curva) both; }
+
+@keyframes desde-la-izquierda {
+  from { opacity: 0; transform: translateX(-48px); }
+}
+
+@keyframes desde-la-derecha {
+  from { opacity: 0; transform: translateX(48px); }
+}
+
+/* R21: reduced motion. The rows appear at once, and a year fades in 150ms. */
+@media (prefers-reduced-motion: reduce) {
+  .imprime { animation: none; }
+  .paneles[data-desliza="izquierda"], .paneles[data-desliza="derecha"] {
+    animation: fundido 150ms linear both;
+  }
+  .pista, .pista::after, .arco { transition: none; }
+}
+
+@keyframes fundido {
+  from { opacity: 0; }
+}
+
+/* ---- A telephone (R1, R20) ---------------------------------------------------- */
+
+@media (max-width: 800px) {
+  /* The page scrolls here, and the chart comes first. */
+  .marco { height: auto; min-height: 100dvh; overflow: visible; }
+
+  /* Three rows: the name and the breadcrumb, the years, the switches. */
+  .barra { gap: 4px 12px; padding: 8px 16px; }
+  .empuje { flex-basis: 100%; height: 0; }
+  .anios { flex-basis: 100%; }
+
+  .paneles { display: block; }
+  .panel-grafico { padding: 16px; overflow: visible; }
+  h1 { font-size: 22px; }
+  .caja { flex: none; height: min(92vw, 420px); }
+  .panel-cinta { border-left: 0; border-top: 1px solid var(--regla); }
+  .renglones { overflow: visible; }
+  .fila, .vacio { padding: 10px 16px; }
+  .pie { padding: 12px 16px 24px; }
+  .total { font-size: 22px; }
+}

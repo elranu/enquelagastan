@@ -2,8 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  ancestroQueExiste, ejercicioDeEntrada, ejerciciosDisponibles, escribirRuta,
-  leerRuta,
+  ancestroQueExiste, direccionEntre, ejercicioDeEntrada, ejerciciosDisponibles, entradaDe,
+  escribirRuta, escrituraDe,
+  leerRuta, rutaDeEntrada,
 } from "../site/app/ruta.js";
 
 const MANIFIESTO = {
@@ -60,4 +61,69 @@ test("una url sin ejercicio nunca se escribe como #/null", () => {
   // the URL, so the route here only has to stay a route.
   assert.equal(escribirRuta(null, ""), "#/");
   assert.equal(escribirRuta(Number.NaN, "88"), "#/");
+});
+
+const ruta = (anio, clave, grupos = [], desde = null) => ({ anio, clave, grupos, desde });
+
+test("la raiz y un nodo tienen su hash, y el estado lleva la ruta", () => {
+  assert.deepEqual(entradaDe(ruta(2025, "")), {
+    hash: "#/2025",
+    estado: { anio: 2025, clave: "", grupos: [], desde: null },
+  });
+  assert.equal(entradaDe(ruta(2025, "88-1")).hash, "#/2025/88-1");
+  assert.deepEqual(entradaDe({ fuentes: true }), { hash: "#/fuentes", estado: { fuentes: true } });
+});
+
+test("un grupo otros guarda sus claves en el estado y no en la url", () => {
+  // W8: a shared link opens the nodo of the group.
+  const entrada = entradaDe(ruta(2025, "88", [["88-5", "88-6"]]));
+  assert.equal(entrada.hash, "#/2025/88");
+  assert.deepEqual(entrada.estado.grupos, [["88-5", "88-6"]]);
+});
+
+test("una entrada del historial vuelve a dar su ruta", () => {
+  const original = ruta(2026, "88-9", [["88-9-1", "88-9-2"]], { anio: 2025, nombre: "Becas", monto: 4 });
+  const { hash, estado } = entradaDe(original);
+  assert.deepEqual(rutaDeEntrada(hash, estado), original);
+  assert.deepEqual(rutaDeEntrada("#/2025/88", estado), ruta(2025, "88"),
+    "a state of another place carries no group to this one");
+  assert.deepEqual(rutaDeEntrada("#/2025/88", null), ruta(2025, "88"));
+  assert.deepEqual(rutaDeEntrada("#/fuentes", null), { fuentes: true });
+});
+
+test("un paso agrega una entrada y un paso al mismo lugar no agrega nada", () => {
+  const raiz = entradaDe(ruta(2025, ""));
+  assert.equal(escrituraDe("paso", raiz, entradaDe(ruta(2025, "88"))), "push");
+  assert.equal(escrituraDe("paso", raiz, entradaDe(ruta(2025, ""))), null,
+    "the name of the site on the root");
+  assert.equal(escrituraDe("paso", entradaDe(ruta(2025, "88")),
+    entradaDe(ruta(2025, "88", [["88-5"]]))), "push", "a group is a step");
+});
+
+test("una carga que cambia el lugar reemplaza la entrada", () => {
+  // R12: the link names a nodo with one child, and the navigator lands on
+  // its child. Back must not return to the nodo that jumps forward.
+  const salto = entradaDe(ruta(2025, "70-1"));
+  assert.equal(escrituraDe("carga", { hash: "#/2025/70", estado: null }, salto), "replace");
+  // The first load of a good link still writes the state.
+  assert.equal(escrituraDe("carga", { hash: "#/2025/70-1", estado: null }, salto), "replace");
+  assert.equal(escrituraDe("carga", salto, salto), null, "Back to an entry that holds");
+  // A group that the data no longer has: draw the nodo, replace the entry.
+  const conGrupo = entradaDe(ruta(2025, "88", [["88-7"]]));
+  assert.equal(escrituraDe("carga", conGrupo, entradaDe(ruta(2025, "88"))), "replace");
+});
+
+test("la direccion entre dos rutas elige el movimiento", () => {
+  assert.equal(direccionEntre(null, ruta(2025, "")), "inicio");
+  assert.equal(direccionEntre(ruta(2025, ""), ruta(2025, "88")), "abajo");
+  assert.equal(direccionEntre(ruta(2025, "88"), ruta(2025, "88-1-0")), "abajo");
+  assert.equal(direccionEntre(ruta(2025, "88"), ruta(2025, "88", [["88-5"]])), "abajo");
+  assert.equal(direccionEntre(ruta(2025, "88-1"), ruta(2025, "88")), "arriba");
+  assert.equal(direccionEntre(ruta(2025, "", [["20"]]), ruta(2025, "")), "arriba");
+  assert.equal(direccionEntre(ruta(2025, "88"), ruta(2026, "88")), "anio");
+  assert.equal(direccionEntre(ruta(2025, "88"), ruta(2025, "88")), "igual");
+  assert.equal(direccionEntre(ruta(2025, "88"), ruta(2025, "90")), "salto");
+  assert.equal(direccionEntre(ruta(2025, "88"), { fuentes: true }), "salto");
+  assert.equal(direccionEntre(ruta(2025, "88-10"), ruta(2025, "88-1")), "salto",
+    "a clave is a camino, not a prefix of text");
 });

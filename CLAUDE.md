@@ -6,9 +6,9 @@ En qué la gastan makes the public spending of the Argentine national state easy
 to read. The data is open already. It comes from an API as thousands of rows
 with codes for the jurisdiction, the program and the object of the spending.
 This project shows that data as one map. The user sees the total spending as a
-pie chart, with the fiscal result beside it. The user taps one slice and goes
-one level down: jurisdiction, entity, program, activity, object of the
-spending.
+chart of concentric rings, with the fiscal result beside it. The user taps one
+part and goes one level down: jurisdiction, entity, program, activity, object
+of the spending.
 
 The users are the citizens, the journalists and the researchers of Argentina.
 The product asks for no login, and for no knowledge of budget terms.
@@ -66,7 +66,9 @@ The `designpowers` plugin adds design stages to Superpowers. This rule overrides
 Superpowers hand-off: after `superpowers:brainstorming` ends its architectural path and
 the user approves the design spec, invoke `designpowers:eventstorming`. Do not invoke
 `superpowers:writing-plans` at that point. The chain is eventstorming, wireframing,
-domain-modeling, consolidating-the-spec, and only then writing-plans.
+domain-modeling, consolidating-the-spec, and only then writing-plans. A stage may be
+skipped when the user asks for it, and the skip, its reason and who asked go into the
+design spec.
 
 Every level of every design stage ends with a model, a KPI table, and a user gate. See
 `plugins/designpowers/skills/using-designpowers/SKILL.md` and `docs/WORKFLOW.md`.

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  conSigno, fechaCorta, montoCorto, montoLargo, pesosDe, porcentaje,
+  conSigno, fechaCorta, montoCorto, montoLargo, partesDelMonto, pesosDe, porcentaje,
 } from "../site/app/formato.js";
 
 test("un millon de la fuente son un millon de pesos por uno", () => {
@@ -45,4 +45,10 @@ test("una fecha que no se entiende pasa como vino", () => {
   assert.equal(fechaCorta("ayer a la tarde"), "ayer a la tarde");
   assert.equal(fechaCorta(undefined), "");
   assert.equal(fechaCorta(""), "");
+});
+
+test("el disco separa el numero de la unidad", () => {
+  assert.deepEqual(partesDelMonto(123_533_955.013701), { numero: "123,5", unidad: "billones" });
+  assert.deepEqual(partesDelMonto(1.2), { numero: "1,2", unidad: "millones" });
+  assert.deepEqual(partesDelMonto(0.5), { numero: "500.000", unidad: "pesos" });
 });
