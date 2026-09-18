@@ -159,7 +159,7 @@ Closed: RQ1 by W14, RQ2 by W11, RQ4 by W15. Q7 of the base spec by R9. The other
 | KPI | Baseline today | Target | Window | Measured how | Owner |
 |---|---|---|---|---|---|
 | Page scroll on a desktop | yes: the list goes below the fold at 1440x900 | none at 1440x900 and 1280x720 | every release | a browser walk | the agent |
-| Contrast | text passes; adjacent slices look the same | text 4.5:1, slices 3:1, four palettes | every release | a unit test on the palettes | the agent |
+| Contrast | text passes; adjacent slices look the same | text 4.5:1, slices 3:1, five palettes | every release | a unit test on the palettes | the agent |
 | Duration of a step | 0ms, no motion | 450 to 550ms | every release | the code, and a browser walk | the agent |
 | Back moves inside the navigator | fails after a group "otros" | every step of the walk | every release | a browser walk of Back and Forward | the agent |
 | Chart visible after the first load | not measured | under 2 s on a 4G telephone, estimate | every release | a performance mark when the ring appears, read in a browser walk | the agent |
@@ -194,7 +194,7 @@ The navigator has no command and no aggregate, so the table traces use cases to 
 | UC-05 | P1, P2 | A1, A2, A3, A4, A5, A10, A12, A13, K1, B1, B2 | R9, R10, R12, R20, W6, W7 | the short breadcrumb at depths 0 to 6, with and without accents | under 1 s |
 | UC-06 | P1, P2, P2b, P4 | A15, A16, A20, A21 | W3, W13, R22 | the foot is on every place; the dialog holds the codes at the last level; Escape closes the dialog only | visible with no action |
 | UC-08 | P2 | the URL | R12, W8 | a hash opens its nodo; an absent clave opens the nearest ancestor | the link opens the same nodo |
-| UC-09 | every place | A8, A9 | R13 to R17, R22 to R25, W9, W14, W15 | the theme with no storage and with a storage that throws; the sentence; the contrast of the four palettes, with `--dato`; the system look changes with no reload | under 0.3 s |
+| UC-09 | every place | A8, A9 | R13 to R17, R22 to R25, W9, W14, W15 | the theme with no storage and with a storage that throws; the sentence; the contrast of the five palettes, with `--dato`; the system look changes with no reload | under 0.3 s |
 
 ## Risks and assumptions
 
@@ -227,10 +227,10 @@ Read this document first, then `02-wireframes.md` for the flows and the sketches
   - `site/app/tema.js`, new: the two switches and their storage.
   - `site/app/app.js`, changed: the history of R12; the generation counter stays.
   - `site/app/pantalla.js`, changed: the two panes, "Volver", the years, the disc, the tape, P2b, P4, the failure screen.
-  - `site/estilo.css`, rewritten: the tokens of the four palettes, chosen by two attributes on `<html>`.
+  - `site/estilo.css`, rewritten: the tokens of the five palettes, chosen by two attributes on `<html>`.
   - `site/index.html`, changed: an inline script sets the two attributes before the first paint.
   - `site/fuentes/`, new: the font files and their licences.
-- [x] Invariants as TDD targets. No new invariant. Test targets: the geometry of the rings (the angles add up to 360 degrees, one part gives a full ring, the interpolation starts and ends at the right states); the short breadcrumb (depths 0 to 6, names with and without accents); the sentence (the root, the same name, a nodo with no part, centavos, under 1 centavo); the fit of the text of the disc; the theme (no stored value, a storage that throws, a dark preference); the history (which step pushes and which replaces); the contrast of the four palettes. The 106 tests of the navigator and the 78 tests of the build stay green.
+- [x] Invariants as TDD targets. No new invariant. Test targets: the geometry of the rings (the angles add up to 360 degrees, one part gives a full ring, the interpolation starts and ends at the right states); the short breadcrumb (depths 0 to 6, names with and without accents); the sentence (the root, the same name, a nodo with no part, centavos, under 1 centavo); the fit of the text of the disc; the theme (no stored value, a storage that throws, a dark preference); the history (which step pushes and which replaces); the contrast of the five palettes. The 106 tests of the navigator and the 78 tests of the build stay green.
 - [x] KPIs that need instrumentation: a performance mark when the ring first appears. The completion rates have no measurement point, by scope.
 - [x] Places per use case, sketches to build: `02-wireframes.md`, level 3 (the top bar, P1, P2, P2b, P4, Failure).
 - [x] Deferred questions with owner and due date: RQ3, the agent, writing-plans.
