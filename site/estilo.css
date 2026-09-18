@@ -309,7 +309,9 @@ h1:focus { outline: none; }
   align-items: center;
   min-width: 44px;
   min-height: 44px;
-  padding: 10px 6px;
+  /* No padding above or below: the logo then takes the full 44px of the
+     control, and the bar keeps the height that its own controls set. */
+  padding: 0 6px;
   border-radius: 6px;
   font-weight: 600;
   color: var(--texto);
@@ -322,7 +324,9 @@ h1:focus { outline: none; }
 .sitio img {
   display: block;
   width: auto;
-  height: 48px;
+  /* 44px is the tallest logo that does not grow the bar: the year arrows
+     and the switches already stand 44px tall. */
+  height: 44px;
 }
 
 .miga ol {
@@ -772,5 +776,5 @@ h1 {
 @media (max-width: 400px) {
   /* At 375px wide the bar takes its height from its own padding, never
      from the panes (G4): the logo shrinks a little further here. */
-  .sitio img { height: 40px; }
+  .sitio img { height: 36px; }
 }
