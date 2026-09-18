@@ -702,6 +702,18 @@ export function pintarFuentes(documento, vista) {
   vaciar(lugar);
   const tabla = documento.createElement("table");
   tabla.setAttribute("class", "fuentes");
+  const encabezado = documento.createElement("thead");
+  const filaEncabezado = documento.createElement("tr");
+  // A screen reader names every value it reads; with no header row it read
+  // four numbers with no name.
+  for (const nombre of ["Año", "Archivo", "Publicado", "Estado"]) {
+    const celda = texto(documento, "th", nombre);
+    celda.setAttribute("scope", "col");
+    filaEncabezado.appendChild(celda);
+  }
+  encabezado.appendChild(filaEncabezado);
+  tabla.appendChild(encabezado);
+  const cuerpo = documento.createElement("tbody");
   for (const fila of vista.filas) {
     const linea = documento.createElement("tr");
     linea.appendChild(texto(documento, "td", String(fila.ejercicio)));
@@ -712,8 +724,9 @@ export function pintarFuentes(documento, vista) {
     linea.appendChild(celda);
     linea.appendChild(texto(documento, "td", fechaCorta(fila.publicado)));
     linea.appendChild(texto(documento, "td", estadoDeLaFila(fila)));
-    tabla.appendChild(linea);
+    cuerpo.appendChild(linea);
   }
+  tabla.appendChild(cuerpo);
   lugar.appendChild(tabla);
   // This place is the source itself.
   parte(documento, "pie").hidden = true;

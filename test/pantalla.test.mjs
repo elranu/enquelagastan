@@ -531,12 +531,27 @@ test("las fuentes ponen el metodo en el grafico y la tabla en la cinta", () => {
   assert.equal(enMarco(documento, "caja").hidden, true, "W13: no chart on P4");
   const tabla = enMarco(documento, "renglones").hijos[0];
   assert.equal(tabla.etiqueta, "table");
-  assert.equal(tabla.hijos.length, 2);
   assert.match(textoDe(tabla), /credito-anual-2025\.zip/);
   assert.deepEqual(controles(enMarco(documento, "acciones"), "data-clave"),
     [{ texto: "Volver al inicio", valor: "" }]);
   assert.ok(controles(enMarco(documento, "acciones"), "href")
     .some((control) => control.texto === "El código de este proyecto"));
+});
+
+test("la tabla de fuentes nombra sus columnas para el lector de pantalla", () => {
+  // Comment 3: a table of td cells only reads four values with no name.
+  const documento = falsoDocumento();
+  pintarFuentes(documento, vistaDeFuentes(MANIFIESTO));
+  const tabla = enMarco(documento, "renglones").hijos[0];
+  const [encabezado, cuerpo] = tabla.hijos;
+  assert.equal(encabezado.etiqueta, "thead");
+  const columnas = encabezado.hijos[0].hijos;
+  assert.deepEqual(columnas.map((celda) => celda.etiqueta), ["th", "th", "th", "th"]);
+  assert.deepEqual(columnas.map((celda) => celda.textContent),
+    ["Año", "Archivo", "Publicado", "Estado"]);
+  assert.ok(columnas.every((celda) => celda.getAttribute("scope") === "col"));
+  assert.equal(cuerpo.etiqueta, "tbody");
+  assert.equal(cuerpo.hijos.length, MANIFIESTO.ejercicios.length);
 });
 
 test("la pantalla de un fallo tiene sus salidas en el marco", () => {
