@@ -1,6 +1,6 @@
 # En qué la gastan
 
-Un mapa navegable del gasto público del estado nacional argentino.
+Un mapa navegable del gasto público del Estado nacional argentino.
 
 Los datos ya son abiertos. Llegan como miles de filas con códigos para la
 jurisdicción, el programa y el objeto del gasto. Un ejercicio, el 2025, tiene
@@ -10,10 +10,9 @@ Sin login. Sin necesidad de conocer los términos del presupuesto.
 
 ## Qué es este proyecto hoy
 
-El sitio se publica desde GitHub Pages en
-**https://elranu.github.io/enquelagastan/**, pero GitHub Pages todavía no lo
-está sirviendo. La página va a responder en cuanto se habilite GitHub Pages
-en este repositorio.
+El sitio está publicado en **https://elranu.github.io/enquelagastan/**.
+GitHub Pages lo sirve, y cada corrida del build que publica datos nuevos lo
+actualiza.
 
 El build corre todos los días. Descarga los archivos abiertos. Suma sus
 filas. Compara el total contra el informe oficial. Escribe el resultado como
@@ -26,7 +25,7 @@ su fila, y esa parte crece hasta ocupar el todo: entidad, programa,
 actividad, y el objeto del gasto. Los anillos exteriores mantienen el camino
 a la vista.
 
-"Volver", la tecla Escape, el breadcrumb y el botón Atrás del navegador suben
+"Volver", la tecla Escape, la miga de pan y el botón Atrás del navegador suben
 un nivel. Las flechas de la barra superior cambian el año, y el camino se
 mantiene. Cada paso es una entrada del historial, así que un link abre el
 mismo nodo.
@@ -51,7 +50,7 @@ Todavía faltan dos cosas. La pantalla del resultado fiscal espera los
 ingresos, porque el build solo lee el gasto. El botón que quita la inflación
 espera un plan futuro.
 
-## Los números son los números del estado
+## Los números son los números del Estado
 
 Cada número de acá viene de los archivos que publica el Ministerio de
 Economía. Este proyecto los suma; no los ajusta.
@@ -101,9 +100,9 @@ lee filtra las filas del archivo por los códigos de esa rama.
 
 ## La medida
 
-Este proyecto muestra el **crédito devengado**: el gasto que el estado
+Este proyecto muestra el **crédito devengado**: el gasto que el Estado
 ejecutó, es decir, el gasto cuya obligación ya nació. El empleado trabajó el
-mes, el bien llegó, la jubilación se volvió pagadera. El estado debe esa
+mes, el bien llegó, la jubilación se volvió pagadera. El Estado debe esa
 plata, la haya pagado o no.
 
 `CONTEXT.md` define todos los términos del presupuesto que usa este
@@ -159,4 +158,4 @@ abiertos. Las URLs son idénticas, sin copia y sin espejo en el medio.
 
 ## Licencia
 
-MIT para el código. Los datos pertenecen al estado argentino, bajo CC BY 4.0.
+MIT para el código. Los datos pertenecen al Estado argentino, bajo CC BY 4.0.
