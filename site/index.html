@@ -1,22 +1,120 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-tema="sistema" data-vista="simple">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>En qué la gastan</title>
     <meta name="description"
           content="Un mapa navegable del gasto público del Estado nacional argentino." />
+    <script>
+      // Apply the stored look before the first paint, so a look never
+      // flashes. site/app/tema.js holds the same keys, and a test checks it.
+      // R13: "sistema" is the default and one of three stored values, so
+      // estilo.css alone follows prefers-color-scheme; this script never
+      // needs matchMedia.
+      (() => {
+        const leer = (clave) => {
+          try { return localStorage.getItem(clave); } catch { return null; }
+        };
+        const raiz = document.documentElement;
+        const aspecto = leer("enquelagastan-oscuro");
+        raiz.setAttribute("data-tema",
+          ["sistema", "claro", "oscuro"].includes(aspecto) ? aspecto : "sistema");
+        raiz.setAttribute("data-vista", leer("enquelagastan-billetes") === "true" ? "billetes" : "simple");
+      })();
+    </script>
     <link rel="stylesheet" href="estilo.css" />
   </head>
   <body>
-    <!-- #app carries no aria-live. Every navigation empties and refills it,
-         so a live region here would read the whole new screen: the strip of
-         years, up to 10 crumbs, the headline, 8 rows of the legend and 13
-         codes, as one announcement that nothing can interrupt. The region
-         below is stable and empty, and it says only what changed. -->
-    <main id="app">
-      <p class="cargando">Cargando el gasto público…</p>
-    </main>
+    <!-- The frame draws once. app.js writes its parts on every step, so the
+         top bar, the chart and the tape stay in place, and a motion can run
+         between two places. -->
+    <div class="marco">
+      <header class="barra">
+        <a class="sitio" id="sitio" href="#/" data-clave="">En qué la gastan</a>
+        <nav class="miga" id="miga" aria-label="Camino" hidden></nav>
+        <span class="empuje"></span>
+        <div class="anios" role="group" aria-label="Ejercicio">
+          <button type="button" class="flecha" id="anio-anterior" data-anio=""
+                  aria-label="Año anterior" disabled>‹</button>
+          <span class="anio" id="anio"></span>
+          <button type="button" class="flecha" id="anio-siguiente" data-anio=""
+                  aria-label="Año siguiente" disabled>›</button>
+        </div>
+        <div class="interruptores">
+          <!-- R13, R23: three states (sistema, claro, oscuro), an icon and no
+               word. tema.js sets the icon and the label that matches the
+               stored state; this markup shows "sistema" until it runs. -->
+          <button type="button" class="interruptor" id="tema" data-interruptor="tema"
+                  aria-label="Tema: sistema. Tocar para el tema claro.">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="3" width="16" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7 17h6M10 14v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </button>
+          <!-- R23: two states, so it keeps role="switch" and its track. -->
+          <button type="button" class="interruptor" id="billetes" role="switch"
+                  aria-checked="false" data-interruptor="billetes" aria-label="Billetes">
+            <span class="pista" aria-hidden="true"></span>
+            <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="1.5" y="6" width="17" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="10" cy="10" r="2.2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- #app carries no aria-live. A live region here would read the whole
+           place on every step. #aviso below is stable, and it says only what
+           changed. -->
+      <main id="app" class="paneles">
+        <section class="panel-grafico" aria-labelledby="titulo">
+          <div class="cabeza">
+            <button type="button" class="volver" id="volver" data-subir="" hidden>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16 10H4m5-5-5 5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Volver
+            </button>
+            <h1 id="titulo" tabindex="-1">Cargando el gasto público…</h1>
+          </div>
+          <p class="frase" id="frase" hidden></p>
+          <p class="subtitulo" id="subtitulo" hidden></p>
+          <p class="detalle" id="detalle" hidden></p>
+          <div class="nota" id="nota" hidden></div>
+          <div class="acciones" id="acciones" hidden></div>
+          <div class="caja" id="caja">
+            <div class="lienzo" id="lienzo">
+              <svg id="grafico" viewBox="-1 -1 2 2" aria-hidden="true"><g id="anillos"></g></svg>
+              <div class="disco" aria-hidden="true">
+                <div class="monto" id="disco">
+                  <span class="numero" id="disco-numero"></span>
+                  <span class="unidad" id="disco-unidad"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel-cinta" aria-label="Partidas">
+          <div class="renglones" id="renglones"></div>
+          <footer class="pie" id="pie">
+            <div class="cuenta" id="cuenta" hidden>
+              <p class="rotulo" id="rotulo"></p>
+              <p class="total"><span class="cifras" id="total" aria-hidden="true"></span><span class="unidad" aria-hidden="true">pesos</span><span class="solo-lectores" id="total-texto"></span></p>
+            </div>
+            <!-- R22: one line, always visible with no action (INV-03). A tap
+                 opens the dialog with the rest of the source. -->
+            <button type="button" class="fuente-control" id="fuente-control" data-abrir-fuente=""
+                    aria-haspopup="dialog">
+              Fuente: Presupuesto Abierto, Ministerio de Economía.
+            </button>
+          </footer>
+        </section>
+      </main>
+    </div>
+    <!-- R22: the frame holds the dialog once; pintarPie fills its parts. -->
+    <dialog class="fuente-dialogo" id="fuente-dialogo" aria-labelledby="fuente-dialogo-titulo">
+      <h2 id="fuente-dialogo-titulo">Fuente: Presupuesto Abierto, Ministerio de Economía</h2>
+      <p id="fuente-dialogo-medida"></p>
+      <p class="codigos" id="codigos" hidden></p>
+      <p class="enlaces">
+        <a id="descargar" href="" hidden>Descargar el archivo oficial</a>
+        <a id="fuentes-enlace" href="#/fuentes" data-fuentes="">De dónde salen estos números</a>
+      </p>
+      <button type="button" class="secundario" id="fuente-dialogo-cerrar" data-cerrar-fuente="">Cerrar</button>
+    </dialog>
     <p id="aviso" role="status" class="solo-lectores"></p>
     <script type="module" src="app/app.js"></script>
   </body>

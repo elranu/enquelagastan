@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { iniciar } from "../site/app/app.js";
 import { cargarJson, olvidar } from "../site/app/datos.js";
+import { CLAVE_OSCURO } from "../site/app/tema.js";
 import {
   controles, falsaHistoria, falsaVentana, falsoDocumento, textoDe,
 } from "./falso-documento.mjs";
@@ -21,7 +22,8 @@ function arbolDe(devengado) {
     "88-9": { n: "Otra area", d: 1, p: 1, v: 1, g: 0, k: [] },
     "90": { n: "Deuda", d: 40, p: 40, v: 40, g: 0, k: [] },
     "50": { n: "Economia", d: 10, p: 10, v: 10, g: 0, k: [] },
-    // A chain of one child. The visitor never stops on "70".
+    // A chain of one child. The visitor never stops on "70". Its 4 are
+    // under 4% of the root, so "70" lives in the group "otros" of the root.
     "70": { n: "Vialidad", d: 4, p: 4, v: 4, g: 0, k: ["1"] },
     "70-1": { n: "Rutas", d: 4, p: 4, v: 4, g: 0, k: ["1", "2"] },
     "70-1-1": { n: "Norte", d: 2, p: 2, v: 2, g: 0, k: [] },
@@ -45,6 +47,15 @@ function arbolDe(devengado) {
   }
   return indice;
 }
+
+// In 2025 the Deuda divides in two. In 2026 it does not, so "90-1" is a
+// clave that exists in 2025 only.
+const ARBOL_2025 = {
+  ...arbolDe(60),
+  "90": { n: "Deuda", d: 40, p: 40, v: 40, g: 0, k: ["1", "2"] },
+  "90-1": { n: "Intereses", d: 30, p: 30, v: 30, g: 0, k: [] },
+  "90-2": { n: "Comisiones", d: 10, p: 10, v: 10, g: 0, k: [] },
+};
 
 const OBJETO = {
   [`${CADENA}-1`]: { n: "Personal", d: 30, p: 30, v: 30, g: 0, k: [] },
@@ -74,7 +85,7 @@ const MANIFIESTO = {
 
 const CUERPOS = {
   "data/manifest.json": MANIFIESTO,
-  "data/2025/institucional.json": arbolDe(60),
+  "data/2025/institucional.json": ARBOL_2025,
   "data/2026/institucional.json": arbolDe(70),
   [`data/2025/objeto/${CADENA}.json`]: OBJETO,
   [`data/2026/objeto/${CADENA}.json`]: OBJETO,
@@ -116,22 +127,41 @@ function falsoTraer(demorados = []) {
   return { traer, llamadas, soltar, contar };
 }
 
-function montar(hash, demorados = []) {
+function montar(hash, { demorados = [], estado = null, ventanaExtra = {} } = {}) {
   olvidar();
   const red = falsoTraer(demorados);
   globalThis.fetch = red.traer;
   const documento = falsoDocumento();
-  const ventana = falsaVentana(hash);
-  const historia = falsaHistoria();
+  const ventana = { ...falsaVentana(hash), ...ventanaExtra };
+  const historia = falsaHistoria(ventana, estado);
   const navegador = iniciar({ documento, ventana, historia });
+  const parte = (id) => documento.getElementById(id);
   return {
     ...red,
+    documento,
     navegador,
     ventana,
     historia,
-    app: documento.getElementById("app"),
-    aviso: documento.getElementById("aviso"),
+    parte,
+    titulo: () => parte("titulo").textContent,
+    // A click on a painted control, as a mouse or a tap fires it. detail 1
+    // marks it as a pointer click, never a keyboard one (detail 0).
+    pulsar: (elemento) => {
+      documento.disparar("click", { target: elemento, detail: 1, preventDefault() {} });
+      return navegador.listo();
+    },
+    tecla: (key) => {
+      documento.disparar("keydown", { key, target: parte("titulo") });
+      return navegador.listo();
+    },
   };
+}
+
+// The row of the tape whose name is nombre.
+function fila(sitio, nombre) {
+  const lista = sitio.parte("renglones").hijos[0];
+  return lista.hijos.map((item) => item.hijos[0])
+    .find((control) => textoDe(control).includes(nombre));
 }
 
 // Let every promise that is already settled run its continuations.
@@ -141,41 +171,33 @@ function respirar() {
 
 test("la pantalla de la raiz escribe el total del ejercicio", async () => {
   const sitio = montar("#/2025");
-  await sitio.navegador.dibujar();
-  assert.equal(sitio.app.hijos.length, 1);
-  assert.match(textoDe(sitio.app), /111\.000\.000 pesos/);
+  await sitio.navegador.listo();
+  assert.equal(sitio.titulo(), "En qué la gastó el Estado nacional");
+  assert.equal(sitio.parte("total-texto").textContent, "111.000.000 pesos");
 });
 
-test("una segunda navegacion no deja dos pantallas encima", async () => {
-  // A visitor on a nodo of level 8 taps a slice, and the object file takes
-  // 250 ms. 30 ms later the visitor taps "Inicio". Both runs used to empty
-  // the page early and to append late. The page then carried two headlines,
-  // two migas, two strips of years and two feet at once.
+test("una segunda navegacion no deja la pantalla de la primera", async () => {
+  // A visitor on a nodo of level 8 goes down, and the object file takes
+  // 250 ms. 30 ms later the visitor goes to the root. The first run must
+  // not paint over the second one when its file arrives.
   const objeto = `data/2025/objeto/${CADENA}.json`;
-  const sitio = montar(`#/2025/${CADENA}`, [objeto]);
-  const primera = sitio.navegador.dibujar();
-  // The first run reads the hash and reaches the object file. The tap on
-  // "Inicio" comes 30 ms later, while that file is still on the way.
+  const sitio = montar(`#/2025/${CADENA}`, { demorados: [objeto] });
   await respirar();
   await respirar();
 
-  sitio.ventana.location.hash = "#/2025";
-  await sitio.navegador.dibujar();
-
+  await sitio.navegador.ir({ anio: 2025, clave: "", grupos: [], desde: null }, "paso");
   sitio.soltar(objeto);
-  await primera;
+  await respirar();
   await respirar();
 
-  assert.equal(sitio.app.hijos.length, 1, "one screen, and never two");
-  const texto = textoDe(sitio.app);
-  assert.match(texto, /111\.000\.000 pesos/, "the screen the visitor asked for");
-  assert.doesNotMatch(texto, /Personal/, "and nothing of the run it left");
+  assert.equal(sitio.titulo(), "En qué la gastó el Estado nacional");
+  assert.doesNotMatch(textoDe(sitio.parte("renglones")), /Personal/,
+    "nothing of the run it left");
 });
 
 test("un pedido abandonado que despues falla no borra la pantalla vigente", async () => {
-  // A visitor on a nodo of level 8 taps a slice, and the object file fails
-  // instead of arriving. 30 ms later the visitor taps "Inicio". The failure
-  // of the first run must not erase the second run, already on screen.
+  // The object file fails instead of arriving, after the visitor went to
+  // the root. The failure of the first run must not erase the second run.
   olvidar();
   const objeto = `data/2025/objeto/${CADENA}.json`;
   let rechazar;
@@ -187,118 +209,608 @@ test("un pedido abandonado que despues falla no borra la pantalla vigente", asyn
   });
   const documento = falsoDocumento();
   const ventana = falsaVentana(`#/2025/${CADENA}`);
-  const historia = falsaHistoria();
+  const historia = falsaHistoria(ventana);
   const navegador = iniciar({ documento, ventana, historia });
-  const app = documento.getElementById("app");
-
-  const primera = navegador.dibujar();
+  const primera = navegador.listo();
   await respirar();
   await respirar();
 
-  ventana.location.hash = "#/2025";
-  await navegador.dibujar();
-
+  await navegador.ir({ anio: 2025, clave: "", grupos: [], desde: null }, "paso");
   rechazar(new Error("Failed to fetch"));
   await primera;
 
-  assert.equal(app.hijos.length, 1, "one screen, and never the error page");
-  const texto = textoDe(app);
-  assert.match(texto, /111\.000\.000 pesos/, "the root, still on screen");
-  assert.doesNotMatch(texto, /No pudimos mostrar esta pantalla/, "and not the failure");
+  assert.equal(documento.getElementById("titulo").textContent, "En qué la gastó el Estado nacional");
+  assert.doesNotMatch(textoDe(documento.getElementById("titulo")), /No pudimos/);
 });
 
-test("el ejercicio que se abandona no reescribe la url", async () => {
+test("el ejercicio que se abandona no escribe en el historial", async () => {
   const objeto = `data/2025/objeto/${CADENA}.json`;
-  const sitio = montar(`#/2025/${CADENA}`, [objeto]);
-  const primera = sitio.navegador.dibujar();
+  const sitio = montar(`#/2025/${CADENA}`, { demorados: [objeto] });
   await respirar();
   await respirar();
-  sitio.ventana.location.hash = "#/2025";
-  await sitio.navegador.dibujar();
+  await sitio.navegador.ir({ anio: 2025, clave: "", grupos: [], desde: null }, "paso");
   sitio.soltar(objeto);
-  await primera;
   await respirar();
-  assert.deepEqual(sitio.historia.escrituras, [],
-    "history.replaceState must never name the screen the visitor left");
+  await respirar();
+  assert.deepEqual(sitio.historia.escrituras, [["push", "#/2025"]],
+    "the history never names the screen the visitor left");
 });
 
 test("dos lecturas de una misma ruta hacen un solo pedido", async () => {
-  // A visitor on the root of 2025 taps the arrow of 2026, a file of 1,1 MB.
-  // 40 ms later the visitor taps a slice. Both runs read the same file, and
-  // the memory used to hold the settled value, so both asked for it.
+  // A visitor taps the arrow of 2026, a file of 1,1 MB, and taps again
+  // before it arrives. Both runs read the same file.
   const lento = "data/2026/institucional.json";
-  const sitio = montar("#/2026", [lento]);
-  const primera = sitio.navegador.dibujar();
-  const segunda = sitio.navegador.dibujar();
+  const sitio = montar("#/2026", { demorados: [lento] });
+  const segunda = sitio.navegador.ir({ anio: 2026, clave: "", grupos: [], desde: null }, "carga");
   await respirar();
   sitio.soltar(lento);
-  await Promise.all([primera, segunda]);
+  await segunda;
   assert.equal(sitio.contar(lento), 1, "one file, one request");
-  assert.equal(sitio.app.hijos.length, 1);
+  assert.equal(sitio.titulo(), "En qué la gastó el Estado nacional");
 });
 
 test("un pedido que falla no queda guardado", async () => {
   const sitio = montar("#/2025");
-  await sitio.navegador.dibujar();
+  await sitio.navegador.listo();
   const ausente = "data/2025/objeto/99-9-9-9-9-9-9-9-9.json";
   await assert.rejects(() => cargarJson(ausente, sitio.traer));
   await assert.rejects(() => cargarJson(ausente, sitio.traer));
   assert.equal(sitio.contar(ausente), 2, "a failure is asked for again");
 });
 
-test("el navegador reescribe la url cuando salta un hijo unico", async () => {
-  // A nodo of one child repeats the screen before it, so the navigator jumps
-  // over it. history.replaceState, and never push: Back would come here
-  // again and jump forward again, with no way out.
+test("un enlace a un nodo de un solo hijo reemplaza la entrada", async () => {
+  // R12: Back must never return to a nodo that jumps forward again.
   const sitio = montar("#/2025/70");
-  await sitio.navegador.dibujar();
-  assert.deepEqual(sitio.historia.escrituras, ["#/2025/70-1"]);
-  assert.match(textoDe(sitio.app), /Rutas/);
+  await sitio.navegador.listo();
+  assert.deepEqual(sitio.historia.escrituras, [["replace", "#/2025/70-1"]]);
+  assert.equal(sitio.titulo(), "Rutas");
+});
+
+test("un nodo cuyo unico hijo falta en el indice termina y se pinta a si mismo", async () => {
+  // "88" declares one child in k ("88-1"), but the index holds no entry for
+  // it. saltarHijoUnico must stop on "88", and never send the navigator to
+  // a clave with no nodo behind it. That kind of clave calls itself absent,
+  // and with no exercise of origin the loop returns here for ever.
+  olvidar();
+  const indice = { "88": { n: "Capital Humano", d: 60, p: 60, v: 60, g: 0, k: ["1"] } };
+  const cuerpos = {
+    "data/manifest.json": {
+      ejercicios: [{
+        ejercicio: 2025, archivo: "https://ejemplo/credito-anual-2025.zip",
+        publicado: "Wed, 08 Jul 2026 10:39:43 GMT", total_devengado: 60_000_000,
+        verificado: true, en_este_artefacto: true,
+      }],
+    },
+    "data/2025/institucional.json": indice,
+  };
+  globalThis.fetch = async (ruta) => ({
+    ok: cuerpos[ruta] !== undefined,
+    status: cuerpos[ruta] === undefined ? 404 : 200,
+    json: async () => cuerpos[ruta],
+  });
+  const documento = falsoDocumento();
+  const ventana = falsaVentana("#/2025/88");
+  const historia = falsaHistoria(ventana);
+  const navegador = iniciar({ documento, ventana, historia });
+  await navegador.listo();
+  assert.equal(documento.getElementById("titulo").textContent, "Capital Humano",
+    "the nodo paints itself, and never P2b");
+  assert.deepEqual(historia.escrituras, [["replace", "#/2025/88"]]);
 });
 
 test("una hoja del objeto nombra cada codigo de su camino", async () => {
   const sitio = montar(`#/2025/${CADENA}-1`);
-  await sitio.navegador.dibujar();
-  const texto = textoDe(sitio.app);
-  assert.match(texto, /Personal/);
-  assert.match(texto, /jurisdiccion_id=88/);
-  assert.match(texto, /inciso_id=1/,
+  await sitio.navegador.listo();
+  assert.equal(sitio.titulo(), "Personal");
+  const codigos = sitio.parte("codigos").textContent;
+  assert.match(codigos, /jurisdiccion_id=88/);
+  assert.match(codigos, /inciso_id=1/,
     "the source names every code, or the number is not reproducible");
-});
-
-test("la pantalla de un grupo otros describe al grupo", async () => {
-  const sitio = montar("#/2025");
-  await sitio.navegador.dibujar();
-  await sitio.navegador.manejarClick({
-    target: {
-      closest: (selector) => (selector === "[data-destino]"
-        ? { dataset: { destino: "90 50" } }
-        : null),
-    },
-  });
-  const texto = textoDe(sitio.app);
-  assert.equal(sitio.app.hijos.length, 1);
-  assert.match(texto, /50\.000\.000 pesos/, "the total of the group");
-  assert.match(texto, /Parte del gasto del Estado nacional/);
-  assert.doesNotMatch(texto, /111\.000\.000/, "and never the total of the country");
 });
 
 test("la region de avisos dice lo que cambio, y no la pantalla entera", async () => {
   const sitio = montar("#/2025");
-  await sitio.navegador.dibujar();
-  assert.equal(sitio.aviso.textContent,
+  await sitio.navegador.listo();
+  assert.equal(sitio.parte("aviso").textContent,
     "En qué la gastó el Estado nacional. 111.000.000 pesos.");
-  assert.doesNotMatch(sitio.aviso.textContent, /Fuente/);
 });
 
-test("la pantalla de un fallo ofrece una salida que sirve siempre", async () => {
-  const sitio = montar("#/");
-  sitio.navegador.informar(new Error("Unexpected end of JSON input"));
-  const salidas = controles(sitio.app, "data-clave");
-  assert.deepEqual(salidas, [{ texto: "Volver al inicio", valor: "" }],
-    "a button, and never a link to the route already on screen");
-  const texto = textoDe(sitio.app);
-  assert.match(texto, /No pudimos mostrar esta pantalla/);
-  assert.match(texto, /Fuente: Presupuesto Abierto/, "UC-06 holds here too");
-  assert.match(texto, /Unexpected end of JSON input/, "the detail helps a report");
+test("un primer fallo, con nada pintado, pinta el fallo con una salida que sirve siempre", async () => {
+  // UC-01: nothing is on screen yet, so the failure screen is the only
+  // honest answer. Its exit must still work once the network recovers.
+  olvidar();
+  let primeraLlamada = true;
+  globalThis.fetch = async (ruta) => {
+    if (primeraLlamada) {
+      primeraLlamada = false;
+      throw new Error("Failed to fetch");
+    }
+    return {
+      ok: CUERPOS[ruta] !== undefined,
+      status: CUERPOS[ruta] === undefined ? 404 : 200,
+      json: async () => CUERPOS[ruta],
+    };
+  };
+  const documento = falsoDocumento();
+  const ventana = falsaVentana("#/2025");
+  const historia = falsaHistoria(ventana);
+  const navegador = iniciar({ documento, ventana, historia });
+  await navegador.listo();
+
+  const salida = documento.getElementById("acciones").hijos[0];
+  assert.deepEqual(controles(salida, "data-clave"), [{ texto: "Volver al inicio", valor: "" }]);
+  documento.disparar("click", { target: salida, detail: 1, preventDefault() {} });
+  await navegador.listo();
+  assert.equal(documento.getElementById("titulo").textContent,
+    "En qué la gastó el Estado nacional", "the exit works");
+});
+
+test("un fallo transitorio con una pantalla pintada la deja, y avisa en la nota", async () => {
+  // UC-01: a transient failure of the network must not hide data that was
+  // already correct. Only the line of notice, and the live region, say why.
+  const sitio = montar("#/2025");
+  await sitio.navegador.listo();
+  assert.equal(sitio.parte("total-texto").textContent, "111.000.000 pesos");
+
+  globalThis.fetch = async () => { throw new Error("Failed to fetch"); };
+  await sitio.navegador.ir({ anio: 2026, clave: "", grupos: [], desde: null }, "paso");
+
+  assert.equal(sitio.parte("total-texto").textContent, "111.000.000 pesos",
+    "the screen already on view stays; 2026 never overwrites it");
+  assert.equal(textoDe(sitio.parte("nota")).trim(), "No pudimos cargar 2026. Probá de nuevo.");
+  assert.equal(sitio.parte("aviso").textContent, "No pudimos cargar 2026. Probá de nuevo.");
+});
+
+test("un fallo que llega despues de Cargando repone el disco de la pantalla que queda", async () => {
+  // W10 meets UC-01: the timer of ESPERA_DE_CARGA can paint "Cargando..." in
+  // the disc before a request that keeps the screen on view finally fails.
+  // The disc must go back to that screen's own total, not stay on the
+  // placeholder.
+  const sitio = montar("#/2025");
+  await sitio.navegador.listo();
+  const numeroDeAntes = sitio.parte("disco-numero").textContent;
+  const unidadDeAntes = sitio.parte("disco-unidad").textContent;
+
+  // ESPERA_DE_CARGA is 300ms; a rejection after 350ms lets the timer paint
+  // "Cargando…" before the run fails.
+  globalThis.fetch = () => new Promise((_resolver, rechazar) => {
+    setTimeout(() => rechazar(new Error("Failed to fetch")), 350);
+  });
+  await sitio.navegador.ir({ anio: 2026, clave: "", grupos: [], desde: null }, "paso");
+
+  assert.equal(sitio.parte("disco-numero").textContent, numeroDeAntes,
+    "the disc shows the total of the screen that stayed, and not the placeholder");
+  assert.equal(sitio.parte("disco-unidad").textContent, unidadDeAntes);
+  assert.match(textoDe(sitio.parte("nota")), /No pudimos cargar 2026/);
+});
+
+test("abrir una parte agrega una entrada, y Volver agrega otra", async () => {
+  const sitio = montar("#/2025");
+  await sitio.navegador.listo();
+  await sitio.pulsar(fila(sitio, "Capital Humano"));
+  assert.equal(sitio.titulo(), "Capital Humano");
+  assert.equal(sitio.ventana.location.hash, "#/2025/88");
+  await sitio.pulsar(sitio.parte("volver"));
+  assert.equal(sitio.titulo(), "En qué la gastó el Estado nacional");
+  // W6: "Volver" is a step, so Back returns to Capital Humano.
+  assert.deepEqual(sitio.historia.escrituras,
+    [["replace", "#/2025"], ["push", "#/2025/88"], ["push", "#/2025"]]);
+});
+
+test("otros agrega una entrada con el mismo hash y sus claves en el estado", async () => {
+  const sitio = montar("#/2025");
+  await sitio.navegador.listo();
+  await sitio.pulsar(fila(sitio, "Otros (1)"));
+  assert.equal(sitio.titulo(), "Otros");
+  assert.equal(sitio.ventana.location.hash, "#/2025", "W8: the group is not in the URL");
+  assert.deepEqual(sitio.historia.state.grupos, [["70"]]);
+  assert.equal(sitio.parte("detalle").textContent, "3,5% del gasto total",
+    "R18: 4 of 114 is 3,5%, and nothing more");
+});
+
+test("Atras vuelve al grupo otros y a su nodo", async () => {
+  const sitio = montar("#/2025");
+  await sitio.navegador.listo();
+  await sitio.pulsar(fila(sitio, "Otros (1)"));
+  await sitio.pulsar(fila(sitio, "Vialidad"));
+  assert.equal(sitio.titulo(), "Rutas", "the skip of Vialidad lands on Rutas");
+  sitio.historia.back();
+  await sitio.navegador.listo();
+  assert.equal(sitio.titulo(), "Otros", "Back keeps the group");
+  sitio.historia.back();
+  await sitio.navegador.listo();
+  assert.equal(sitio.titulo(), "En qué la gastó el Estado nacional");
+  sitio.historia.forward();
+  await sitio.navegador.listo();
+  assert.equal(sitio.titulo(), "Otros");
+  assert.equal(sitio.historia.entradas.length, 3, "Back and Forward write no entry");
+});
+
+test("una entrada con un grupo que ya no existe dibuja el nodo y se reemplaza", async () => {
+  const sitio = montar("#/2025", {
+    estado: { anio: 2025, clave: "", grupos: [["77", "78"]], desde: null },
+  });
+  await sitio.navegador.listo();
+  assert.equal(sitio.titulo(), "En qué la gastó el Estado nacional");
+  assert.deepEqual(sitio.historia.state.grupos, []);
+  assert.deepEqual(sitio.historia.escrituras, [["replace", "#/2025"]]);
+});
+
+test("el arco encendido y la miga suben al nivel que nombran", async () => {
+  const sitio = montar("#/2025/88-1-0-1");
+  await sitio.navegador.listo();
+  // The pila: Inicio, Capital Humano, Nivel 2, Nivel 3, Nivel 4.
+  assert.match(sitio.parte("anillos").innerHTML, /data-subir="3"/, "A12: the thin ring");
+  assert.match(sitio.parte("anillos").innerHTML, /data-subir="1"/, "A13: the hairline ring");
+  const miga = sitio.parte("miga").hijos[0].hijos;
+  const nivel1 = miga[1].hijos[0];
+  assert.equal(nivel1.textContent, "Capital Humano");
+  await sitio.pulsar(nivel1);
+  assert.equal(sitio.titulo(), "Capital Humano");
+  assert.equal(sitio.historia.escrituras.at(-1)[0], "push");
+});
+
+test("las flechas del anio conservan el camino y cierran el grupo", async () => {
+  const sitio = montar("#/2025/88");
+  await sitio.navegador.listo();
+  await sitio.pulsar(fila(sitio, "Otros (1)"));
+  assert.equal(sitio.titulo(), "Otros");
+  await sitio.pulsar(sitio.parte("anio-siguiente"));
+  assert.equal(sitio.ventana.location.hash, "#/2026/88", "C17: the path stays");
+  assert.equal(sitio.titulo(), "Capital Humano", "W5: the group closes");
+  assert.equal(sitio.parte("anio-siguiente").disabled, true, "R11: 2026 is the end");
+});
+
+test("un anio donde el camino no existe muestra P2b, y Volver a vuelve", async () => {
+  const sitio = montar("#/2025/90-1");
+  await sitio.navegador.listo();
+  await sitio.pulsar(sitio.parte("anio-siguiente"));
+  assert.equal(sitio.ventana.location.hash, "#/2026/90-1");
+  assert.equal(sitio.titulo(), "Intereses");
+  assert.equal(sitio.parte("volver").hidden, true, "W12");
+  assert.match(textoDe(sitio.parte("nota")), /En 2025 gastó 30,0 millones\./);
+  const volverA = controles(sitio.parte("acciones"), "data-anio");
+  assert.deepEqual(volverA, [{ texto: "Volver a 2025", valor: "2025" }]);
+  await sitio.pulsar(sitio.parte("acciones").hijos[1]);
+  assert.equal(sitio.ventana.location.hash, "#/2025/90-1");
+  assert.equal(sitio.titulo(), "Intereses");
+});
+
+test("un enlace a una clave ausente abre el ancestro con un aviso", async () => {
+  const sitio = montar("#/2026/90-1");
+  await sitio.navegador.listo();
+  assert.equal(sitio.titulo(), "Deuda");
+  assert.equal(textoDe(sitio.parte("nota")).trim(),
+    "Ese nivel no existe en 2026; te llevamos al más cercano.");
+  assert.deepEqual(sitio.historia.escrituras, [["replace", "#/2026/90"]]);
+});
+
+test("Escape sube un nivel y las flechas del teclado cambian el anio", async () => {
+  const sitio = montar("#/2025/88");
+  await sitio.navegador.listo();
+  await sitio.tecla("ArrowRight");
+  assert.equal(sitio.ventana.location.hash, "#/2026/88");
+  await sitio.tecla("ArrowRight");
+  assert.equal(sitio.ventana.location.hash, "#/2026/88", "K2 does nothing at the end");
+  await sitio.tecla("Escape");
+  assert.equal(sitio.ventana.location.hash, "#/2026");
+  await sitio.tecla("Escape");
+  assert.equal(sitio.historia.entradas.length, 3, "Escape at the root does nothing");
+});
+
+test("un toque en la fuente abre el dialogo, y Escape no sube de nivel con el dialogo abierto", async () => {
+  const sitio = montar("#/2025/88");
+  await sitio.navegador.listo();
+  const control = sitio.parte("fuente-control");
+  control.setAttribute("data-abrir-fuente", "");
+  await sitio.pulsar(control);
+  const dialogo = sitio.parte("fuente-dialogo");
+  assert.equal(dialogo.open, true, "R22: a tap opens the dialog");
+  const hashAntes = sitio.ventana.location.hash;
+  await sitio.tecla("Escape");
+  assert.equal(sitio.ventana.location.hash, hashAntes,
+    "the navigator must not go up a level when the dialog answers Escape");
+
+  const cerrar = sitio.parte("fuente-dialogo-cerrar");
+  cerrar.setAttribute("data-cerrar-fuente", "");
+  await sitio.pulsar(cerrar);
+  assert.equal(dialogo.open, false, "Cerrar closes the dialog");
+});
+
+test("un enlace dentro del dialogo abierto cierra el dialogo al navegar", async () => {
+  // Review, fix round 1, item 2: the link to P4 inside the dialog must not
+  // leave the modal sitting over the new place.
+  const sitio = montar("#/2025/88");
+  await sitio.navegador.listo();
+  const control = sitio.parte("fuente-control");
+  control.setAttribute("data-abrir-fuente", "");
+  await sitio.pulsar(control);
+  const dialogo = sitio.parte("fuente-dialogo");
+  assert.equal(dialogo.open, true);
+
+  const enlace = sitio.parte("fuentes-enlace");
+  enlace.setAttribute("data-fuentes", "");
+  await sitio.pulsar(enlace);
+  assert.equal(dialogo.open, false, "P4 must not sit under an open dialog");
+});
+
+test("el nombre del sitio vuelve a la raiz del anio en pantalla", async () => {
+  const sitio = montar("#/2026/88");
+  await sitio.navegador.listo();
+  sitio.parte("sitio").setAttribute("data-clave", "");
+  await sitio.pulsar(sitio.parte("sitio"));
+  assert.equal(sitio.ventana.location.hash, "#/2026");
+});
+
+test("el enlace a las fuentes abre P4 y Volver al inicio vuelve", async () => {
+  const sitio = montar("#/2026/88");
+  await sitio.navegador.listo();
+  const enlace = sitio.parte("fuentes-enlace");
+  enlace.setAttribute("data-fuentes", "");
+  await sitio.pulsar(enlace);
+  assert.equal(sitio.ventana.location.hash, "#/fuentes");
+  assert.equal(sitio.titulo(), "De dónde salen estos números");
+  await sitio.pulsar(sitio.parte("acciones").hijos[0]);
+  assert.equal(sitio.ventana.location.hash, "#/2026", "the root of the last year on screen");
+});
+
+test("un interruptor cambia el aspecto y no escribe en el historial", async () => {
+  const guardado = {};
+  const sitio = montar("#/2025", {
+    ventanaExtra: {
+      localStorage: { getItem: (clave) => guardado[clave] ?? null, setItem: (clave, valor) => { guardado[clave] = valor; } },
+      matchMedia: () => ({ matches: false }),
+    },
+  });
+  await sitio.navegador.listo();
+  const html = sitio.documento.documentElement;
+  assert.equal(html.atributos["data-tema"], "sistema");
+  const tema = sitio.parte("tema");
+  tema.setAttribute("data-interruptor", "tema");
+  const antes = sitio.historia.escrituras.length;
+  await sitio.pulsar(tema);
+  assert.equal(html.atributos["data-tema"], "claro");
+  assert.equal(guardado[CLAVE_OSCURO], "claro");
+  await sitio.pulsar(tema);
+  assert.equal(html.atributos["data-tema"], "oscuro");
+  assert.equal(guardado[CLAVE_OSCURO], "oscuro");
+  assert.equal(sitio.historia.escrituras.length, antes, "W9: no entry");
+});
+
+test("el interruptor de billetes reajusta el disco para el tipo de letra nuevo", async () => {
+  // R7: Billetes changes --mono to Archivo, a different width. The fake
+  // document has no layout, so ajustarDisco always returns at once; a spy on
+  // getElementById shows whether the switch asked it to measure the disc.
+  const sitio = montar("#/2025", {
+    ventanaExtra: {
+      localStorage: { getItem: () => null, setItem: () => {} },
+      matchMedia: () => ({ matches: false }),
+    },
+  });
+  await sitio.navegador.listo();
+  const pedidos = [];
+  const original = sitio.documento.getElementById;
+  sitio.documento.getElementById = (id) => {
+    pedidos.push(id);
+    return original(id);
+  };
+  const billetes = sitio.parte("billetes");
+  billetes.setAttribute("data-interruptor", "billetes");
+  await sitio.pulsar(billetes);
+  for (const id of ["disco-numero", "disco", "lienzo"]) {
+    assert.ok(pedidos.includes(id), `the switch must re-measure the disc (${id})`);
+  }
+});
+
+test("un toque durante el movimiento lo termina, y la marca sale una vez", async () => {
+  const cuadros = [];
+  const marcas = [];
+  const sitio = montar("#/2025", {
+    ventanaExtra: {
+      requestAnimationFrame: (funcion) => { cuadros.push(funcion); },
+      performance: { now: () => 0, mark: (nombre) => { marcas.push(nombre); } },
+    },
+  });
+  await sitio.navegador.listo();
+  assert.doesNotMatch(sitio.parte("anillos").innerHTML, /data-abrir/, "the ring is growing");
+  sitio.documento.disparar("pointerdown", {});
+  assert.match(sitio.parte("anillos").innerHTML, /data-abrir="0"/, "R4: the motion ends at once");
+  await sitio.pulsar(fila(sitio, "Capital Humano"));
+  assert.deepEqual(marcas, ["enquelagastan-anillo"]);
+});
+
+test("un archivo lento escribe Cargando en el disco", async () => {
+  // W10: the object file loads before the motion. After 300ms the disc
+  // says so.
+  const objeto = `data/2025/objeto/${CADENA}.json`;
+  const sitio = montar("#/2025/88-1-0-1-1-1-1-1", { demorados: [objeto] });
+  await sitio.navegador.listo();
+  const paso = sitio.pulsar(fila(sitio, "Nivel 9"));
+  await new Promise((seguir) => setTimeout(seguir, 320));
+  assert.equal(sitio.parte("disco-numero").textContent, "Cargando…");
+  sitio.soltar(objeto);
+  await paso;
+  assert.equal(sitio.titulo(), "Nivel 9");
+  assert.notEqual(sitio.parte("disco-numero").textContent, "Cargando…");
+});
+
+test("un puntero durante el movimiento suelta en la parte, y el click que sigue no repite el paso", async () => {
+  // R4: pointerdown only ends the motion and remembers the part; the step
+  // itself waits for pointerup of the same gesture. The click that follows
+  // lands on the same arc the gesture just opened, so the ignore must hold
+  // even when that click alone would also open it.
+  const cuadros = [];
+  const sitio = montar("#/2025", {
+    ventanaExtra: { requestAnimationFrame: (funcion) => { cuadros.push(funcion); } },
+  });
+  await sitio.navegador.listo();
+  const antes = sitio.historia.escrituras.length;
+  const control = sitio.documento.createElement("path");
+  control.setAttribute("data-abrir", "0");
+  sitio.documento.elementoBajoElPuntero = control;
+  sitio.documento.disparar("pointerdown", { button: 0, pointerId: 1 });
+  sitio.documento.disparar("pointerup", { pointerId: 1 });
+  await sitio.navegador.listo();
+  // The gesture alone, with no click yet, must already have opened it.
+  assert.equal(sitio.titulo(), "Capital Humano");
+  assert.equal(sitio.historia.escrituras.length, antes + 1, "pointerup alone opens the part");
+  sitio.documento.disparar("click", { target: control, detail: 1, preventDefault() {} });
+  await sitio.navegador.listo();
+  assert.equal(sitio.titulo(), "Capital Humano");
+  assert.equal(sitio.historia.escrituras.length, antes + 1, "the click that follows adds nothing");
+});
+
+test("un puntero cancelado no deja nada pendiente, y un toque despues navega una vez", async () => {
+  // A pan that starts on a moving ring fires pointercancel, and no click.
+  // The gesture must open nothing, and a later, ordinary tap must still
+  // work: a stale remembered part must never block it.
+  const cuadros = [];
+  const sitio = montar("#/2025", {
+    ventanaExtra: { requestAnimationFrame: (funcion) => { cuadros.push(funcion); } },
+  });
+  await sitio.navegador.listo();
+  const antes = sitio.historia.escrituras.length;
+  const control = sitio.documento.createElement("path");
+  control.setAttribute("data-abrir", "0");
+  sitio.documento.elementoBajoElPuntero = control;
+  sitio.documento.disparar("pointerdown", { button: 0, pointerId: 1 });
+  sitio.documento.disparar("pointercancel", { pointerId: 1 });
+  // A stray pointerup of the cancelled gesture must find nothing remembered.
+  sitio.documento.disparar("pointerup", { pointerId: 1 });
+  await sitio.navegador.listo();
+  assert.equal(sitio.historia.escrituras.length, antes, "the cancelled gesture opens nothing");
+  const filaCapitalHumano = fila(sitio, "Capital Humano");
+  await sitio.pulsar(filaCapitalHumano);
+  assert.equal(sitio.titulo(), "Capital Humano");
+  assert.equal(sitio.historia.escrituras.length, antes + 1, "one step, never two");
+});
+
+test("un puntero pendiente no abre nada solo, y un click de teclado en una fila navega despues", async () => {
+  // Enter or Space on a focused row fires a real click of detail 0, with no
+  // pointerdown of its own. That click must land, whatever a pointerdown
+  // with no pointerup and no click left remembered.
+  const cuadros = [];
+  const sitio = montar("#/2025", {
+    ventanaExtra: { requestAnimationFrame: (funcion) => { cuadros.push(funcion); } },
+  });
+  await sitio.navegador.listo();
+  const antes = sitio.historia.escrituras.length;
+  const control = sitio.documento.createElement("path");
+  control.setAttribute("data-abrir", "0");
+  sitio.documento.elementoBajoElPuntero = control;
+  sitio.documento.disparar("pointerdown", { button: 0, pointerId: 1 });
+  // Let the async chain of a (wrongly) direct navigation run to completion,
+  // so a step from pointerdown alone would already show in the history.
+  await sitio.navegador.listo();
+  assert.equal(sitio.historia.escrituras.length, antes,
+    "R4 ends the motion, but a tap opens nothing before pointerup");
+  const filaCapitalHumano = fila(sitio, "Capital Humano");
+  sitio.documento.disparar("click", { target: filaCapitalHumano, detail: 0, preventDefault() {} });
+  await sitio.navegador.listo();
+  assert.equal(sitio.titulo(), "Capital Humano");
+  assert.equal(sitio.historia.escrituras.length, antes + 1, "one step, from the keyboard click alone");
+});
+
+test("un puntero de boton secundario termina el movimiento y no abre nada", async () => {
+  const cuadros = [];
+  const sitio = montar("#/2025", {
+    ventanaExtra: { requestAnimationFrame: (funcion) => { cuadros.push(funcion); } },
+  });
+  await sitio.navegador.listo();
+  assert.doesNotMatch(sitio.parte("anillos").innerHTML, /data-abrir/, "the ring is growing");
+  const antes = sitio.historia.escrituras.length;
+  const control = sitio.documento.createElement("path");
+  control.setAttribute("data-abrir", "0");
+  sitio.documento.elementoBajoElPuntero = control;
+  // button 2: a right click. R4 still ends the motion.
+  sitio.documento.disparar("pointerdown", { button: 2, pointerId: 1 });
+  assert.match(sitio.parte("anillos").innerHTML, /data-abrir="0"/, "R4: the motion still ends at once");
+  sitio.documento.disparar("pointerup", { pointerId: 1 });
+  await sitio.navegador.listo();
+  assert.equal(sitio.historia.escrituras.length, antes, "a secondary button never opens a part");
+});
+
+test("un click de teclado nunca se ignora, y el puntero siguiente limpia la marca vieja", async () => {
+  // A pointer click clears the mark once it ignores it; a keyboard click
+  // never touches the mark at all, so it can stay set with no click of a
+  // pointer left to clear it. Any later pointerdown, of any gesture, must
+  // still clear it first, or it blocks a normal tap for ever.
+  const cuadros = [];
+  const sitio = montar("#/2025", {
+    ventanaExtra: { requestAnimationFrame: (funcion) => { cuadros.push(funcion); } },
+  });
+  await sitio.navegador.listo();
+  const antes = sitio.historia.escrituras.length;
+  const control = sitio.documento.createElement("path");
+  control.setAttribute("data-abrir", "0");
+  sitio.documento.elementoBajoElPuntero = control;
+  sitio.documento.disparar("pointerdown", { button: 0, pointerId: 1 });
+  sitio.documento.disparar("pointerup", { pointerId: 1 });
+  await sitio.navegador.listo();
+  assert.equal(sitio.historia.escrituras.length, antes + 1, "the gesture alone opens the part");
+
+  // Enter or Space on the first row of the new screen: a real click of
+  // detail 0, with no pointer at all. It must land, mark or no mark.
+  const primeraFila = sitio.parte("renglones").hijos[0].hijos[0].hijos[0];
+  sitio.documento.disparar("click", { target: primeraFila, detail: 0, preventDefault() {} });
+  await sitio.navegador.listo();
+  assert.equal(sitio.historia.escrituras.length, antes + 2, "a keyboard click is never ignored");
+
+  // A pointerdown of an unrelated gesture, over nothing, must still clear
+  // whatever the keyboard click above left set.
+  sitio.documento.elementoBajoElPuntero = null;
+  sitio.documento.disparar("pointerdown", { button: 0, pointerId: 2 });
+  const otraFila = sitio.parte("renglones").hijos[0].hijos[0].hijos[0];
+  await sitio.pulsar(otraFila);
+  assert.equal(sitio.historia.escrituras.length, antes + 3, "one more step, from an ordinary tap");
+});
+
+test("un pointerup con otro pointerId no abre nada", async () => {
+  // Only the pointerup of the same gesture the pointerdown remembered may
+  // open the part it found.
+  const cuadros = [];
+  const sitio = montar("#/2025", {
+    ventanaExtra: { requestAnimationFrame: (funcion) => { cuadros.push(funcion); } },
+  });
+  await sitio.navegador.listo();
+  const antes = sitio.historia.escrituras.length;
+  const control = sitio.documento.createElement("path");
+  control.setAttribute("data-abrir", "0");
+  sitio.documento.elementoBajoElPuntero = control;
+  sitio.documento.disparar("pointerdown", { button: 0, pointerId: 1 });
+  sitio.documento.disparar("pointerup", { pointerId: 2 });
+  await sitio.navegador.listo();
+  assert.equal(sitio.historia.escrituras.length, antes, "a pointerup of a different gesture opens nothing");
+});
+
+test("un pointerup sobre otro elemento no abre nada", async () => {
+  // A mouse drag off the part, or a screen that changed while the press
+  // was held, must not open the part remembered at pointerdown, and never
+  // the different part the finger now sits over either.
+  const cuadros = [];
+  const sitio = montar("#/2025", {
+    ventanaExtra: { requestAnimationFrame: (funcion) => { cuadros.push(funcion); } },
+  });
+  await sitio.navegador.listo();
+  const antes = sitio.historia.escrituras.length;
+  const control = sitio.documento.createElement("path");
+  control.setAttribute("data-abrir", "0");
+  sitio.documento.elementoBajoElPuntero = control;
+  sitio.documento.disparar("pointerdown", { button: 0, pointerId: 1 });
+  const otroElemento = sitio.documento.createElement("path");
+  otroElemento.setAttribute("data-abrir", "1");
+  sitio.documento.elementoBajoElPuntero = otroElemento;
+  sitio.documento.disparar("pointerup", { pointerId: 1 });
+  await sitio.navegador.listo();
+  assert.equal(sitio.historia.escrituras.length, antes, "a moved pointer opens nothing");
+});
+
+test("un puntero sin movimiento no hace nada, y el click que sigue navega una vez", async () => {
+  const sitio = montar("#/2025");
+  await sitio.navegador.listo();
+  const antes = sitio.historia.escrituras.length;
+  sitio.documento.disparar("pointerdown", {});
+  await sitio.pulsar(fila(sitio, "Capital Humano"));
+  assert.equal(sitio.titulo(), "Capital Humano");
+  assert.equal(sitio.historia.escrituras.length, antes + 1, "one step, never two");
 });

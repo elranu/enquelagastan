@@ -63,3 +63,10 @@ export function fechaCorta(cabecera) {
   return `${fecha.getUTCDate()} ${MESES[fecha.getUTCMonth()]} `
     + `${fecha.getUTCFullYear()}`;
 }
+
+export function partesDelMonto(millones) {
+  // R7: the disc writes the number large and the unit small, on two lines.
+  // montoCorto writes no unit under a million pesos, so the unit is "pesos".
+  const [numero, unidad = "pesos"] = montoCorto(millones).split(" ");
+  return { numero, unidad };
+}
