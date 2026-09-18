@@ -755,6 +755,15 @@ export function pintarCargando(documento) {
   parte(documento, "disco-unidad").textContent = "";
 }
 
+export function pintarNota(documento, mensaje) {
+  // UC-01: a failure that arrives once a screen already shows its data must
+  // not replace it. This line is the only part of that screen that changes.
+  const nota = parte(documento, "nota");
+  vaciar(nota);
+  nota.hidden = false;
+  nota.appendChild(texto(documento, "p", mensaje));
+}
+
 export function ajustarDisco(documento) {
   // R7: measure the text at 100px, then give it the size that fits the hole.
   // The fake document of the tests has no layout, so it skips this. An

@@ -14,7 +14,7 @@ import { crearMotor } from "./movimiento.js";
 import {
   ajustarDisco, deslizar, esAusencia, ESPERA_DE_CARGA, expandirMiga, indiceParaClave,
   moverNavegador, pilaDe, pintarAusente, pintarCargando, pintarError, pintarFuentes,
-  pintarNavegador, resolverPantalla, rutaDePila, vistaDeAusente, vistaDeError,
+  pintarNavegador, pintarNota, resolverPantalla, rutaDePila, vistaDeAusente, vistaDeError,
   vistaDeFuentes, vistaDeNavegador,
 } from "./pantalla.js";
 import {
@@ -210,14 +210,26 @@ export function iniciar({ documento, ventana, historia }) {
     enCurso = correr(pedido, modo, vigente)
       .catch((error) => {
         if (vigente()) {
-          informar(error);
+          informar(error, pedido);
         }
       })
       .finally(() => clearTimeout(espera));
     return enCurso;
   }
 
-  function informar(error) {
+  function informar(error, pedido = null) {
+    // UC-01: a failure of the network keeps the last known screen with its
+    // date. Only a first load, with nothing painted yet, has no screen to
+    // keep, and the error screen itself counts as none.
+    if (actual && actual.lugar !== "error") {
+      const anio = pedido?.anio;
+      const mensaje = anio
+        ? `No pudimos cargar ${anio}. Probá de nuevo.`
+        : "No pudimos cargar los datos. Probá de nuevo.";
+      pintarNota(documento, mensaje);
+      anunciar(mensaje);
+      return;
+    }
     pintarError(documento, vistaDeError(error));
     anunciar("No pudimos mostrar esta pantalla.");
     actual = { ruta: null, lugar: "error" };

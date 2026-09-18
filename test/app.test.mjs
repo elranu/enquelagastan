@@ -315,14 +315,50 @@ test("la region de avisos dice lo que cambio, y no la pantalla entera", async ()
     "En qué la gastó el Estado nacional. 111.000.000 pesos.");
 });
 
-test("la pantalla de un fallo ofrece una salida que sirve siempre", async () => {
+test("un primer fallo, con nada pintado, pinta el fallo con una salida que sirve siempre", async () => {
+  // UC-01: nothing is on screen yet, so the failure screen is the only
+  // honest answer. Its exit must still work once the network recovers.
+  olvidar();
+  let primeraLlamada = true;
+  globalThis.fetch = async (ruta) => {
+    if (primeraLlamada) {
+      primeraLlamada = false;
+      throw new Error("Failed to fetch");
+    }
+    return {
+      ok: CUERPOS[ruta] !== undefined,
+      status: CUERPOS[ruta] === undefined ? 404 : 200,
+      json: async () => CUERPOS[ruta],
+    };
+  };
+  const documento = falsoDocumento();
+  const ventana = falsaVentana("#/2025");
+  const historia = falsaHistoria(ventana);
+  const navegador = iniciar({ documento, ventana, historia });
+  await navegador.listo();
+
+  const salida = documento.getElementById("acciones").hijos[0];
+  assert.deepEqual(controles(salida, "data-clave"), [{ texto: "Volver al inicio", valor: "" }]);
+  documento.disparar("click", { target: salida, detail: 1, preventDefault() {} });
+  await navegador.listo();
+  assert.equal(documento.getElementById("titulo").textContent,
+    "En qué la gastó el Estado nacional", "the exit works");
+});
+
+test("un fallo transitorio con una pantalla pintada la deja, y avisa en la nota", async () => {
+  // UC-01: a transient failure of the network must not hide data that was
+  // already correct. Only the line of notice, and the live region, say why.
   const sitio = montar("#/2025");
   await sitio.navegador.listo();
-  sitio.navegador.informar(new Error("Unexpected end of JSON input"));
-  const salida = sitio.parte("acciones").hijos[0];
-  assert.deepEqual(controles(salida, "data-clave"), [{ texto: "Volver al inicio", valor: "" }]);
-  await sitio.pulsar(salida);
-  assert.equal(sitio.titulo(), "En qué la gastó el Estado nacional", "the exit works");
+  assert.equal(sitio.parte("total-texto").textContent, "111.000.000 pesos");
+
+  globalThis.fetch = async () => { throw new Error("Failed to fetch"); };
+  await sitio.navegador.ir({ anio: 2026, clave: "", grupos: [], desde: null }, "paso");
+
+  assert.equal(sitio.parte("total-texto").textContent, "111.000.000 pesos",
+    "the screen already on view stays; 2026 never overwrites it");
+  assert.equal(textoDe(sitio.parte("nota")).trim(), "No pudimos cargar 2026. Probá de nuevo.");
+  assert.equal(sitio.parte("aviso").textContent, "No pudimos cargar 2026. Probá de nuevo.");
 });
 
 test("abrir una parte agrega una entrada, y Volver agrega otra", async () => {
