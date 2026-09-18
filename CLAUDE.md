@@ -66,7 +66,9 @@ The `designpowers` plugin adds design stages to Superpowers. This rule overrides
 Superpowers hand-off: after `superpowers:brainstorming` ends its architectural path and
 the user approves the design spec, invoke `designpowers:eventstorming`. Do not invoke
 `superpowers:writing-plans` at that point. The chain is eventstorming, wireframing,
-domain-modeling, consolidating-the-spec, and only then writing-plans.
+domain-modeling, consolidating-the-spec, and only then writing-plans. A stage may be
+skipped when the user asks for it, and the skip, its reason and who asked go into the
+design spec.
 
 Every level of every design stage ends with a model, a KPI table, and a user gate. See
 `plugins/designpowers/skills/using-designpowers/SKILL.md` and `docs/WORKFLOW.md`.
