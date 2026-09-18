@@ -768,6 +768,16 @@ export function pintarCargando(documento) {
   parte(documento, "disco-unidad").textContent = "";
 }
 
+export function pintarDisco(documento, disco) {
+  // UC-01, the keep branch of informar: a failure that arrives after
+  // "Cargando..." painted must put back only the two parts of the disc, and
+  // nothing else of the screen that stays. disco is null for a screen with
+  // no total of its own (P2b, P4).
+  const { numero, unidad } = disco ?? { numero: "", unidad: "" };
+  parte(documento, "disco-numero").textContent = numero;
+  parte(documento, "disco-unidad").textContent = unidad;
+}
+
 export function pintarNota(documento, mensaje) {
   // UC-01: a failure that arrives once a screen already shows its data must
   // not replace it. This line is the only part of that screen that changes.

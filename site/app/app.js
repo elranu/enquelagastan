@@ -9,13 +9,13 @@
 // loop with the fakes of test/falso-documento.mjs.
 
 import { cargarInstitucional, cargarManifiesto } from "./datos.js";
-import { montoLargo } from "./formato.js";
+import { montoLargo, partesDelMonto } from "./formato.js";
 import { crearMotor } from "./movimiento.js";
 import {
   ajustarDisco, deslizar, esAusencia, ESPERA_DE_CARGA, expandirMiga, indiceParaClave,
-  moverNavegador, pilaDe, pintarAusente, pintarCargando, pintarError, pintarFuentes,
-  pintarNavegador, pintarNota, resolverPantalla, rutaDePila, vistaDeAusente, vistaDeError,
-  vistaDeFuentes, vistaDeNavegador,
+  moverNavegador, pilaDe, pintarAusente, pintarCargando, pintarDisco, pintarError,
+  pintarFuentes, pintarNavegador, pintarNota, resolverPantalla, rutaDePila, vistaDeAusente,
+  vistaDeError, vistaDeFuentes, vistaDeNavegador,
 } from "./pantalla.js";
 import {
   ancestroQueExiste, direccionEntre, ejercicioDeEntrada, ejerciciosDisponibles,
@@ -199,8 +199,12 @@ export function iniciar({ documento, ventana, historia }) {
     generacion += 1;
     const mia = generacion;
     const vigente = () => mia === generacion;
+    // The keep branch of informar undoes this once the run settles, so it
+    // must know whether the timer actually painted over the disc.
+    let cargandoPintado = false;
     const espera = setTimeout(() => {
       if (vigente()) {
+        cargandoPintado = true;
         pintarCargando(documento);
         // R7: "Cargando…" is new text in the disc, so it needs its own size.
         ajustarDisco(documento);
@@ -210,14 +214,14 @@ export function iniciar({ documento, ventana, historia }) {
     enCurso = correr(pedido, modo, vigente)
       .catch((error) => {
         if (vigente()) {
-          informar(error, pedido);
+          informar(error, pedido, cargandoPintado);
         }
       })
       .finally(() => clearTimeout(espera));
     return enCurso;
   }
 
-  function informar(error, pedido = null) {
+  function informar(error, pedido = null, cargandoPintado = false) {
     // UC-01: a failure of the network keeps the last known screen with its
     // date. Only a first load, with nothing painted yet, has no screen to
     // keep, and the error screen itself counts as none.
@@ -228,6 +232,12 @@ export function iniciar({ documento, ventana, historia }) {
         : "No pudimos cargar los datos. Probá de nuevo.";
       pintarNota(documento, mensaje);
       anunciar(mensaje);
+      if (cargandoPintado) {
+        // The timer already replaced the disc with "Cargando…"; put the
+        // screen that stays back, and size it again (R7).
+        pintarDisco(documento, actual.lugar === "navegador" ? partesDelMonto(actual.vista.total) : null);
+        ajustarDisco(documento);
+      }
       return;
     }
     pintarError(documento, vistaDeError(error));

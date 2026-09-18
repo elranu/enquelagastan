@@ -361,6 +361,29 @@ test("un fallo transitorio con una pantalla pintada la deja, y avisa en la nota"
   assert.equal(sitio.parte("aviso").textContent, "No pudimos cargar 2026. Probá de nuevo.");
 });
 
+test("un fallo que llega despues de Cargando repone el disco de la pantalla que queda", async () => {
+  // W10 meets UC-01: the timer of ESPERA_DE_CARGA can paint "Cargando..." in
+  // the disc before a request that keeps the screen on view finally fails.
+  // The disc must go back to that screen's own total, not stay on the
+  // placeholder.
+  const sitio = montar("#/2025");
+  await sitio.navegador.listo();
+  const numeroDeAntes = sitio.parte("disco-numero").textContent;
+  const unidadDeAntes = sitio.parte("disco-unidad").textContent;
+
+  // ESPERA_DE_CARGA is 300ms; a rejection after 350ms lets the timer paint
+  // "Cargando…" before the run fails.
+  globalThis.fetch = () => new Promise((_resolver, rechazar) => {
+    setTimeout(() => rechazar(new Error("Failed to fetch")), 350);
+  });
+  await sitio.navegador.ir({ anio: 2026, clave: "", grupos: [], desde: null }, "paso");
+
+  assert.equal(sitio.parte("disco-numero").textContent, numeroDeAntes,
+    "the disc shows the total of the screen that stayed, and not the placeholder");
+  assert.equal(sitio.parte("disco-unidad").textContent, unidadDeAntes);
+  assert.match(textoDe(sitio.parte("nota")), /No pudimos cargar 2026/);
+});
+
 test("abrir una parte agrega una entrada, y Volver agrega otra", async () => {
   const sitio = montar("#/2025");
   await sitio.navegador.listo();
