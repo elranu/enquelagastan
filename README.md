@@ -1,76 +1,84 @@
 # En qué la gastan
 
-A navigable map of the public spending of the Argentine national state.
+Un mapa navegable del gasto público del Estado nacional argentino.
 
-The data is open already. It arrives as thousands of rows with codes for the
-jurisdiccion, the programa and the object of the spending. One exercise, 2025,
-is 113,217 rows with 13 levels.
+Los datos ya son abiertos. Llegan como miles de filas con códigos para la
+jurisdicción, el programa y el objeto del gasto. Un ejercicio, el 2025, tiene
+113.217 filas con 13 niveles.
 
-No login. No knowledge of budget terms.
+Sin login. Sin necesidad de conocer los términos del presupuesto.
 
-## What this project is today
+## Qué es este proyecto hoy
 
-The site is live at **https://elranu.github.io/enquelagastan/**.
+El sitio está publicado en **https://elranu.github.io/enquelagastan/**.
+GitHub Pages lo sirve, y cada corrida del build que publica datos nuevos lo
+actualiza.
 
-The build runs every day. It downloads the open files. It adds up their
-rows. It checks the total against the official report. It writes the result
-as JSON files.
+El build corre todos los días. Descarga los archivos abiertos. Suma sus
+filas. Compara el total contra el informe oficial. Escribe el resultado como
+archivos JSON.
 
-The screens read those files. The first screen shows the total of the
-exercise as a chart of rings, with a tape of rows beside it. One part of the
-main ring is one jurisdiccion. The reader taps a part, or its row, and the
-part grows into the whole: entidad, programa, actividad, and the object of
-the spending. The outer rings keep the path in sight.
+Las pantallas leen esos archivos. La primera pantalla muestra el total del
+ejercicio como un gráfico de anillos, con una cinta de filas al lado. Una
+parte del anillo principal es una jurisdicción. Quien lee toca una parte, o
+su fila, y esa parte crece hasta ocupar el todo: entidad, programa,
+actividad, y el objeto del gasto. Los anillos exteriores mantienen el camino
+a la vista.
 
-"Volver", the key Escape, the breadcrumb and the Back button of the browser
-go up. The arrows of the top bar change the year, and the path stays. Every
-step is an entry of the history, so a link opens the same nodo.
+"Volver", la tecla Escape, la miga de pan y el botón Atrás del navegador suben
+un nivel. Las flechas de la barra superior cambian el año, y el camino se
+mantiene. Cada paso es una entrada del historial, así que un link abre el
+mismo nodo.
 
-One button changes the look, through three states: sistema, claro and
-oscuro. One switch, "Billetes", gives the colours of the peso bills, and one
-sentence: how many pesos of every 100 went to the largest part. Both
-controls are icons.
+La barra superior muestra el logo del producto, `site/marca.webp`, dibujado
+a partir de `enqlagastan-logo.svg`.
 
-The foot of the tape names the file and the date the number comes from.
-That foot is always visible.
+Un botón cambia el aspecto, con tres estados: sistema, claro y oscuro. Un
+interruptor, "Billetes", da los colores de los billetes de peso, y una
+frase: cuántos pesos de cada 100 fueron a la parte más grande. Los dos
+controles son iconos.
 
-The site needs no login and no knowledge of budget terms. It loads no font
-and no script from another server. The typefaces live under `site/fuentes/`.
+El pie de la cinta nombra el archivo y la fecha de la que viene el número.
+Ese pie está siempre visible.
 
-The design of the screens lives in
-`docs/superpowers/specs/2026-09-17-navigator-redesign-design.md` and
+El sitio no necesita login ni conocer los términos del presupuesto. No carga
+ninguna tipografía ni ningún script de otro servidor. Las tipografías viven
+bajo `site/fuentes/`.
+
+El diseño de las pantallas vive en
+`docs/superpowers/specs/2026-09-17-navigator-redesign-design.md` y
 `docs/designpowers/2026-09-17-navigator-redesign/02-wireframes.md`.
 
-Two things are still absent. The screen of the fiscal result waits for the
-revenue, because the build reads only the spending. The button that removes
-the inflation waits for a later plan.
+Todavía faltan dos cosas. La pantalla del resultado fiscal espera los
+ingresos, porque el build solo lee el gasto. El botón que quita la inflación
+espera un plan futuro.
 
-## The numbers are the numbers of the state
+## Los números son los números del Estado
 
-Every number here comes from the files that the Ministerio de Economia
-publishes. This project adds them up; it does not adjust them.
+Cada número de acá viene de los archivos que publica el Ministerio de
+Economía. Este proyecto los suma; no los ajusta.
 
-The build proves that on every run. It computes the total of the exercise and
-compares it against the official report "Cuenta Ahorro Inversion
-Financiamiento". **When the two do not agree, nothing is published.**
+El build lo prueba en cada corrida. Calcula el total del ejercicio y lo
+compara contra el informe oficial "Cuenta Ahorro Inversión Financiamiento".
+**Cuando los dos no coinciden, no se publica nada.**
 
-On the exercise 2025, the build compares one number:
+En el ejercicio 2025, el build compara un número:
 
-| | This project | The official report |
+| | Este proyecto | El informe oficial |
 |---|---|---|
-| Total spending | 123,533,955,013,702 | 123,533,955,013,702 |
+| Gasto total | 123.533.955.013.702 | 123.533.955.013.702 |
 
-The build reads the spending. It does not read the revenue yet. The revenue
-and the fiscal result belong to a screen that does not exist yet.
+El build lee el gasto. Todavía no lee los ingresos. Los ingresos y el
+resultado fiscal pertenecen a una pantalla que todavía no existe.
 
-A person measured the revenue of 2025 by hand on 2026-09-14, and found
-134,812,992,323,522 pesos. The same measurement gives a fiscal result of
-11,279,037,309,820 pesos. **No check of this project proves those two
-numbers.** Read them as notes, and not as a machine check.
+Una persona midió a mano los ingresos de 2025 el 2026-09-14, y encontró
+134.812.992.323.522 pesos. La misma medición da un resultado fiscal de
+11.279.037.309.820 pesos. **Ninguna verificación de este proyecto prueba
+esos dos números.** Leelos como notas, no como una verificación automática.
 
-## Check a number yourself
+## Comprobá un número por tu cuenta
 
-Check the headline total today, with no trust in this project:
+Comprobá hoy el total principal, sin confiar en este proyecto:
 
 ```bash
 curl -O https://dgsiaf-repo.mecon.gob.ar/repository/pa/datasets/2025/credito-anual-2025.zip
@@ -85,70 +93,72 @@ print(f'{total * 1_000_000:,.0f}')
 "
 ```
 
-It prints `123,533,955,013,702`, the same total the table above gives.
+Imprime `123.533.955.013.702`, el mismo total que da la tabla de arriba.
 
-The source stores each amount in millions of pesos. The script multiplies
-the total by one million.
+La fuente guarda cada monto en millones de pesos. El script multiplica el
+total por un millón.
 
-The same method works for any branch of the tree, once the reader filters
-the file's rows by that branch's codes.
+El mismo método funciona para cualquier rama del árbol, una vez que quien
+lee filtra las filas del archivo por los códigos de esa rama.
 
-## The measure
+## La medida
 
-This project shows the **credito devengado**: the spending that the state
-executed, which means that the obligation was born. The employee worked the
-month, the good arrived, the pension became payable. The state owes that money,
-whether it paid it or not.
+Este proyecto muestra el **crédito devengado**: el gasto que el Estado
+ejecutó, es decir, el gasto cuya obligación ya nació. El empleado trabajó el
+mes, el bien llegó, la jubilación se volvió pagadera. El Estado debe esa
+plata, la haya pagado o no.
 
-`CONTEXT.md` defines every term of the budget that this product uses.
+`CONTEXT.md` define todos los términos del presupuesto que usa este
+producto.
 
-## Run the build
+## Corré el build
 
-Python 3.11 or later. **No dependency.**
+Python 3.11 o posterior. **Sin dependencias.**
 
 ```bash
 python -m unittest discover -s tests -v
 python -m build --destino site/data
 ```
 
-The tests of the screens need no build. Run them with Node 22.7 or later.
-The repository holds no `package.json`, so Node must detect the modules of
-`site/app/*.js` on its own, and it does that only from that version:
+Las pruebas de las pantallas no necesitan el build. Correlas con Node 22.7
+o posterior. El repositorio no tiene `package.json`, así que Node tiene que
+detectar los módulos de `site/app/*.js` por su cuenta, y eso solo lo hace
+desde esa versión:
 
 ```bash
 node --test
 ```
 
-The screens themselves read what the build writes, so run the build first.
-`site/data/manifest.json` is empty in a fresh clone, and a server started
-before the build gives the screen of a failure:
+Las pantallas leen lo que escribe el build, así que corré el build primero.
+`site/data/manifest.json` está vacío en un clon nuevo, y un servidor que
+arranca antes del build muestra la pantalla de una falla:
 
 ```bash
 python -m build --destino site/data
 python3 -m http.server 8000 --directory site
 ```
 
-The command `node --test` carries no path. Node 26 reads a bare directory as
-a module path, so `node --test test/` fails there.
+El comando `node --test` no lleva ninguna ruta. Node 26 lee un directorio
+suelto como una ruta de módulo, así que `node --test test/` falla ahí.
 
-The build downloads the file of every exercise on every run. Three files of
-3.5 MB once a day cost nothing.
+El build descarga el archivo de cada ejercicio en cada corrida. Tres
+archivos de 3,5 MB una vez al día no cuestan nada.
 
-## The source
+## La fuente
 
-Presupuesto Abierto, Ministerio de Economia de la Nacion.
-`https://www.presupuestoabierto.gob.ar/`. Licence CC BY 4.0.
+Presupuesto Abierto, Ministerio de Economía de la Nación.
+`https://www.presupuestoabierto.gob.ar/`. Licencia CC BY 4.0.
 
-This project reads the same files that the official page of open data offers.
-The URLs are identical, with no copy and no mirror in the middle.
+Este proyecto lee los mismos archivos que ofrece la página oficial de datos
+abiertos. Las URLs son idénticas, sin copia y sin espejo en el medio.
 
-## How this was designed
+## Cómo se diseñó esto
 
-- `docs/superpowers/specs/` the design spec
-- `docs/designpowers/` the research and the design of the screens and the model
-- `docs/adr/` the decisions that are hard to reverse
-- `CONTEXT.md` the glossary
+- `docs/superpowers/specs/` la especificación de diseño
+- `docs/designpowers/` la investigación y el diseño de las pantallas y el modelo
+- `docs/adr/` las decisiones difíciles de revertir
+- `CONTEXT.md` el glosario
 
-## Licence
+## Licencia
 
-MIT for the code. The data belongs to the Argentine state, under CC BY 4.0.
+MIT para el código. Los datos pertenecen al Estado argentino, bajo CC BY 4.0.
