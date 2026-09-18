@@ -30,6 +30,9 @@ un nivel. Las flechas de la barra superior cambian el año, y el camino se
 mantiene. Cada paso es una entrada del historial, así que un link abre el
 mismo nodo.
 
+La barra superior muestra el logo del producto, `site/marca.webp`, dibujado
+a partir de `enqlagastan-logo.svg`.
+
 Un botón cambia el aspecto, con tres estados: sistema, claro y oscuro. Un
 interruptor, "Billetes", da los colores de los billetes de peso, y una
 frase: cuántos pesos de cada 100 fueron a la parte más grande. Los dos
