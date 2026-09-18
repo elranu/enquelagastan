@@ -111,7 +111,9 @@ python -m unittest discover -s tests -v
 python -m build --destino site/data
 ```
 
-The tests of the screens need no build. Run them with Node 20 or later:
+The tests of the screens need no build. Run them with Node 22.7 or later.
+The repository holds no `package.json`, so Node must detect the modules of
+`site/app/*.js` on its own, and it does that only from that version:
 
 ```bash
 node --test
