@@ -44,9 +44,16 @@ Un botón con una "i" abre "Más info". Esa pantalla explica el objetivo del
 proyecto, lista lo que viene después, y enlaza al código en GitHub, a la
 cuenta de X del autor y a "De dónde salen estos números".
 
-El sitio no necesita login ni conocer los términos del presupuesto. No carga
-ninguna tipografía ni ningún script de otro servidor. Las tipografías viven
-bajo `site/fuentes/`.
+El sitio no necesita login ni conocer los términos del presupuesto. El código
+del sitio no carga ninguna tipografía ni ningún script de otro servidor. Las
+tipografías viven bajo `site/fuentes/`.
+
+**La única excepción es la analítica.** El dominio pasa por Cloudflare, y
+Cloudflare agrega al HTML un script propio de Web Analytics
+(`static.cloudflareinsights.com`) para contar las visitas. Ese script no está
+en este repositorio: lo inyecta Cloudflare cuando entrega la página. Según
+Cloudflare, no usa cookies ni rastrea a quien visita. El sitio funciona igual
+sin él: si un bloqueador lo frena, no se rompe nada.
 
 El diseño de las pantallas vive en
 `docs/superpowers/specs/2026-09-17-navigator-redesign-design.md` y
