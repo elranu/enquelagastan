@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 
 import {
   ajustarDisco, aniosVecinos, esAusencia, estadoDeLaFila, indiceParaClave, lineaDeDetalle,
-  moverNavegador, pilaDe, pintarAusente, pintarBarra, pintarError, pintarFuentes,
+  moverNavegador, pilaDe, pintarAusente, pintarBarra, pintarError, pintarFuentes, pintarInfo,
   pintarNavegador, resolverPantalla, rutaDePila, vistaDeAusente, vistaDeError, vistaDeFuentes,
   vistaDeNavegador, vistaDeNodo, vistaDeRaiz,
 } from "../site/app/pantalla.js";
@@ -552,6 +552,62 @@ test("la tabla de fuentes nombra sus columnas para el lector de pantalla", () =>
   assert.ok(columnas.every((celda) => celda.getAttribute("scope") === "col"));
   assert.equal(cuerpo.etiqueta, "tbody");
   assert.equal(cuerpo.hijos.length, MANIFIESTO.ejercicios.length);
+});
+
+test("mas info escribe el titulo, el objetivo y lo que viene en el grafico", () => {
+  // P5. Like P4 (D6), this place carries no exercise: the year is empty and
+  // both year arrows are disabled.
+  const documento = falsoDocumento();
+  pintarInfo(documento);
+  assert.equal(enMarco(documento, "titulo").textContent, "Más info");
+  assert.equal(enMarco(documento, "anio").textContent, "");
+  assert.equal(enMarco(documento, "anio-anterior").disabled, true);
+  assert.equal(enMarco(documento, "anio-siguiente").disabled, true);
+
+  const nota = textoDe(enMarco(documento, "nota"));
+  assert.match(nota, /Los datos ya son públicos, pero llegan como miles de filas con códigos\./);
+  assert.match(nota, /si no coinciden, no publica\./);
+  assert.match(nota, /el código está en GitHub y cualquiera puede verificar cada número\./);
+
+  // The owner's approved design shows one heading per section.
+  const titulos = enMarco(documento, "nota").hijos
+    .filter((hijo) => hijo.etiqueta === "h2").map((hijo) => hijo.textContent);
+  assert.deepEqual(titulos, ["El objetivo", "Lo que viene"]);
+
+  const parrafos = enMarco(documento, "nota").hijos.filter((hijo) => hijo.etiqueta === "p");
+  assert.equal(parrafos.length, 3, "the three paragraphs of El objetivo, and nothing else");
+
+  const lista = enMarco(documento, "nota").hijos.find((hijo) => hijo.etiqueta === "ul");
+  assert.equal(lista.hijos.length, 6, "the six items of Lo que viene, in order");
+  const primero = textoDe(lista.hijos[0]);
+  assert.match(primero, /Todas las provincias/);
+  assert.match(primero, /El gasto de cada provincia, con el mismo mapa\./);
+  const ultimo = textoDe(lista.hijos.at(-1));
+  assert.match(ultimo, /Más años/);
+  assert.match(ultimo, /La serie completa hacia atrás, desde 1995\./);
+});
+
+test("mas info pone los tres enlaces en la cinta, con su destino exacto", () => {
+  const documento = falsoDocumento();
+  pintarInfo(documento);
+  const encabezados = enMarco(documento, "renglones").hijos
+    .filter((hijo) => hijo.etiqueta === "h2").map((hijo) => hijo.textContent);
+  assert.deepEqual(encabezados, ["Enlaces"]);
+
+  const lista = enMarco(documento, "renglones").hijos.find((hijo) => hijo.etiqueta === "ul");
+  const enlaces = lista.hijos.map((item) => item.hijos[0]);
+  assert.deepEqual(enlaces.map((enlace) => enlace.textContent), [
+    "El código, en GitHub", "Seguime en X: @el_ranu", "De dónde salen estos números",
+  ]);
+  assert.deepEqual(enlaces.map((enlace) => enlace.getAttribute("href")), [
+    "https://github.com/elranu/enquelagastan", "https://x.com/el_ranu", "#/fuentes",
+  ]);
+  assert.deepEqual(enlaces.map((enlace) => enlace.getAttribute("target")),
+    ["_blank", "_blank", null], "the internal link to P4 stays in the same tab");
+  assert.deepEqual(enlaces.map((enlace) => enlace.getAttribute("rel")),
+    ["noopener", "noopener", null]);
+  assert.equal(enlaces[2].getAttribute("data-fuentes"), "", "app.js routes it through data-fuentes");
+  assert.equal(enMarco(documento, "pie").hidden, true, "this place names no exercise (D6)");
 });
 
 test("la pantalla de un fallo tiene sus salidas en el marco", () => {

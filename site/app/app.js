@@ -14,8 +14,8 @@ import { crearMotor } from "./movimiento.js";
 import {
   ajustarDisco, deslizar, esAusencia, ESPERA_DE_CARGA, expandirMiga, indiceParaClave,
   moverNavegador, pilaDe, pintarAusente, pintarCargando, pintarDisco, pintarError,
-  pintarFuentes, pintarNavegador, pintarNota, resolverPantalla, rutaDePila, vistaDeAusente,
-  vistaDeError, vistaDeFuentes, vistaDeNavegador,
+  pintarFuentes, pintarInfo, pintarNavegador, pintarNota, resolverPantalla, rutaDePila,
+  vistaDeAusente, vistaDeError, vistaDeFuentes, vistaDeNavegador,
 } from "./pantalla.js";
 import {
   ancestroQueExiste, direccionEntre, ejercicioDeEntrada, ejerciciosDisponibles,
@@ -49,9 +49,9 @@ export function iniciar({ documento, ventana, historia }) {
   let marcado = false;
 
   // The place on screen: { ruta, lugar, pila, vista, indice }. lugar is
-  // "navegador", "ausente", "fuentes" or "error".
+  // "navegador", "ausente", "fuentes", "info" or "error".
   let actual = null;
-  // The last exercise on screen. P4 and the failure screen belong to no
+  // The last exercise on screen. P4, P5 and the failure screen belong to no
   // exercise, and "Volver al inicio" goes back to this one.
   let ultimoAnio = null;
 
@@ -97,6 +97,16 @@ export function iniciar({ documento, ventana, historia }) {
   }
 
   async function correr(pedido, modo, vigente) {
+    // P5 is static: it reads no manifest. It comes before the request, so a
+    // network that fails cannot hide it behind the failure screen.
+    if (pedido.info) {
+      escribirHistoria(modo, pedido);
+      pintarInfo(documento);
+      anunciar("Más info");
+      actual = { ruta: pedido, lugar: "info" };
+      return;
+    }
+
     const manifiesto = await cargarManifiesto();
     if (!vigente()) {
       return;
@@ -369,6 +379,9 @@ export function iniciar({ documento, ventana, historia }) {
     if (control("data-fuentes") && !enOtraPestania) {
       evento.preventDefault?.();
       return ir({ fuentes: true }, "paso");
+    }
+    if (control("data-info")) {
+      return ir({ info: true }, "paso");
     }
     return enCurso;
   }

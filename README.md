@@ -10,9 +10,8 @@ Sin login. Sin necesidad de conocer los términos del presupuesto.
 
 ## Qué es este proyecto hoy
 
-El sitio está publicado en **https://elranu.github.io/enquelagastan/**.
-GitHub Pages lo sirve, y cada corrida del build que publica datos nuevos lo
-actualiza.
+El sitio está publicado en **https://enquelagastan.ar**. GitHub Pages lo
+sirve, y cada corrida del build que publica datos nuevos lo actualiza.
 
 El build corre todos los días. Descarga los archivos abiertos. Suma sus
 filas. Compara el total contra el informe oficial. Escribe el resultado como
@@ -40,6 +39,10 @@ controles son iconos.
 
 El pie de la cinta nombra el archivo y la fecha de la que viene el número.
 Ese pie está siempre visible.
+
+Un botón con una "i" abre "Más info". Esa pantalla explica el objetivo del
+proyecto, lista lo que viene después, y enlaza al código en GitHub, a la
+cuenta de X del autor y a "De dónde salen estos números".
 
 El sitio no necesita login ni conocer los términos del presupuesto. No carga
 ninguna tipografía ni ningún script de otro servidor. Las tipografías viven

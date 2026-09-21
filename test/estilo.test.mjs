@@ -216,6 +216,11 @@ test("index.html trae cada id que los pintores y app.js leen, y sus atributos", 
   assert.match(pagina,
     /<button[^>]*id="fuente-dialogo-cerrar"[^>]*data-cerrar-fuente=""[^>]*>Cerrar<\/button>/,
     "R22: the dialog closes with a Cerrar button");
+  // R27: the icon button that opens P5, after the theme button and Billetes.
+  assert.match(pagina, /id="info"[^>]*data-info=""[^>]*aria-label="Más información"/,
+    "info names itself, with no word");
+  const info = /<button[^>]*id="info"[\s\S]*?<\/button>/.exec(pagina)?.[0] ?? "";
+  assert.match(info, /<svg[^>]*>/, "R27: info shows an inline icon");
 });
 
 test("la pagina no carga nada de otro servidor", () => {
