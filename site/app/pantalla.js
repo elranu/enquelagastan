@@ -773,23 +773,27 @@ export function pintarInfo(documento) {
 
   const nota = parte(documento, "nota");
   nota.hidden = false;
+  nota.appendChild(texto(documento, "h2", "El objetivo"));
   for (const parrafo of EL_OBJETIVO) {
     nota.appendChild(texto(documento, "p", parrafo));
   }
+  nota.appendChild(texto(documento, "h2", "Lo que viene"));
   const lista = documento.createElement("ul");
   for (const item of LO_QUE_VIENE) {
     const fila = documento.createElement("li");
-    fila.appendChild(texto(documento, "b", item.nombre));
-    fila.appendChild(texto(documento, "span", ` ${item.linea}`));
+    fila.appendChild(texto(documento, "span", item.nombre, "nombre-item"));
+    fila.appendChild(texto(documento, "span", item.linea, "linea-item"));
     lista.appendChild(fila);
   }
   nota.appendChild(lista);
 
   const lugar = parte(documento, "renglones");
   vaciar(lugar);
-  const enlaces = documento.createElement("p");
-  enlaces.setAttribute("class", "enlaces");
+  lugar.appendChild(texto(documento, "h2", "Enlaces"));
+  const enlaces = documento.createElement("ul");
+  enlaces.setAttribute("class", "enlaces-info");
   for (const enlace of ENLACES_DE_INFO) {
+    const item = documento.createElement("li");
     const control = texto(documento, "a", enlace.texto);
     control.setAttribute("href", enlace.href);
     if (enlace.externo) {
@@ -798,7 +802,8 @@ export function pintarInfo(documento) {
     } else {
       control.setAttribute("data-fuentes", "");
     }
-    enlaces.appendChild(control);
+    item.appendChild(control);
+    enlaces.appendChild(item);
   }
   lugar.appendChild(enlaces);
   // This place names no exercise (D6), as P4 does.

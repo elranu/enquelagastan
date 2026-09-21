@@ -569,6 +569,11 @@ test("mas info escribe el titulo, el objetivo y lo que viene en el grafico", () 
   assert.match(nota, /si no coinciden, no publica\./);
   assert.match(nota, /el código está en GitHub y cualquiera puede verificar cada número\./);
 
+  // The owner's approved design shows one heading per section.
+  const titulos = enMarco(documento, "nota").hijos
+    .filter((hijo) => hijo.etiqueta === "h2").map((hijo) => hijo.textContent);
+  assert.deepEqual(titulos, ["El objetivo", "Lo que viene"]);
+
   const parrafos = enMarco(documento, "nota").hijos.filter((hijo) => hijo.etiqueta === "p");
   assert.equal(parrafos.length, 3, "the three paragraphs of El objetivo, and nothing else");
 
@@ -585,8 +590,12 @@ test("mas info escribe el titulo, el objetivo y lo que viene en el grafico", () 
 test("mas info pone los tres enlaces en la cinta, con su destino exacto", () => {
   const documento = falsoDocumento();
   pintarInfo(documento);
-  const enlaces = enMarco(documento, "renglones").hijos
-    .flatMap((hijo) => (hijo.etiqueta === "p" ? hijo.hijos : []));
+  const encabezados = enMarco(documento, "renglones").hijos
+    .filter((hijo) => hijo.etiqueta === "h2").map((hijo) => hijo.textContent);
+  assert.deepEqual(encabezados, ["Enlaces"]);
+
+  const lista = enMarco(documento, "renglones").hijos.find((hijo) => hijo.etiqueta === "ul");
+  const enlaces = lista.hijos.map((item) => item.hijos[0]);
   assert.deepEqual(enlaces.map((enlace) => enlace.textContent), [
     "El código, en GitHub", "Seguime en X: @el_ranu", "De dónde salen estos números",
   ]);

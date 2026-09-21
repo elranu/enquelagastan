@@ -493,6 +493,23 @@ h1 {
 
 .nota p { max-width: 38rem; text-wrap: pretty; }
 
+/* P5 ("Más info", R27): one heading per section, the same paragraph rhythm
+   as the rest of the site, and the bold name of an item on its own line, so
+   it never runs into its description at 375px either. */
+.nota h2 { margin: 16px 0 4px; font-size: 20px; font-weight: 600; color: var(--texto); }
+
+.nota h2:first-child { margin-top: 0; }
+
+.nota p + p { margin-top: 12px; }
+
+.nota ul { margin: 0; padding-left: 20px; }
+
+.nota li + li { margin-top: 8px; }
+
+.nota .nombre-item { display: block; font-weight: 600; color: var(--texto); }
+
+.nota .linea-item { display: block; color: var(--tenue); }
+
 .acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 8px; }
 
 .principal, .secundario {
@@ -590,6 +607,13 @@ h1 {
 .renglones ul { margin: 0; padding: 12px 0; list-style: none; }
 
 .renglones li { border-bottom: 1px dashed var(--regla); }
+
+/* P5 ("Más info", R27): "Enlaces" heads a vertical list, not a crowded row,
+   with the same side padding as a row of the tape (.fila) and a 44px hit
+   area on every link. */
+.renglones h2 { margin: 16px 28px 4px; font-size: 18px; font-weight: 600; color: var(--texto); }
+
+.enlaces-info a { display: flex; align-items: center; min-height: 44px; padding: 10px 28px; }
 
 .fila {
   width: 100%;
