@@ -52,7 +52,8 @@ tipografías viven bajo `site/fuentes/`.
 Cloudflare agrega al HTML un script propio de Web Analytics
 (`static.cloudflareinsights.com`) para contar las visitas. Ese script no está
 en este repositorio: lo inyecta Cloudflare cuando entrega la página. Según
-Cloudflare, no usa cookies ni rastrea a quien visita. El sitio funciona igual
+[Cloudflare](https://www.cloudflare.com/web-analytics/), no usa cookies ni
+almacenamiento del navegador, y no identifica a cada visitante. El sitio funciona igual
 sin él: si un bloqueador lo frena, no se rompe nada.
 
 El diseño de las pantallas vive en
