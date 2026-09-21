@@ -554,6 +554,21 @@ test("el enlace a las fuentes abre P4 y Volver al inicio vuelve", async () => {
   assert.equal(sitio.ventana.location.hash, "#/2026", "the root of the last year on screen");
 });
 
+test("el boton info abre P5 y Atras vuelve al lugar de antes", async () => {
+  const sitio = montar("#/2026/88");
+  await sitio.navegador.listo();
+  const boton = sitio.parte("info");
+  boton.setAttribute("data-info", "");
+  await sitio.pulsar(boton);
+  assert.equal(sitio.ventana.location.hash, "#/info");
+  assert.equal(sitio.titulo(), "Más info");
+  assert.equal(sitio.parte("anio").textContent, "", "D6: no exercise on this place");
+  sitio.historia.back();
+  await sitio.navegador.listo();
+  assert.equal(sitio.ventana.location.hash, "#/2026/88", "Back returns to the place before");
+  assert.equal(sitio.titulo(), "Capital Humano");
+});
+
 test("un interruptor cambia el aspecto y no escribe en el historial", async () => {
   const guardado = {};
   const sitio = montar("#/2025", {

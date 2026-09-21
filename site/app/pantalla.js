@@ -732,6 +732,79 @@ export function pintarFuentes(documento, vista) {
   parte(documento, "pie").hidden = true;
 }
 
+// P5. The goal, the roadmap and the links: static copy, with no manifest to
+// read. See the design spec, decision R27.
+const EL_OBJETIVO = [
+  "En qué la gastan muestra en qué gasta la plata el Estado nacional "
+  + "argentino. Los datos ya son públicos, pero llegan como miles de filas "
+  + "con códigos. Acá los convertimos en un mapa que se recorre con un "
+  + "toque, sin login y sin saber de presupuesto.",
+  "Cada número sale de los archivos que publica el Ministerio de Economía. "
+  + "El sitio los suma y compara el total con el informe oficial todos los "
+  + "días: si no coinciden, no publica.",
+  "Es un proyecto abierto: el código está en GitHub y cualquiera puede "
+  + "verificar cada número.",
+];
+
+const LO_QUE_VIENE = [
+  { nombre: "Todas las provincias", linea: "El gasto de cada provincia, con el mismo mapa." },
+  { nombre: "Conectarlo con asistentes de IA",
+    linea: "Un botón para conectar ChatGPT y otros asistentes, y preguntarles a los datos." },
+  { nombre: "Buscar lo que falta",
+    linea: "Cuando llegás al último nivel y no hay más detalle, rastrear el dato en otros "
+      + "organismos: contratos, compras y transferencias." },
+  { nombre: "El resultado fiscal",
+    linea: "Los ingresos, los gastos y el resultado de cada año, al lado del mapa." },
+  { nombre: "Restar la inflación", linea: "Comparar años en pesos de hoy." },
+  { nombre: "Más años", linea: "La serie completa hacia atrás, desde 1995." },
+];
+
+const ENLACES_DE_INFO = [
+  { texto: "El código, en GitHub", href: REPOSITORIO, externo: true },
+  { texto: "Seguime en X: @el_ranu", href: "https://x.com/el_ranu", externo: true },
+  { texto: "De dónde salen estos números", href: RUTA_DE_FUENTES, externo: false },
+];
+
+export function pintarInfo(documento) {
+  // P5. Like P4 (W13), the chart pane holds the copy and the tape pane holds
+  // the links; D6 gives it no exercise.
+  pintarBarra(documento, { ejercicio: null, anterior: null, siguiente: null, miga: [] });
+  pintarGrafico(documento, { titulo: "Más info" });
+
+  const nota = parte(documento, "nota");
+  nota.hidden = false;
+  for (const parrafo of EL_OBJETIVO) {
+    nota.appendChild(texto(documento, "p", parrafo));
+  }
+  const lista = documento.createElement("ul");
+  for (const item of LO_QUE_VIENE) {
+    const fila = documento.createElement("li");
+    fila.appendChild(texto(documento, "b", item.nombre));
+    fila.appendChild(texto(documento, "span", ` ${item.linea}`));
+    lista.appendChild(fila);
+  }
+  nota.appendChild(lista);
+
+  const lugar = parte(documento, "renglones");
+  vaciar(lugar);
+  const enlaces = documento.createElement("p");
+  enlaces.setAttribute("class", "enlaces");
+  for (const enlace of ENLACES_DE_INFO) {
+    const control = texto(documento, "a", enlace.texto);
+    control.setAttribute("href", enlace.href);
+    if (enlace.externo) {
+      control.setAttribute("target", "_blank");
+      control.setAttribute("rel", "noopener");
+    } else {
+      control.setAttribute("data-fuentes", "");
+    }
+    enlaces.appendChild(control);
+  }
+  lugar.appendChild(enlaces);
+  // This place names no exercise (D6), as P4 does.
+  parte(documento, "pie").hidden = true;
+}
+
 export function pintarError(documento, vista) {
   pintarBarra(documento, { ejercicio: null, anterior: null, siguiente: null, miga: [] });
   // The exit is a button and never a link to "#/". From the home route a

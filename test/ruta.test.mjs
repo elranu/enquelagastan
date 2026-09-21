@@ -72,6 +72,7 @@ test("la raiz y un nodo tienen su hash, y el estado lleva la ruta", () => {
   });
   assert.equal(entradaDe(ruta(2025, "88-1")).hash, "#/2025/88-1");
   assert.deepEqual(entradaDe({ fuentes: true }), { hash: "#/fuentes", estado: { fuentes: true } });
+  assert.deepEqual(entradaDe({ info: true }), { hash: "#/info", estado: { info: true } });
 });
 
 test("un grupo otros guarda sus claves en el estado y no en la url", () => {
@@ -89,6 +90,7 @@ test("una entrada del historial vuelve a dar su ruta", () => {
     "a state of another place carries no group to this one");
   assert.deepEqual(rutaDeEntrada("#/2025/88", null), ruta(2025, "88"));
   assert.deepEqual(rutaDeEntrada("#/fuentes", null), { fuentes: true });
+  assert.deepEqual(rutaDeEntrada("#/info", null), { info: true });
 });
 
 test("un paso agrega una entrada y un paso al mismo lugar no agrega nada", () => {
@@ -124,6 +126,9 @@ test("la direccion entre dos rutas elige el movimiento", () => {
   assert.equal(direccionEntre(ruta(2025, "88"), ruta(2025, "88")), "igual");
   assert.equal(direccionEntre(ruta(2025, "88"), ruta(2025, "90")), "salto");
   assert.equal(direccionEntre(ruta(2025, "88"), { fuentes: true }), "salto");
+  assert.equal(direccionEntre(ruta(2025, "88"), { info: true }), "salto");
+  assert.equal(direccionEntre({ info: true }, { info: true }), "igual");
+  assert.equal(direccionEntre({ fuentes: true }, { info: true }), "salto");
   assert.equal(direccionEntre(ruta(2025, "88-10"), ruta(2025, "88-1")), "salto",
     "a clave is a camino, not a prefix of text");
 });

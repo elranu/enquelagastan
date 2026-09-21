@@ -64,17 +64,22 @@ export function ancestroQueExiste(indice, clave) {
 
 // ---- The history of the browser (R12) ----------------------------------
 //
-// A ruta is { anio, clave, grupos, desde }, or { fuentes: true }.
+// A ruta is { anio, clave, grupos, desde }, or { fuentes: true }, or
+// { info: true }.
 // grupos holds the claves of every open group "otros" over the nodo. W8: a
 // group is not in the URL, so it lives in history.state. desde is the
 // exercise of origin when a change of year lands on a clave that is absent:
 // { anio, nombre, monto }, or null.
 
 export const RUTA_DE_FUENTES = "#/fuentes";
+export const RUTA_DE_INFO = "#/info";
 
 export function entradaDe(ruta) {
   if (ruta.fuentes) {
     return { hash: RUTA_DE_FUENTES, estado: { fuentes: true } };
+  }
+  if (ruta.info) {
+    return { hash: RUTA_DE_INFO, estado: { info: true } };
   }
   return {
     hash: escribirRuta(ruta.anio, ruta.clave),
@@ -87,6 +92,9 @@ export function entradaDe(ruta) {
 export function rutaDeEntrada(hash, estado) {
   if (hash === RUTA_DE_FUENTES) {
     return { fuentes: true };
+  }
+  if (hash === RUTA_DE_INFO) {
+    return { info: true };
   }
   const { ejercicio, clave } = leerRuta(hash);
   // A state that names another place is not this entry: a shared link, or a
@@ -128,8 +136,9 @@ export function direccionEntre(antes, despues) {
   if (!antes) {
     return "inicio";
   }
-  if (antes.fuentes || despues.fuentes) {
-    return antes.fuentes && despues.fuentes ? "igual" : "salto";
+  if (antes.fuentes || despues.fuentes || antes.info || despues.info) {
+    const mismoLugar = (antes.fuentes && despues.fuentes) || (antes.info && despues.info);
+    return mismoLugar ? "igual" : "salto";
   }
   if (antes.anio !== despues.anio) {
     return "anio";
