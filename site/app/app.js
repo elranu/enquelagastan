@@ -97,6 +97,16 @@ export function iniciar({ documento, ventana, historia }) {
   }
 
   async function correr(pedido, modo, vigente) {
+    // P5 is static: it reads no manifest. It comes before the request, so a
+    // network that fails cannot hide it behind the failure screen.
+    if (pedido.info) {
+      escribirHistoria(modo, pedido);
+      pintarInfo(documento);
+      anunciar("Más info");
+      actual = { ruta: pedido, lugar: "info" };
+      return;
+    }
+
     const manifiesto = await cargarManifiesto();
     if (!vigente()) {
       return;
@@ -107,14 +117,6 @@ export function iniciar({ documento, ventana, historia }) {
       pintarFuentes(documento, vistaDeFuentes(manifiesto));
       anunciar("De dónde salen estos números");
       actual = { ruta: pedido, lugar: "fuentes" };
-      return;
-    }
-
-    if (pedido.info) {
-      escribirHistoria(modo, pedido);
-      pintarInfo(documento);
-      anunciar("Más info");
-      actual = { ruta: pedido, lugar: "info" };
       return;
     }
 

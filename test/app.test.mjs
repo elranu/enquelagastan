@@ -554,6 +554,21 @@ test("el enlace a las fuentes abre P4 y Volver al inicio vuelve", async () => {
   assert.equal(sitio.ventana.location.hash, "#/2026", "the root of the last year on screen");
 });
 
+test("P5 se abre aunque el manifiesto no llegue", async () => {
+  // P5 is static: it reads no manifest. A direct link to #/info must paint
+  // it even while the network fails, and never the failure screen.
+  olvidar();
+  globalThis.fetch = async () => { throw new Error("Failed to fetch"); };
+  const documento = falsoDocumento();
+  const ventana = falsaVentana("#/info");
+  const historia = falsaHistoria(ventana);
+  const navegador = iniciar({ documento, ventana, historia });
+  await navegador.listo();
+
+  assert.equal(documento.getElementById("titulo").textContent, "Más info");
+  assert.doesNotMatch(textoDe(documento.getElementById("titulo")), /No pudimos/);
+});
+
 test("el boton info abre P5 y Atras vuelve al lugar de antes", async () => {
   const sitio = montar("#/2026/88");
   await sitio.navegador.listo();
