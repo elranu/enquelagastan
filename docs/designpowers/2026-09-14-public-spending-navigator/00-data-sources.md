@@ -129,7 +129,10 @@ and each one has a cost.
 
 **a. The internal endpoint of the site.** The visualization "Cuenta Ahorro
 Inversion Financiamiento" reads
-`GET https://www.presupuestoabierto.gob.ar/sici/rest-api/reporte/cta-aif-base-devengado/<year>`.
+`GET https://www.presupuestoabierto.gob.ar/sici/rest-api/visualizaciones/cta-aif-base-devengado/<year>`.
+The site moved this endpoint on 2026-10-09. Before that date its path was
+`/sici/rest-api/reporte/cta-aif-base-devengado/<year>`, and that path now
+answers HTTP 404.
 It answers HTTP 200 with JSON and it needs no token. It covers the exercises
 2017 to 2025. It gives the economic result and the financial result, on the
 accrual basis, and it does not give a primary result as a named row.
@@ -255,7 +258,7 @@ of the same rows that this project reads. The test below proves it.
 
 Method: sum `credito_devengado` of `credito-anual-2025.csv`, sum
 `recurso_ingresado_percibido` of `recursos-anual-2025.csv`, and compare the two
-sums with the endpoint `/sici/rest-api/reporte/cta-aif-base-devengado/2025`,
+sums with the endpoint `/sici/rest-api/visualizaciones/cta-aif-base-devengado/2025`,
 column "Administracion Nacional".
 
 | Item | Computed from the files | Official report | Difference |
