@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 REPOSITORIO = "https://dgsiaf-repo.mecon.gob.ar/repository/pa/datasets"
 URL_REPORTE_OFICIAL = (
-    "https://www.presupuestoabierto.gob.ar/sici/rest-api/reporte"
+    "https://www.presupuestoabierto.gob.ar/sici/rest-api/visualizaciones"
     "/cta-aif-base-devengado/{ejercicio}"
 )
 
